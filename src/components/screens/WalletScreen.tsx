@@ -1,6 +1,10 @@
 "use client";
 import { useState } from "react";
-import { Banknote, BarChart2, Building2, Bitcoin, CreditCard, Calendar, ArrowDownToLine, ArrowUpFromLine, CheckCircle, AlertTriangle, ChevronRight, ArrowLeft } from "lucide-react";
+import {
+  Banknote, BarChart2, Building2, Bitcoin, CreditCard,
+  Calendar, ArrowDownToLine, ArrowUpFromLine, CheckCircle,
+  AlertTriangle, ChevronRight, ArrowLeft,
+} from "lucide-react";
 import { User } from "@/lib/types";
 
 interface Props {
@@ -11,86 +15,67 @@ interface Props {
 type Step = "main" | "method" | "amount" | "confirm" | "success";
 
 const methods = [
-  { id: "bank", Icon: Building2, label: "Bank Transfer", sub: "1–2 business days", c: "#00D4FF" },
-  { id: "crypto", Icon: Bitcoin, label: "USDT / Crypto", sub: "Within 2 hours", c: "#F7931A" },
-  { id: "paypal", Icon: CreditCard, label: "PayPal", sub: "Same day", c: "#0079C1" },
+  { id: "bank",   Icon: Building2,  label: "Bank Transfer",  sub: "1–2 business days", c: "#00D4FF" },
+  { id: "crypto", Icon: Bitcoin,    label: "USDT / Crypto",  sub: "Within 2 hours",    c: "#F7931A" },
+  { id: "paypal", Icon: CreditCard, label: "PayPal",         sub: "Same day",           c: "#0079C1" },
 ];
 
 const txns = [
-  { type: "earn", desc: "Annotation Job #A-2291", amt: "+$12.50", date: "Today, 10:02 AM", c: "#00E5A0" },
-  { type: "earn", desc: "Annotation Job #A-2290", amt: "+$12.50", date: "Today, 9:44 AM", c: "#00E5A0" },
-  { type: "earn", desc: "Recruit Bonus — Fatima Bello", amt: "+$40.00", date: "Yesterday", c: "#00D4FF" },
-  { type: "debit", desc: "Annotation Lens Activation", amt: "-$3.80", date: "May 17, 2026", c: "#FF4D6D" },
-  { type: "withdraw", desc: "Bank Transfer Withdrawal", amt: "-$1,023.80", date: "May 16, 2026", c: "#FF4D6D" },
+  { type: "earn",     desc: "Annotation Job #A-2291",        amt: "+$12.50",     date: "Today, 10:02 AM",  c: "#00E5A0" },
+  { type: "earn",     desc: "Annotation Job #A-2290",        amt: "+$12.50",     date: "Today, 9:44 AM",   c: "#00E5A0" },
+  { type: "earn",     desc: "Recruit Bonus — Fatima Bello",  amt: "+$40.00",     date: "Yesterday",        c: "#00D4FF" },
+  { type: "debit",    desc: "Annotation Lens Activation",    amt: "-$3.80",      date: "May 17, 2026",     c: "#FF4D6D" },
+  { type: "withdraw", desc: "Bank Transfer Withdrawal",       amt: "-$1,023.80",  date: "May 16, 2026",     c: "#FF4D6D" },
 ];
 
+const inputCls = "w-full rounded-xl bg-[#101829] border border-white/10 text-white text-sm sm:text-base outline-none px-3.5 py-3 sm:py-3.5";
+
 export default function WalletScreen({ user, setUser }: Props) {
-  const [step, setStep] = useState<Step>("main");
+  const [step,   setStep]   = useState<Step>("main");
   const [method, setMethod] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
-  const [bank, setBank] = useState("");
-  const [acct, setAcct] = useState("");
+  const [bank,   setBank]   = useState("");
+  const [acct,   setAcct]   = useState("");
 
   const canWithdraw = user.trainingDone && user.lensActivated && user.salary >= 10;
-  const parsedAmt = parseFloat(amount || "0");
-
-  const inputStyle: React.CSSProperties = {
-    width: "100%", padding: "13px 14px", borderRadius: 12,
-    background: "var(--s2)", border: "1px solid var(--b2)",
-    color: "#fff", fontSize: 14, outline: "none",
-  };
+  const parsedAmt   = parseFloat(amount || "0");
 
   function BackBtn({ to }: { to: Step }) {
     return (
       <button
         onClick={() => setStep(to)}
-        className="flex items-center gap-1 mb-5"
-        style={{ background: "none", border: "none", color: "var(--txt2)", cursor: "pointer", fontSize: 13 }}
+        className="flex items-center gap-1.5 mb-5 text-sm min-h-[44px]"
+        style={{ background: "none", border: "none", color: "var(--txt2)", cursor: "pointer" }}
       >
-        <ArrowLeft size={14} /> Back
+        <ArrowLeft size={15} /> Back
       </button>
     );
   }
 
+  /* ── Success ── */
   if (step === "success") return (
-    <div style={{ padding: "40px 18px", textAlign: "center" }} className="animate-fadeUp">
-      <CheckCircle size={60} color="#00E5A0" className="mx-auto" />
-      <div
-        className="font-black mt-4"
-        style={{ fontFamily: "-apple-system-ui-serif,sans-serif", fontSize: 24, color: "#00E5A0" }}
-      >
-        Withdrawal Submitted!
-      </div>
-      <div style={{ color: "var(--txt2)", marginTop: 8, fontSize: 14 }}>
-        <strong style={{ color: "#fff" }}>${parsedAmt.toFixed(2)}</strong> is being processed.
-        Delivery: <strong style={{ color: "#fff" }}>1–2 business days</strong>
-      </div>
-      <div
-        style={{
-          margin: "24px 0", background: "var(--s1)", borderRadius: 16, padding: "18px",
-          border: "1px solid var(--b2)", textAlign: "left",
-        }}
-      >
-        <div className="font-mono" style={{ fontSize: 10, color: "var(--txt2)", letterSpacing: 1, marginBottom: 8 }}>
-          TRANSACTION REF
-        </div>
-        <div className="font-mono" style={{ color: "var(--cyan)", fontSize: 13 }}>
-          TXN-{Date.now().toString().slice(-8)}
-        </div>
+    <div className="max-w-lg mx-auto px-4 sm:px-6 py-10 text-center animate-fadeUp">
+      <CheckCircle size={64} color="#00E5A0" className="mx-auto mb-4" />
+      <h2 className="font-black text-2xl sm:text-3xl mb-2" style={{ color: "#00E5A0" }}>Withdrawal Submitted!</h2>
+      <p className="text-sm sm:text-base mb-6" style={{ color: "var(--txt2)" }}>
+        <strong className="text-white">${parsedAmt.toFixed(2)}</strong> is being processed.
+        Delivery: <strong className="text-white">1–2 business days</strong>
+      </p>
+      <div className="rounded-2xl p-5 text-left mb-6" style={{ background: "var(--s1)", border: "1px solid var(--b2)" }}>
+        <div className="font-mono text-[10px] tracking-widest mb-2" style={{ color: "var(--txt2)" }}>TRANSACTION REF</div>
+        <div className="font-mono text-sm" style={{ color: "var(--cyan)" }}>TXN-{Date.now().toString().slice(-8)}</div>
       </div>
       <button
         onClick={() => { setStep("main"); setAmount(""); setBank(""); setAcct(""); setMethod(null); }}
-        style={{
-          padding: "14px 40px", borderRadius: 12, border: "none",
-          background: "linear-gradient(135deg,#00D4FF,#0055DD)", color: "#fff",
-          fontFamily: "-apple-system-ui-serif,sans-serif", fontWeight: 700, fontSize: 15, cursor: "pointer",
-        }}
+        className="min-h-[50px] px-8 rounded-xl font-bold text-base text-white cursor-pointer border-none"
+        style={{ background: "linear-gradient(135deg,#00D4FF,#0055DD)" }}
       >
         Back to Wallet
       </button>
     </div>
   );
 
+  /* ── Confirm ── */
   if (step === "confirm") {
     const meth = methods.find(m => m.id === method);
     const rows = [
@@ -102,85 +87,60 @@ export default function WalletScreen({ user, setUser }: Props) {
       ["You Receive", `$${parsedAmt.toFixed(2)}`],
     ];
     return (
-      <div style={{ padding: "24px 18px" }} className="animate-fadeUp">
+      <div className="max-w-lg mx-auto px-4 sm:px-6 py-6 sm:py-8 animate-fadeUp">
         <BackBtn to="amount" />
-        <div className="font-black mb-5" style={{ fontFamily: "-apple-system-ui-serif,sans-serif", fontSize: 22 }}>
-          Confirm Withdrawal
-        </div>
+        <h2 className="font-black text-xl sm:text-2xl mb-6">Confirm Withdrawal</h2>
         {rows.map(([k, v]) => (
-          <div key={k} className="flex justify-between py-3" style={{ borderBottom: "1px solid var(--b1)" }}>
-            <span style={{ color: "var(--txt2)", fontSize: 14 }}>{k}</span>
-            <span className="font-semibold" style={{ fontSize: 14 }}>{v}</span>
+          <div key={k} className="flex justify-between py-3 text-sm sm:text-base" style={{ borderBottom: "1px solid var(--b1)" }}>
+            <span style={{ color: "var(--txt2)" }}>{k}</span>
+            <span className="font-semibold">{v}</span>
           </div>
         ))}
         <button
-          onClick={() => {
-            setUser(u => ({ ...u, salary: Math.max(0, u.salary - parsedAmt) }));
-            setStep("success");
-          }}
-          className="w-full font-bold mt-6"
-          style={{
-            padding: "15px", borderRadius: 12, border: "none",
-            background: "linear-gradient(135deg,#00E5A0,#00B37E)", color: "#000",
-            fontFamily: "-apple-system-ui-serif,sans-serif", fontSize: 15, cursor: "pointer",
-          }}
+          onClick={() => { setUser(u => ({ ...u, salary: Math.max(0, u.salary - parsedAmt) })); setStep("success"); }}
+          className="w-full font-bold text-black text-base min-h-[50px] rounded-xl border-none cursor-pointer mt-6"
+          style={{ background: "linear-gradient(135deg,#00E5A0,#00B37E)" }}
         >
-          Confirm & Submit →
+          Confirm &amp; Submit →
         </button>
       </div>
     );
   }
 
+  /* ── Amount ── */
   if (step === "amount") return (
-    <div style={{ padding: "24px 18px" }} className="animate-fadeUp">
+    <div className="max-w-lg mx-auto px-4 sm:px-6 py-6 sm:py-8 animate-fadeUp">
       <BackBtn to="method" />
-      <div className="font-black mb-[18px]" style={{ fontFamily: "-apple-system-ui-serif,sans-serif", fontSize: 22 }}>
-        Enter Amount
-      </div>
-      <div className="mb-3.5">
-        <div className="font-mono mb-1.5" style={{ fontSize: 10, color: "var(--txt2)", letterSpacing: 1 }}>
-          WITHDRAWAL AMOUNT
-        </div>
+      <h2 className="font-black text-xl sm:text-2xl mb-5">Enter Amount</h2>
+      <div className="mb-4">
+        <div className="font-mono text-[10px] tracking-widest mb-2" style={{ color: "var(--txt2)" }}>WITHDRAWAL AMOUNT</div>
         <div className="relative">
-          <span
-            className="absolute font-bold font-mono"
-            style={{ left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 18, color: "var(--cyan)" }}
-          >
-            $
-          </span>
-          <input
-            type="number"
-            value={amount}
-            onChange={e => setAmount(e.target.value)}
-            placeholder="0.00"
-            style={{ ...inputStyle, paddingLeft: 36, fontSize: 22, fontWeight: 700 }}
-          />
+          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-lg font-mono" style={{ color: "var(--cyan)" }}>$</span>
+          <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" className={inputCls} style={{ paddingLeft: 30, fontSize: 22, fontWeight: 700 }} />
         </div>
-        <div style={{ marginTop: 6, fontSize: 12, color: "var(--txt2)" }}>
-          Available: <strong style={{ color: "#00E5A0" }}>${user.salary.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> · Min: $10.00
-        </div>
+        <p className="text-xs mt-1.5" style={{ color: "var(--txt2)" }}>
+          Available: <strong style={{ color: "#00E5A0" }}>${user.salary.toLocaleString("en-US", { minimumFractionDigits: 2 })}</strong> · Min: $10.00
+        </p>
       </div>
       {method === "bank" && (
         <>
           <div className="mb-3">
-            <div className="font-mono mb-1.5" style={{ fontSize: 10, color: "var(--txt2)", letterSpacing: 1 }}>BANK NAME</div>
-            <input value={bank} onChange={e => setBank(e.target.value)} placeholder="e.g. Zenith Bank, GTBank..." style={inputStyle} />
+            <div className="font-mono text-[10px] tracking-widest mb-2" style={{ color: "var(--txt2)" }}>BANK NAME</div>
+            <input value={bank} onChange={e => setBank(e.target.value)} placeholder="e.g. Zenith Bank, GTBank..." className={inputCls} />
           </div>
-          <div className="mb-[18px]">
-            <div className="font-mono mb-1.5" style={{ fontSize: 10, color: "var(--txt2)", letterSpacing: 1 }}>ACCOUNT NUMBER</div>
-            <input value={acct} onChange={e => setAcct(e.target.value)} placeholder="10-digit account number" style={inputStyle} />
+          <div className="mb-5">
+            <div className="font-mono text-[10px] tracking-widest mb-2" style={{ color: "var(--txt2)" }}>ACCOUNT NUMBER</div>
+            <input value={acct} onChange={e => setAcct(e.target.value)} placeholder="10-digit account number" className={inputCls} />
           </div>
         </>
       )}
       <button
         disabled={!amount || parsedAmt < 10 || parsedAmt > user.salary}
         onClick={() => setStep("confirm")}
-        className="w-full font-bold"
+        className="w-full font-bold text-base min-h-[50px] rounded-xl border-none cursor-pointer"
         style={{
-          padding: "15px", borderRadius: 12, border: "none",
           background: amount && parsedAmt >= 10 && parsedAmt <= user.salary ? "linear-gradient(135deg,#00D4FF,#0055DD)" : "var(--s3)",
           color: amount && parsedAmt >= 10 ? "#fff" : "var(--txt3)",
-          fontFamily: "-apple-system-ui-serif,sans-serif", fontSize: 15, cursor: "pointer",
         }}
       >
         Continue →
@@ -188,172 +148,127 @@ export default function WalletScreen({ user, setUser }: Props) {
     </div>
   );
 
+  /* ── Method ── */
   if (step === "method") return (
-    <div style={{ padding: "24px 18px" }} className="animate-fadeUp">
+    <div className="max-w-lg mx-auto px-4 sm:px-6 py-6 sm:py-8 animate-fadeUp">
       <BackBtn to="main" />
-      <div className="font-black mb-1.5" style={{ fontFamily: "-apple-system-ui-serif,sans-serif", fontSize: 22 }}>
-        Choose Method
-      </div>
-      <div style={{ fontSize: 13, color: "var(--txt2)", marginBottom: 22 }}>Select your preferred withdrawal channel.</div>
-      {methods.map(m => (
-        <div
-          key={m.id}
-          onClick={() => { setMethod(m.id); setStep("amount"); }}
-          className="flex items-center gap-3.5 cursor-pointer mb-2.5"
-          style={{
-            background: "var(--s1)",
-            border: `1px solid ${method === m.id ? m.c + "55" : "var(--b1)"}`,
-            borderRadius: 14, padding: "16px",
-          }}
-        >
+      <h2 className="font-black text-xl sm:text-2xl mb-1">Choose Method</h2>
+      <p className="text-sm mb-6" style={{ color: "var(--txt2)" }}>Select your preferred withdrawal channel.</p>
+      <div className="space-y-3">
+        {methods.map(m => (
           <div
-            className="flex items-center justify-center flex-shrink-0"
-            style={{
-              width: 46, height: 46, borderRadius: 12,
-              background: `${m.c}18`, border: `1px solid ${m.c}30`,
-            }}
+            key={m.id}
+            onClick={() => { setMethod(m.id); setStep("amount"); }}
+            className="flex items-center gap-4 rounded-2xl p-4 sm:p-5 cursor-pointer transition-colors"
+            style={{ background: "var(--s1)", border: `1px solid ${method === m.id ? m.c + "55" : "var(--b1)"}` }}
           >
-            <m.Icon size={22} color={m.c} />
+            <div className="flex items-center justify-center rounded-xl shrink-0" style={{ width: 48, height: 48, background: `${m.c}18`, border: `1px solid ${m.c}30` }}>
+              <m.Icon size={22} color={m.c} />
+            </div>
+            <div className="flex-1">
+              <div className="font-semibold text-sm sm:text-base">{m.label}</div>
+              <div className="text-xs mt-0.5" style={{ color: "var(--txt2)" }}>{m.sub}</div>
+            </div>
+            <ChevronRight size={16} color="var(--txt2)" />
           </div>
-          <div className="flex-1">
-            <div className="font-semibold" style={{ fontSize: 15 }}>{m.label}</div>
-            <div style={{ fontSize: 12, color: "var(--txt2)", marginTop: 2 }}>{m.sub}</div>
-          </div>
-          <ChevronRight size={16} color="var(--txt2)" />
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 
-  // main
+  /* ── Main ── */
   return (
     <div className="animate-fadeUp">
-      <div
-        style={{
-          background: "linear-gradient(150deg,#081428,#0C2044,#081830)",
-          padding: "26px 18px 24px",
-          borderRadius: "0 0 24px 24px",
-          marginBottom: 20,
-        }}
-      >
-        <div className="font-black mb-4" style={{ fontFamily: "-apple-system-ui-serif,sans-serif", fontSize: 22 }}>
-          My Wallet
-        </div>
-        <div className="font-mono" style={{ fontSize: 10, color: "var(--txt2)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>
-          Salary Balance
-        </div>
-        <div
-          className="font-black"
-          style={{ fontFamily: "-apple-system-ui-serif,sans-serif", fontSize: 46, letterSpacing: -1.5, lineHeight: 1 }}
-        >
-          <span style={{ fontSize: 22, color: "var(--cyan)", verticalAlign: "top", marginTop: 10, display: "inline-block" }}>$</span>
-          {user.salary.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </div>
-        <div style={{ fontSize: 12, color: "var(--txt2)", marginTop: 8 }}>
-          Total earned: <strong style={{ color: "#00E5A0" }}>${(user.salary + 1023.8).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
-          {" · "}Withdrawn: <strong style={{ color: "#FF4D6D" }}>$1,023.80</strong>
-        </div>
-
-        <div className="flex gap-2.5 mt-[18px]">
-          <button
-            onClick={() => canWithdraw && setStep("method")}
-            className="flex-1 flex items-center justify-center gap-2 font-bold"
-            style={{
-              padding: "13px", borderRadius: 12, border: "none",
-              background: canWithdraw ? "linear-gradient(135deg,#00E5A0,#00B37E)" : "var(--s3)",
-              color: canWithdraw ? "#000" : "var(--txt3)",
-              fontFamily: "-apple-system-ui-serif,sans-serif", fontSize: 14,
-              cursor: canWithdraw ? "pointer" : "not-allowed",
-            }}
-          >
-            <Banknote size={16} /> Withdraw
-          </button>
-          <button
-            className="flex-1 flex items-center justify-center gap-2 font-semibold"
-            style={{
-              padding: "13px", borderRadius: 12,
-              border: "1px solid var(--b2)", background: "var(--s1)",
-              color: "var(--txt)", fontSize: 14, cursor: "pointer",
-            }}
-          >
-            <BarChart2 size={16} /> Report
-          </button>
-        </div>
-
-        {!canWithdraw && (
-          <div className="flex items-center gap-1.5 mt-2.5 font-mono" style={{ fontSize: 11, color: "var(--txt3)" }}>
-            <AlertTriangle size={11} />
-            {!user.trainingDone ? "Complete training first" : !user.lensActivated ? "Activate your Annotation Lens" : "Min withdrawal: $10.00"}
+      {/* Header */}
+      <div className="rounded-b-3xl mb-6" style={{ background: "linear-gradient(150deg,#081428,#0C2044,#081830)" }}>
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          <h1 className="font-black text-2xl sm:text-3xl mb-4" style={{ fontFamily: "system-ui,sans-serif" }}>My Wallet</h1>
+          <div className="font-mono text-[10px] tracking-widest uppercase mb-1.5" style={{ color: "var(--txt2)" }}>Salary Balance</div>
+          <div className="font-black leading-none mb-2 text-4xl sm:text-5xl lg:text-6xl tracking-tight">
+            <span className="text-xl sm:text-2xl align-top mt-2 inline-block" style={{ color: "var(--cyan)" }}>$</span>
+            {user.salary.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
-        )}
+          <p className="text-xs sm:text-sm mb-5" style={{ color: "var(--txt2)" }}>
+            Total earned: <strong style={{ color: "#00E5A0" }}>${(user.salary + 1023.8).toLocaleString("en-US", { minimumFractionDigits: 2 })}</strong>
+            {" · "}Withdrawn: <strong style={{ color: "#FF4D6D" }}>$1,023.80</strong>
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => canWithdraw && setStep("method")}
+              className="flex-1 flex items-center justify-center gap-2 font-bold text-sm sm:text-base rounded-xl border-none min-h-[50px] sm:min-h-[54px] transition-all"
+              style={{ background: canWithdraw ? "linear-gradient(135deg,#00E5A0,#00B37E)" : "var(--s3)", color: canWithdraw ? "#000" : "var(--txt3)", cursor: canWithdraw ? "pointer" : "not-allowed" }}
+            >
+              <Banknote size={16} /> Withdraw
+            </button>
+            <button
+              className="flex-1 flex items-center justify-center gap-2 font-semibold text-sm sm:text-base rounded-xl min-h-[50px] sm:min-h-[54px] cursor-pointer"
+              style={{ border: "1px solid var(--b2)", background: "var(--s1)", color: "var(--txt)" }}
+            >
+              <BarChart2 size={16} /> Report
+            </button>
+          </div>
+          {!canWithdraw && (
+            <div className="flex items-center gap-1.5 mt-3 font-mono text-xs" style={{ color: "var(--txt3)" }}>
+              <AlertTriangle size={11} />
+              {!user.trainingDone ? "Complete training first" : !user.lensActivated ? "Activate your Annotation Lens" : "Min withdrawal: $10.00"}
+            </div>
+          )}
+        </div>
       </div>
 
-      <div style={{ padding: "0 18px" }}>
-        {/* Stats row */}
-        <div className="flex gap-2 mb-4">
-          {([
-            ["This Month", `$${(user.salary * 0.6).toFixed(2)}`, "#00D4FF"],
-            ["Withdrawn", "$1,023.80", "#FF4D6D"],
-            ["Pending", "$0.00", "#FFB800"],
-          ] as [string, string, string][]).map(([l, v, c]) => (
+      {/* Body */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+        {/* Desktop two-column */}
+        <div className="lg:grid lg:grid-cols-2 lg:gap-10">
+          {/* Left: stats + payout */}
+          <div>
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              {([
+                ["This Month", `$${(user.salary * 0.6).toFixed(2)}`, "#00D4FF"],
+                ["Withdrawn", "$1,023.80", "#FF4D6D"],
+                ["Pending", "$0.00", "#FFB800"],
+              ] as [string, string, string][]).map(([l, v, c]) => (
+                <div key={l} className="rounded-xl p-3 sm:p-4" style={{ background: "var(--s1)", border: "1px solid var(--b1)" }}>
+                  <div className="font-mono text-[9px] sm:text-[10px] tracking-widest mb-1" style={{ color: "var(--txt2)" }}>{l.toUpperCase()}</div>
+                  <div className="font-bold text-sm sm:text-base mt-1" style={{ color: c }}>{v}</div>
+                </div>
+              ))}
+            </div>
+
             <div
-              key={l}
-              className="flex-1 rounded-xl"
-              style={{ background: "var(--s1)", border: "1px solid var(--b1)", padding: "10px 11px" }}
+              className="flex items-center gap-3 rounded-xl p-3 sm:p-4 mb-6 lg:mb-0"
+              style={{ background: "rgba(0,229,160,.07)", border: "1px solid rgba(0,229,160,.22)" }}
             >
-              <div className="font-mono" style={{ fontSize: 9, color: "var(--txt2)", letterSpacing: 1 }}>{l.toUpperCase()}</div>
-              <div
-                className="font-bold mt-1"
-                style={{ fontFamily: "-apple-system-ui-serif,sans-serif", color: c, fontSize: 15 }}
-              >
-                {v}
+              <Calendar size={18} color="#00E5A0" className="shrink-0" />
+              <div>
+                <div className="font-semibold text-sm" style={{ color: "#00E5A0" }}>Next Payout: Friday, May 23</div>
+                <div className="text-xs mt-0.5" style={{ color: "var(--txt2)" }}>Your salary will be processed automatically</div>
               </div>
             </div>
-          ))}
-        </div>
+          </div>
 
-        {/* Next payout */}
-        <div
-          className="flex items-center gap-2.5 mb-4"
-          style={{ background: "rgba(0,229,160,.07)", border: "1px solid rgba(0,229,160,.22)", borderRadius: 12, padding: "12px 14px" }}
-        >
-          <Calendar size={18} color="#00E5A0" className="flex-shrink-0" />
+          {/* Right: transactions */}
           <div>
-            <div className="font-semibold" style={{ fontSize: 13, color: "#00E5A0" }}>Next Payout: Friday, May 23</div>
-            <div style={{ fontSize: 11, color: "var(--txt2)", marginTop: 1 }}>Your salary will be processed automatically</div>
+            <h2 className="font-bold text-base sm:text-lg mb-3">Transaction History</h2>
+            <div className="space-y-0">
+              {txns.map((t, i) => (
+                <div key={i} className="flex items-center gap-3 py-3" style={{ borderBottom: "1px solid var(--b1)" }}>
+                  <div
+                    className="flex items-center justify-center rounded-xl shrink-0"
+                    style={{ width: 40, height: 40, background: t.type === "earn" ? "rgba(0,229,160,.1)" : "rgba(255,77,109,.1)" }}
+                  >
+                    {t.type === "earn" ? <ArrowDownToLine size={16} color="#00E5A0" /> : <ArrowUpFromLine size={16} color="#FF4D6D" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm truncate">{t.desc}</div>
+                    <div className="text-xs mt-0.5" style={{ color: "var(--txt2)" }}>{t.date}</div>
+                  </div>
+                  <div className="font-mono font-semibold text-sm shrink-0" style={{ color: t.c }}>{t.amt}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-
-        {/* Transaction history */}
-        <div className="font-bold mb-3" style={{ fontFamily: "-apple-system-ui-serif,sans-serif", fontSize: 15 }}>
-          Transaction History
-        </div>
-        {txns.map((t, i) => (
-          <div
-            key={i}
-            className="flex items-center gap-3 py-3"
-            style={{ borderBottom: "1px solid var(--b1)" }}
-          >
-            <div
-              className="flex items-center justify-center flex-shrink-0"
-              style={{
-                width: 38, height: 38, borderRadius: 10,
-                background: t.type === "earn" ? "rgba(0,229,160,.1)" : "rgba(255,77,109,.1)",
-              }}
-            >
-              {t.type === "earn"
-                ? <ArrowDownToLine size={16} color="#00E5A0" />
-                : <ArrowUpFromLine size={16} color="#FF4D6D" />
-              }
-            </div>
-            <div className="flex-1">
-              <div className="font-medium" style={{ fontSize: 13 }}>{t.desc}</div>
-              <div style={{ fontSize: 11, color: "var(--txt2)", marginTop: 2 }}>{t.date}</div>
-            </div>
-            <div className="font-mono font-semibold" style={{ color: t.c, fontSize: 13 }}>{t.amt}</div>
-          </div>
-        ))}
-        <div style={{ height: 24 }} />
       </div>
     </div>
   );

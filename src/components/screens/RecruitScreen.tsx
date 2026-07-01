@@ -22,6 +22,12 @@ const steps = [
   { n: "4", t: "You earn $40/month", d: "Per active recruit — passive income, every month" },
 ];
 
+function statusStyle(status: string) {
+  if (status === "Working") return { background: "rgba(0,229,160,.1)", color: "#00E5A0" };
+  if (status === "In Training") return { background: "rgba(0,212,255,.1)", color: "var(--cyan)" };
+  return { background: "rgba(74,84,112,.2)", color: "var(--txt3)" };
+}
+
 export default function RecruitScreen({ user }: Props) {
   const [copied, setCopied] = useState(false);
   const link = `deelai.uk/recruit/${user.refCode}`;
@@ -33,166 +39,137 @@ export default function RecruitScreen({ user }: Props) {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  function statusStyle(status: string) {
-    if (status === "Working") return { background: "rgba(0,229,160,.1)", color: "#00E5A0" };
-    if (status === "In Training") return { background: "rgba(0,212,255,.1)", color: "var(--cyan)" };
-    return { background: "rgba(74,84,112,.2)", color: "var(--txt3)" };
-  }
-
   return (
     <div className="animate-fadeUp">
-      {/* Header */}
+      {/* ── Header band ── */}
       <div
-        style={{
-          background: "linear-gradient(150deg,#0A1230,#0E1845,#08142A)",
-          padding: "26px 18px 24px",
-          borderRadius: "0 0 24px 24px",
-          marginBottom: 20,
-        }}
+        className="rounded-b-3xl mb-6"
+        style={{ background: "linear-gradient(150deg,#0A1230,#0E1845,#08142A)" }}
       >
-        <div
-          className="font-black mb-1"
-          style={{ fontFamily: "-apple-system-ui-serif,sans-serif", fontSize: 22 }}
-        >
-          Recruit Network
-        </div>
-        <div style={{ fontSize: 13, color: "var(--txt2)", marginBottom: 18 }}>
-          Bring talent to DEELAi. Earn $40/month per active recruit.
-        </div>
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          <h1 className="font-black text-2xl sm:text-3xl mb-1" style={{ fontFamily: "system-ui,sans-serif" }}>
+            Recruit Network
+          </h1>
+          <p className="text-sm sm:text-base mb-5" style={{ color: "var(--txt2)" }}>
+            Bring talent to DEELAi. Earn $40/month per active recruit.
+          </p>
 
-        {/* Stats */}
-        <div className="flex gap-2 mb-[18px]">
-          {([
-            [recruits.length, "RECRUITED", "#00D4FF"],
-            [working, "WORKING", "#00E5A0"],
-            ["$120", "RECRUIT PAY", "#FFB800"],
-          ] as [number | string, string, string][]).map(([v, l, c]) => (
-            <div
-              key={l}
-              className="flex-1 rounded-xl p-3"
-              style={{ background: `${c}0D`, border: `1px solid ${c}22` }}
-            >
-              <div className="font-mono" style={{ fontSize: 9, color: "var(--txt2)", letterSpacing: 1 }}>{l}</div>
-              <div
-                className="font-black mt-1"
-                style={{ fontFamily: "-apple-system-ui-serif,sans-serif", fontSize: 24, color: c }}
-              >
-                {v}
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-3 mb-5">
+            {([
+              [recruits.length, "RECRUITED", "#00D4FF"],
+              [working, "WORKING", "#00E5A0"],
+              ["$120", "RECRUIT PAY", "#FFB800"],
+            ] as [number | string, string, string][]).map(([v, l, c]) => (
+              <div key={l} className="rounded-xl p-3 sm:p-4" style={{ background: `${c}0D`, border: `1px solid ${c}22` }}>
+                <div className="font-mono text-[9px] sm:text-[10px] tracking-widest mb-1" style={{ color: "var(--txt2)" }}>{l}</div>
+                <div className="font-black text-2xl sm:text-3xl" style={{ fontFamily: "system-ui,sans-serif", color: c }}>{v}</div>
               </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Recruit link */}
-        <div
-          style={{
-            background: "rgba(0,212,255,.06)", border: "1px solid rgba(0,212,255,.2)",
-            borderRadius: 12, padding: "12px 14px",
-          }}
-        >
-          <div className="font-mono" style={{ fontSize: 9, color: "var(--txt2)", letterSpacing: 1, marginBottom: 6 }}>
-            YOUR RECRUIT LINK
+            ))}
           </div>
-          <div className="flex gap-2 items-center">
-            <div className="flex-1 font-mono truncate" style={{ fontSize: 12, color: "var(--cyan)" }}>{link}</div>
-            <button
-              onClick={copyLink}
-              className="flex items-center gap-1.5 font-semibold font-mono transition-all"
-              style={{
-                padding: "7px 14px", borderRadius: 8,
-                border: "1px solid rgba(0,212,255,.35)",
-                background: copied ? "rgba(0,229,160,.12)" : "rgba(0,212,255,.1)",
-                color: copied ? "#00E5A0" : "var(--cyan)",
-                fontSize: 12, cursor: "pointer", whiteSpace: "nowrap",
-              }}
-            >
-              {copied ? <Check size={12} /> : <Copy size={12} />}
-              {copied ? "Copied" : "Copy"}
-            </button>
+
+          {/* Recruit link */}
+          <div className="rounded-xl p-3 sm:p-4" style={{ background: "rgba(0,212,255,.06)", border: "1px solid rgba(0,212,255,.2)" }}>
+            <div className="font-mono text-[9px] tracking-widest mb-2" style={{ color: "var(--txt2)" }}>YOUR RECRUIT LINK</div>
+            <div className="flex gap-2 items-center">
+              <div className="flex-1 font-mono text-xs sm:text-sm truncate" style={{ color: "var(--cyan)" }}>{link}</div>
+              <button
+                onClick={copyLink}
+                className="flex items-center gap-1.5 font-semibold font-mono text-xs transition-all min-h-[36px] px-3 sm:px-4 rounded-lg shrink-0 cursor-pointer"
+                style={{
+                  border: "1px solid rgba(0,212,255,.35)",
+                  background: copied ? "rgba(0,229,160,.12)" : "rgba(0,212,255,.1)",
+                  color: copied ? "#00E5A0" : "var(--cyan)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {copied ? <Check size={12} /> : <Copy size={12} />}
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      <div style={{ padding: "0 18px" }}>
-        {/* How it works */}
-        <div
-          className="font-bold mb-3"
-          style={{ fontFamily: "-apple-system-ui-serif,sans-serif", fontSize: 15 }}
-        >
-          How It Works
-        </div>
-        {steps.map(s => (
-          <div key={s.n} className="flex gap-3 mb-3.5 items-start">
-            <div
-              className="flex items-center justify-center flex-shrink-0 font-bold font-mono"
-              style={{
-                width: 28, height: 28, borderRadius: "50%",
-                background: "var(--cyan-d)", border: "1px solid rgba(0,212,255,.3)",
-                color: "var(--cyan)", fontSize: 13,
-              }}
-            >
-              {s.n}
-            </div>
-            <div>
-              <div className="font-semibold" style={{ fontSize: 14 }}>{s.t}</div>
-              <div style={{ fontSize: 12, color: "var(--txt2)", marginTop: 2 }}>{s.d}</div>
-            </div>
-          </div>
-        ))}
+      {/* ── Body ── */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+        {/* Desktop: two-column; Mobile: stacked */}
+        <div className="lg:grid lg:grid-cols-2 lg:gap-10">
 
-        {/* Recruits list */}
-        <div
-          className="font-bold mt-2 mb-3"
-          style={{ fontFamily: "-apple-system-ui-serif,sans-serif", fontSize: 15 }}
-        >
-          Your Recruits
-        </div>
-        {recruits.map((r, i) => (
-          <div
-            key={i}
-            className="flex items-center gap-3"
-            style={{
-              background: "var(--s1)", border: "1px solid var(--b1)",
-              borderRadius: 12, padding: "12px 14px", marginBottom: 8,
-            }}
-          >
-            <div className="relative flex-shrink-0">
-              <div
-                className="flex items-center justify-center"
-                style={{ width: 38, height: 38, borderRadius: 10, background: "var(--s2)" }}
-              >
-                <User size={17} color="var(--txt2)" />
-              </div>
-              {r.online && (
-                <div
-                  className="absolute"
-                  style={{
-                    bottom: 0, right: 0, width: 9, height: 9,
-                    borderRadius: "50%", background: "#00E5A0",
-                    border: "1.5px solid var(--s1)",
-                  }}
-                />
-              )}
-            </div>
-            <div className="flex-1">
-              <div className="font-semibold" style={{ fontSize: 13 }}>{r.name}</div>
-              <div style={{ fontSize: 11, color: "var(--txt2)", marginTop: 2 }}>
-                <span style={{ color: r.level === "Permanent" ? "#00E5A0" : "#FFB800" }}>{r.level}</span>
-                {" · "}{r.joined}
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="font-mono font-semibold" style={{ fontSize: 12, color: "#00E5A0" }}>{r.earned}</div>
-              <div
-                className="text-center mt-0.5 rounded-full"
-                style={{ fontSize: 10, padding: "2px 8px", ...statusStyle(r.status) }}
-              >
-                {r.status}
-              </div>
+          {/* How it works */}
+          <div className="mb-8 lg:mb-0">
+            <h2 className="font-bold text-base sm:text-lg mb-4" style={{ fontFamily: "system-ui,sans-serif" }}>
+              How It Works
+            </h2>
+            <div className="space-y-4">
+              {steps.map(s => (
+                <div key={s.n} className="flex gap-3 items-start">
+                  <div
+                    className="flex items-center justify-center shrink-0 font-bold font-mono text-sm"
+                    style={{
+                      width: 30, height: 30, borderRadius: "50%",
+                      background: "var(--cyan-d)", border: "1px solid rgba(0,212,255,.3)",
+                      color: "var(--cyan)",
+                    }}
+                  >
+                    {s.n}
+                  </div>
+                  <div>
+                    <div className="font-semibold text-sm sm:text-base text-white">{s.t}</div>
+                    <div className="text-xs sm:text-sm mt-0.5" style={{ color: "var(--txt2)" }}>{s.d}</div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-        ))}
-        <div style={{ height: 24 }} />
+
+          {/* Recruits list */}
+          <div>
+            <h2 className="font-bold text-base sm:text-lg mb-4" style={{ fontFamily: "system-ui,sans-serif" }}>
+              Your Recruits
+            </h2>
+            <div className="space-y-2.5">
+              {recruits.map((r, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-3 rounded-xl p-3 sm:p-4 transition-colors"
+                  style={{ background: "var(--s1)", border: "1px solid var(--b1)" }}
+                >
+                  <div className="relative shrink-0">
+                    <div
+                      className="flex items-center justify-center rounded-xl"
+                      style={{ width: 40, height: 40, background: "var(--s2)" }}
+                    >
+                      <User size={18} color="var(--txt2)" />
+                    </div>
+                    {r.online && (
+                      <div
+                        className="absolute"
+                        style={{ bottom: 0, right: 0, width: 9, height: 9, borderRadius: "50%", background: "#00E5A0", border: "1.5px solid var(--s1)" }}
+                      />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm text-white">{r.name}</div>
+                    <div className="text-xs mt-0.5" style={{ color: "var(--txt2)" }}>
+                      <span style={{ color: r.level === "Permanent" ? "#00E5A0" : "#FFB800" }}>{r.level}</span>
+                      {" · "}{r.joined}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="font-mono font-semibold text-xs sm:text-sm" style={{ color: "#00E5A0" }}>{r.earned}</div>
+                    <div
+                      className="text-center mt-1 rounded-full text-[10px] px-2 py-0.5"
+                      style={statusStyle(r.status)}
+                    >
+                      {r.status}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

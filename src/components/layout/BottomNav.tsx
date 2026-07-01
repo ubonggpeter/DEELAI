@@ -25,7 +25,7 @@ export default function BottomNav({
 }) {
   return (
     <div
-      className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] flex z-[100]"
+      className="md:hidden fixed bottom-0 left-0 right-0 flex z-[100]"
       style={{
         background: "rgba(6,10,18,.97)",
         backdropFilter: "blur(24px)",

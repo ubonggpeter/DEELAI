@@ -75,178 +75,163 @@ export default function TrainingScreen({ user, setUser }: Props) {
   }
 
   if (view === "cert") return (
-    <div style={{ padding: "26px 18px" }} className="animate-certIn">
-      <div
-        className="relative overflow-hidden text-center mb-5"
-        style={{
-          background: "linear-gradient(145deg,#0C1A32,#101E3A)",
-          border: "1px solid rgba(255,184,0,.35)",
-          borderRadius: 20,
-          padding: "28px 22px",
-        }}
-      >
+    <div className="animate-certIn min-h-screen" style={{ background: "var(--bg)" }}>
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <div
-          className="absolute pointer-events-none"
+          className="relative overflow-hidden text-center mb-5 rounded-2xl sm:rounded-3xl"
           style={{
-            top: -50, left: "50%", transform: "translateX(-50%)",
-            width: 200, height: 200,
-            background: "radial-gradient(circle,rgba(255,184,0,.15) 0%,transparent 70%)",
+            background: "linear-gradient(145deg,#0C1A32,#101E3A)",
+            border: "1px solid rgba(255,184,0,.35)",
+            padding: "28px 22px",
           }}
-        />
-        <Trophy size={44} color="#FFB800" className="mx-auto mb-3" />
-        <div style={{ fontSize: 10, color: "#FFB800", fontFamily: "monospace", letterSpacing: 2, marginBottom: 8 }}>
-          CERTIFICATE OF COMPLETION
-        </div>
-        <div
-          className="font-black"
-          style={{ fontFamily: "-apple-system-ui-serif,sans-serif", fontSize: 21, lineHeight: 1.3, marginBottom: 6 }}
         >
-          DEELAi Certified<br />Image Annotator
-        </div>
-        <div style={{ width: 60, height: 2, background: "linear-gradient(90deg,#FFB800,#FF8C00)", margin: "14px auto", borderRadius: 2 }} />
-        <div style={{ fontSize: 13, color: "var(--txt2)", marginBottom: 4 }}>This certifies that</div>
-        <div
-          className="font-bold"
-          style={{ fontFamily: "-apple-system-ui-serif,sans-serif", fontSize: 18, color: "#FFB800", marginBottom: 4 }}
-        >
-          {user.name}
-        </div>
-        <div style={{ fontSize: 12, color: "var(--txt2)", marginBottom: 16 }}>
-          has successfully completed the DEELAi Image Annotation Certification with a passing score.
-        </div>
-        <div
-          className="flex justify-between font-mono"
-          style={{ fontSize: 10, color: "var(--txt3)", borderTop: "1px solid var(--b2)", paddingTop: 14 }}
-        >
-          <span>CERT-{Date.now().toString().slice(-8)}</span>
-          <span>{new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }).toUpperCase()}</span>
-        </div>
-      </div>
-
-      <div
-        style={{
-          background: "linear-gradient(145deg,rgba(0,212,255,.07),rgba(0,212,255,.02))",
-          border: "1px solid rgba(0,212,255,.25)",
-          borderRadius: 20,
-          padding: "22px 18px",
-        }}
-      >
-        <div className="flex items-center gap-2.5 mb-3.5">
-          <Microscope size={30} color="var(--cyan)" />
-          <div>
-            <div className="font-black" style={{ fontFamily: "-apple-system-ui-serif,sans-serif", fontSize: 17 }}>
-              Activate Your Annotation Lens
-            </div>
-            <div style={{ fontSize: 12, color: "var(--txt2)", marginTop: 2 }}>One-time $3.80 · Required to go live</div>
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              top: -50, left: "50%", transform: "translateX(-50%)",
+              width: 200, height: 200,
+              background: "radial-gradient(circle,rgba(255,184,0,.15) 0%,transparent 70%)",
+            }}
+          />
+          <Trophy size={44} color="#FFB800" className="mx-auto mb-3" />
+          <div className="text-[10px] font-mono tracking-[2px] mb-2" style={{ color: "#FFB800", letterSpacing: 2 }}>
+            CERTIFICATE OF COMPLETION
+          </div>
+          <div className="font-black text-xl sm:text-2xl leading-snug mb-2 text-white" style={{ fontFamily: "system-ui,sans-serif" }}>
+            DEELAi Certified<br />Image Annotator
+          </div>
+          <div style={{ width: 60, height: 2, background: "linear-gradient(90deg,#FFB800,#FF8C00)", margin: "14px auto", borderRadius: 2 }} />
+          <div className="text-sm mb-1" style={{ color: "var(--txt2)" }}>This certifies that</div>
+          <div className="font-bold text-lg sm:text-xl mb-1" style={{ color: "#FFB800", fontFamily: "system-ui,sans-serif" }}>
+            {user.name}
+          </div>
+          <div className="text-sm mb-4" style={{ color: "var(--txt2)" }}>
+            has successfully completed the DEELAi Image Annotation Certification with a passing score.
+          </div>
+          <div
+            className="flex justify-between font-mono text-[10px]"
+            style={{ color: "var(--txt3)", borderTop: "1px solid var(--b2)", paddingTop: 14 }}
+          >
+            <span>CERT-{Date.now().toString().slice(-8)}</span>
+            <span>{new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }).toUpperCase()}</span>
           </div>
         </div>
-        <div style={{ fontSize: 13, color: "var(--txt2)", lineHeight: 1.7, marginBottom: 16 }}>
-          Your <strong style={{ color: "#fff" }}>Virtual Annotation Lens</strong> calibrates your visual precision to match AI model standards. Every certified annotator activates one before their first job.
-        </div>
-        <button
-          onClick={() => setView("lens")}
-          className="w-full flex items-center justify-center gap-2 font-bold"
+
+        <div
+          className="rounded-2xl p-5 sm:p-6"
           style={{
-            padding: "15px", borderRadius: 12, border: "none", cursor: "pointer",
-            background: "linear-gradient(135deg,#00D4FF,#0055DD)", color: "#fff",
-            fontFamily: "-apple-system-ui-serif,sans-serif", fontSize: 15,
-            boxShadow: "0 8px 28px rgba(0,212,255,.3)",
+            background: "linear-gradient(145deg,rgba(0,212,255,.07),rgba(0,212,255,.02))",
+            border: "1px solid rgba(0,212,255,.25)",
           }}
         >
-          <Microscope size={18} />
-          Activate Annotation Lens — $3.80
-          <ChevronRight size={16} />
-        </button>
-        <div className="text-center font-mono mt-2" style={{ fontSize: 11, color: "var(--txt3)" }}>
-          One-time · Non-refundable · Instant activation
+          <div className="flex items-center gap-3 mb-4">
+            <Microscope size={30} color="var(--cyan)" />
+            <div>
+              <div className="font-black text-base sm:text-lg text-white" style={{ fontFamily: "system-ui,sans-serif" }}>
+                Activate Your Annotation Lens
+              </div>
+              <div className="text-xs mt-0.5" style={{ color: "var(--txt2)" }}>One-time $3.80 · Required to go live</div>
+            </div>
+          </div>
+          <div className="text-sm leading-relaxed mb-5" style={{ color: "var(--txt2)" }}>
+            Your <strong className="text-white">Virtual Annotation Lens</strong> calibrates your visual precision to match AI model standards. Every certified annotator activates one before their first job.
+          </div>
+          <button
+            onClick={() => setView("lens")}
+            className="w-full flex items-center justify-center gap-2 font-bold text-white min-h-[52px] rounded-xl text-sm sm:text-base"
+            style={{
+              border: "none", cursor: "pointer",
+              background: "linear-gradient(135deg,#00D4FF,#0055DD)",
+              fontFamily: "system-ui,sans-serif",
+              boxShadow: "0 8px 28px rgba(0,212,255,.3)",
+            }}
+          >
+            <Microscope size={18} />
+            Activate Annotation Lens — $3.80
+            <ChevronRight size={16} />
+          </button>
+          <div className="text-center font-mono text-[10px] mt-2" style={{ color: "var(--txt3)" }}>
+            One-time · Non-refundable · Instant activation
+          </div>
         </div>
       </div>
     </div>
   );
 
   if (view === "lens") return (
-    <div style={{ padding: "26px 18px" }} className="animate-fadeUp">
-      <button
-        onClick={() => setView("cert")}
-        className="flex items-center gap-1 mb-[22px]"
-        style={{ background: "none", border: "none", color: "var(--txt2)", cursor: "pointer", fontSize: 13 }}
-      >
-        <ArrowLeft size={14} /> Back
-      </button>
-      <div className="text-center mb-7">
-        <div className="relative inline-block">
-          <div
-            className="flex items-center justify-center mx-auto animate-lensGlow"
-            style={{
-              width: 120, height: 120, borderRadius: "50%",
-              background: "linear-gradient(135deg,rgba(0,212,255,.15),rgba(0,85,221,.15))",
-              border: "2px solid rgba(0,212,255,.5)",
-            }}
-          >
-            <Microscope size={52} color="var(--cyan)" />
-          </div>
-          <div className="absolute animate-lensRipple" style={{ inset: -10, borderRadius: "50%", border: "1px solid rgba(0,212,255,.2)" }} />
-          <div className="absolute animate-lensRipple2" style={{ inset: -22, borderRadius: "50%", border: "1px solid rgba(0,212,255,.1)" }} />
-        </div>
-        <div
-          className="font-black mt-[18px]"
-          style={{ fontFamily: "-apple-system-ui-serif,sans-serif", fontSize: 22 }}
+    <div className="animate-fadeUp min-h-screen" style={{ background: "var(--bg)" }}>
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <button
+          onClick={() => setView("cert")}
+          className="flex items-center gap-1.5 mb-6 text-sm min-h-[44px]"
+          style={{ background: "none", border: "none", color: "var(--txt2)", cursor: "pointer" }}
         >
-          Virtual Annotation Lens
-        </div>
-        <div
-          className="font-black mt-3"
-          style={{ fontFamily: "-apple-system-ui-serif,sans-serif", fontSize: 40, color: "var(--cyan)" }}
-        >
-          $3.80
-        </div>
-        <div className="font-mono" style={{ fontSize: 10, color: "var(--txt3)" }}>ONE-TIME ACTIVATION FEE</div>
-      </div>
-
-      <div style={{ background: "var(--s1)", border: "1px solid var(--b2)", borderRadius: 16, padding: "18px", marginBottom: 18 }}>
-        {[
-          { Icon: Target, t: "Precision Targeting", d: "AI-calibrated grid overlay for exact bounding boxes" },
-          { Icon: Zap, t: "Priority Job Queue", d: "Faster batch delivery for Lens-activated workers" },
-          { Icon: Lock, t: "Permanent Access", d: "Pay once — your Lens is yours forever" },
-          { Icon: BarChart2, t: "Live Accuracy Dashboard", d: "Real-time quality feedback on every annotation" },
-        ].map(({ Icon, t, d }) => (
-          <div key={t} className="flex gap-3 items-start mb-3.5">
-            <Icon size={20} color="var(--cyan)" className="flex-shrink-0 mt-0.5" />
-            <div>
-              <div className="font-semibold" style={{ fontSize: 14 }}>{t}</div>
-              <div style={{ fontSize: 12, color: "var(--txt2)", marginTop: 2 }}>{d}</div>
+          <ArrowLeft size={14} /> Back
+        </button>
+        <div className="text-center mb-7">
+          <div className="relative inline-block">
+            <div
+              className="flex items-center justify-center mx-auto animate-lensGlow"
+              style={{
+                width: 120, height: 120, borderRadius: "50%",
+                background: "linear-gradient(135deg,rgba(0,212,255,.15),rgba(0,85,221,.15))",
+                border: "2px solid rgba(0,212,255,.5)",
+              }}
+            >
+              <Microscope size={52} color="var(--cyan)" />
             </div>
+            <div className="absolute animate-lensRipple" style={{ inset: -10, borderRadius: "50%", border: "1px solid rgba(0,212,255,.2)" }} />
+            <div className="absolute animate-lensRipple2" style={{ inset: -22, borderRadius: "50%", border: "1px solid rgba(0,212,255,.1)" }} />
           </div>
-        ))}
-      </div>
+          <div className="font-black mt-5 text-xl sm:text-2xl text-white" style={{ fontFamily: "system-ui,sans-serif" }}>
+            Virtual Annotation Lens
+          </div>
+          <div className="font-black mt-3 text-5xl sm:text-6xl" style={{ color: "var(--cyan)", fontFamily: "system-ui,sans-serif" }}>
+            $3.80
+          </div>
+          <div className="font-mono text-[10px] tracking-[2px]" style={{ color: "var(--txt3)" }}>ONE-TIME ACTIVATION FEE</div>
+        </div>
 
-      <div
-        className="flex justify-between items-center mb-4"
-        style={{ background: "var(--s1)", border: "1px solid var(--b2)", borderRadius: 12, padding: "12px 16px" }}
-      >
-        <span style={{ fontSize: 13, color: "var(--txt2)" }}>Deducted from wallet balance</span>
-        <span className="font-mono font-semibold" style={{ color: "#00E5A0", fontSize: 13 }}>${user.salary.toFixed(2)} available</span>
-      </div>
+        <div className="rounded-2xl p-4 sm:p-5 mb-4" style={{ background: "var(--s1)", border: "1px solid var(--b2)" }}>
+          {[
+            { Icon: Target, t: "Precision Targeting", d: "AI-calibrated grid overlay for exact bounding boxes" },
+            { Icon: Zap, t: "Priority Job Queue", d: "Faster batch delivery for Lens-activated workers" },
+            { Icon: Lock, t: "Permanent Access", d: "Pay once — your Lens is yours forever" },
+            { Icon: BarChart2, t: "Live Accuracy Dashboard", d: "Real-time quality feedback on every annotation" },
+          ].map(({ Icon, t, d }) => (
+            <div key={t} className="flex gap-3 items-start mb-4 last:mb-0">
+              <Icon size={20} color="var(--cyan)" className="shrink-0 mt-0.5" />
+              <div>
+                <div className="font-semibold text-sm text-white">{t}</div>
+                <div className="text-xs mt-0.5" style={{ color: "var(--txt2)" }}>{d}</div>
+              </div>
+            </div>
+          ))}
+        </div>
 
-      <button
-        onClick={activateLens}
-        disabled={paying}
-        className="w-full flex items-center justify-center gap-2.5 font-bold"
-        style={{
-          padding: "16px", borderRadius: 12, border: "none",
-          cursor: paying ? "not-allowed" : "pointer",
-          background: paying ? "var(--s3)" : "linear-gradient(135deg,#00D4FF,#0055DD)",
-          color: "#fff",
-          fontFamily: "-apple-system-ui-serif,sans-serif", fontSize: 16,
-          boxShadow: paying ? "none" : "0 8px 32px rgba(0,212,255,.3)",
-        }}
-      >
-        {paying ? (
-          <><Spinner /> Activating…</>
-        ) : (
-          <><Microscope size={18} /> Pay $3.80 & Activate <ChevronRight size={16} /></>
-        )}
-      </button>
+        <div
+          className="flex justify-between items-center mb-4 rounded-xl p-3 sm:p-4"
+          style={{ background: "var(--s1)", border: "1px solid var(--b2)" }}
+        >
+          <span className="text-sm" style={{ color: "var(--txt2)" }}>Deducted from wallet balance</span>
+          <span className="font-mono font-semibold text-sm" style={{ color: "#00E5A0" }}>${user.salary.toFixed(2)} available</span>
+        </div>
+
+        <button
+          onClick={activateLens}
+          disabled={paying}
+          className="w-full flex items-center justify-center gap-2.5 font-bold text-white min-h-[52px] rounded-xl text-base"
+          style={{
+            border: "none",
+            cursor: paying ? "not-allowed" : "pointer",
+            background: paying ? "var(--s3)" : "linear-gradient(135deg,#00D4FF,#0055DD)",
+            fontFamily: "system-ui,sans-serif",
+            boxShadow: paying ? "none" : "0 8px 32px rgba(0,212,255,.3)",
+          }}
+        >
+          {paying ? <><Spinner /> Activating…</> : <><Microscope size={18} /> Pay $3.80 & Activate <ChevronRight size={16} /></>}
+        </button>
+      </div>
     </div>
   );
 
@@ -254,74 +239,67 @@ export default function TrainingScreen({ user, setUser }: Props) {
     if (quizDone) {
       const score = answers.filter(a => a.sel === a.ans).length;
       return (
-        <div style={{ padding: "28px 18px", textAlign: "center" }} className="animate-fadeUp">
-          {score >= 5
-            ? <Trophy size={60} color="#FFB800" className="mx-auto" />
-            : <Frown size={60} color="#FF4D6D" className="mx-auto" />
-          }
-          <div
-            className="font-black mt-4"
-            style={{ fontFamily: "-apple-system-ui-serif,sans-serif", fontSize: 24, color: score >= 5 ? "#00E5A0" : "#FF4D6D" }}
-          >
-            {score >= 5 ? "You're Certified!" : "Not Quite"}
-          </div>
-          <div style={{ color: "var(--txt2)", fontSize: 14, marginTop: 8 }}>
-            Score: <strong style={{ color: "#fff" }}>{score}/{QUIZ.length}</strong> · Pass: 5/6
-          </div>
-          {score < 5 && (
-            <button
-              onClick={() => { setQi(0); setSel(null); setAnswers([]); setQuizDone(false); }}
-              style={{
-                marginTop: 24, padding: "14px 36px", borderRadius: 12, border: "none",
-                background: "var(--cyan)", color: "#000",
-                fontFamily: "-apple-system-ui-serif,sans-serif", fontWeight: 700, cursor: "pointer", fontSize: 15,
-              }}
+        <div className="animate-fadeUp min-h-screen" style={{ background: "var(--bg)" }}>
+          <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10 sm:py-14 text-center">
+            {score >= 5
+              ? <Trophy size={64} color="#FFB800" className="mx-auto" />
+              : <Frown size={64} color="#FF4D6D" className="mx-auto" />
+            }
+            <div
+              className="font-black mt-4 text-2xl sm:text-3xl"
+              style={{ color: score >= 5 ? "#00E5A0" : "#FF4D6D", fontFamily: "system-ui,sans-serif" }}
             >
-              Retake Quiz
-            </button>
-          )}
+              {score >= 5 ? "You're Certified!" : "Not Quite"}
+            </div>
+            <div className="text-sm mt-2" style={{ color: "var(--txt2)" }}>
+              Score: <strong className="text-white">{score}/{QUIZ.length}</strong> · Pass: 5/6
+            </div>
+            {score < 5 && (
+              <button
+                onClick={() => { setQi(0); setSel(null); setAnswers([]); setQuizDone(false); }}
+                className="mt-6 font-bold text-black min-h-[52px] px-10 rounded-xl"
+                style={{ background: "var(--cyan)", border: "none", cursor: "pointer", fontFamily: "system-ui,sans-serif", fontSize: 15 }}
+              >
+                Retake Quiz
+              </button>
+            )}
+          </div>
         </div>
       );
     }
     const q = QUIZ[qi];
     return (
-      <div style={{ padding: "24px 18px" }} className="animate-fadeUp">
-        <button
-          onClick={() => setView("list")}
-          className="flex items-center gap-1 mb-5"
-          style={{ background: "none", border: "none", color: "var(--txt2)", cursor: "pointer", fontSize: 13 }}
-        >
-          <ArrowLeft size={14} /> Back
-        </button>
-        <div className="font-mono" style={{ fontSize: 10, color: "var(--cyan)", letterSpacing: 1, marginBottom: 8 }}>
-          CERTIFICATION QUIZ · {qi + 1}/{QUIZ.length}
-        </div>
-        <Bar pct={(qi / QUIZ.length) * 100} color="var(--cyan)" h={3} />
-        <div
-          className="font-bold"
-          style={{ fontFamily: "-apple-system-ui-serif,sans-serif", fontSize: 18, lineHeight: 1.5, margin: "20px 0 22px" }}
-        >
-          {q.q}
-        </div>
-        {q.opts.map((o, i) => (
-          <div
-            key={i}
-            onClick={() => sel === null && handleAnswer(i)}
-            className="transition-all duration-200"
-            style={{
-              padding: "14px 16px",
-              borderRadius: 12,
-              marginBottom: 10,
-              cursor: sel === null ? "pointer" : "default",
-              border: `1px solid ${sel === i ? (i === q.ans ? "#00E5A0" : "#FF4D6D") : "var(--b2)"}`,
-              background: sel === i ? (i === q.ans ? "rgba(0,229,160,.1)" : "rgba(255,77,109,.1)") : "var(--s1)",
-              fontWeight: 500,
-              fontSize: 14,
-            }}
+      <div className="animate-fadeUp min-h-screen" style={{ background: "var(--bg)" }}>
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+          <button
+            onClick={() => setView("list")}
+            className="flex items-center gap-1.5 mb-5 text-sm min-h-[44px]"
+            style={{ background: "none", border: "none", color: "var(--txt2)", cursor: "pointer" }}
           >
-            {o}
+            <ArrowLeft size={14} /> Back
+          </button>
+          <div className="font-mono text-[10px] tracking-[1px] mb-2" style={{ color: "var(--cyan)" }}>
+            CERTIFICATION QUIZ · {qi + 1}/{QUIZ.length}
           </div>
-        ))}
+          <Bar pct={(qi / QUIZ.length) * 100} color="var(--cyan)" h={3} />
+          <div className="font-bold text-lg sm:text-xl leading-snug my-5 sm:my-6 text-white" style={{ fontFamily: "system-ui,sans-serif" }}>
+            {q.q}
+          </div>
+          {q.opts.map((o, i) => (
+            <div
+              key={i}
+              onClick={() => sel === null && handleAnswer(i)}
+              className="transition-all duration-200 rounded-xl mb-3 px-4 py-3.5 text-sm font-medium min-h-[52px] flex items-center"
+              style={{
+                cursor: sel === null ? "pointer" : "default",
+                border: `1px solid ${sel === i ? (i === q.ans ? "#00E5A0" : "#FF4D6D") : "var(--b2)"}`,
+                background: sel === i ? (i === q.ans ? "rgba(0,229,160,.1)" : "rgba(255,77,109,.1)") : "var(--s1)",
+              }}
+            >
+              {o}
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -330,209 +308,202 @@ export default function TrainingScreen({ user, setUser }: Props) {
     const m = MODULES.find(x => x.id === modId)!;
     const isDone = done.includes(m.id);
     return (
-      <div style={{ padding: "24px 18px" }} className="animate-fadeUp">
-        <button
-          onClick={() => setView("list")}
-          className="flex items-center gap-1 mb-5"
-          style={{ background: "none", border: "none", color: "var(--txt2)", cursor: "pointer", fontSize: 13 }}
-        >
-          <ArrowLeft size={14} /> Back
-        </button>
-        <div
-          className="flex items-center justify-center mb-2.5"
-          style={{
-            width: 52, height: 52, borderRadius: 14,
-            background: isDone ? "rgba(0,229,160,.1)" : "var(--s2)",
-            border: `1px solid ${isDone ? "rgba(0,229,160,.28)" : "var(--b1)"}`,
-            color: isDone ? "#00E5A0" : "var(--txt2)",
-          }}
-        >
-          {isDone ? <CheckCircle size={24} color="#00E5A0" /> : moduleIcons[m.id]}
-        </div>
-        <div
-          className="font-black mb-1.5"
-          style={{ fontFamily: "-apple-system-ui-serif,sans-serif", fontSize: 20 }}
-        >
-          {m.title}
-        </div>
-        <div style={{ fontSize: 13, color: "var(--txt2)", marginBottom: 14, lineHeight: 1.6 }}>{m.desc}</div>
-        <div className="flex gap-2 mb-[18px]">
-          <Chip label={`${m.lessons} lessons`} color="var(--cyan)" />
-          <Chip label={m.dur} color="#8B5CF6" />
-        </div>
-        <div style={{ background: "var(--s2)", borderRadius: 14, padding: "16px", marginBottom: 20 }}>
-          {m.topics.map((t, i) => (
-            <div
-              key={i}
-              className="flex gap-2.5 items-center py-2"
-              style={{ borderBottom: i < m.topics.length - 1 ? "1px solid var(--b1)" : "none" }}
-            >
-              {isDone
-                ? <Check size={12} color="#00E5A0" />
-                : <div style={{ width: 8, height: 8, borderRadius: "50%", border: "1px solid var(--txt3)", flexShrink: 0 }} />
-              }
-              <span style={{ fontSize: 13 }}>{t}</span>
-            </div>
-          ))}
-        </div>
-        {!isDone ? (
+      <div className="animate-fadeUp min-h-screen" style={{ background: "var(--bg)" }}>
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
           <button
-            onClick={() => completeModule(m.id)}
-            className="w-full flex items-center justify-center gap-2 font-bold"
+            onClick={() => setView("list")}
+            className="flex items-center gap-1.5 mb-5 text-sm min-h-[44px]"
+            style={{ background: "none", border: "none", color: "var(--txt2)", cursor: "pointer" }}
+          >
+            <ArrowLeft size={14} /> Back
+          </button>
+          <div
+            className="flex items-center justify-center mb-3 rounded-2xl"
             style={{
-              padding: "15px", borderRadius: 12, border: "none", cursor: "pointer",
-              background: "linear-gradient(135deg,#00D4FF,#0055DD)", color: "#fff",
-              fontFamily: "-apple-system-ui-serif,sans-serif", fontSize: 15,
+              width: 56, height: 56,
+              background: isDone ? "rgba(0,229,160,.1)" : "var(--s2)",
+              border: `1px solid ${isDone ? "rgba(0,229,160,.28)" : "var(--b1)"}`,
+              color: isDone ? "#00E5A0" : "var(--txt2)",
             }}
           >
-            Mark Complete <Check size={16} />
-          </button>
-        ) : (
-          <div
-            className="text-center font-semibold flex items-center justify-center gap-2"
-            style={{ color: "#00E5A0", padding: "14px", background: "rgba(0,229,160,.08)", borderRadius: 12, border: "1px solid rgba(0,229,160,.2)" }}
-          >
-            <CheckCircle size={16} /> Module Completed
+            {isDone ? <CheckCircle size={24} color="#00E5A0" /> : moduleIcons[m.id]}
           </div>
-        )}
+          <div className="font-black text-xl sm:text-2xl mb-1.5 text-white" style={{ fontFamily: "system-ui,sans-serif" }}>
+            {m.title}
+          </div>
+          <div className="text-sm leading-relaxed mb-4" style={{ color: "var(--txt2)" }}>{m.desc}</div>
+          <div className="flex gap-2 mb-5">
+            <Chip label={`${m.lessons} lessons`} color="var(--cyan)" />
+            <Chip label={m.dur} color="#8B5CF6" />
+          </div>
+          <div className="rounded-2xl p-4 mb-5" style={{ background: "var(--s2)" }}>
+            {m.topics.map((t, i) => (
+              <div
+                key={i}
+                className="flex gap-2.5 items-center py-2.5"
+                style={{ borderBottom: i < m.topics.length - 1 ? "1px solid var(--b1)" : "none" }}
+              >
+                {isDone
+                  ? <Check size={12} color="#00E5A0" />
+                  : <div className="shrink-0" style={{ width: 8, height: 8, borderRadius: "50%", border: "1px solid var(--txt3)" }} />
+                }
+                <span className="text-sm">{t}</span>
+              </div>
+            ))}
+          </div>
+          {!isDone ? (
+            <button
+              onClick={() => completeModule(m.id)}
+              className="w-full flex items-center justify-center gap-2 font-bold text-white min-h-[52px] rounded-xl text-base"
+              style={{
+                border: "none", cursor: "pointer",
+                background: "linear-gradient(135deg,#00D4FF,#0055DD)",
+                fontFamily: "system-ui,sans-serif",
+              }}
+            >
+              Mark Complete <Check size={16} />
+            </button>
+          ) : (
+            <div
+              className="text-center font-semibold flex items-center justify-center gap-2 min-h-[52px] rounded-xl text-sm"
+              style={{ color: "#00E5A0", background: "rgba(0,229,160,.08)", border: "1px solid rgba(0,229,160,.2)" }}
+            >
+              <CheckCircle size={16} /> Module Completed
+            </div>
+          )}
+        </div>
       </div>
     );
   }
 
   // list view
   return (
-    <div className="animate-fadeUp">
+    <div className="animate-fadeUp min-h-screen" style={{ background: "var(--bg)" }}>
+      {/* Header */}
       <div
+        className="relative"
         style={{
           background: "linear-gradient(145deg,#081428,#0C1E40)",
-          padding: "26px 18px 22px",
           borderRadius: "0 0 24px 24px",
           marginBottom: 20,
         }}
       >
-        <div
-          className="font-black mb-1"
-          style={{ fontFamily: "-apple-system-ui-serif,sans-serif", fontSize: 22 }}
-        >
-          Training Center
-        </div>
-        <div style={{ fontSize: 13, color: "var(--txt2)", marginBottom: 16 }}>Free · Mandatory · Self-paced · 6–7 hours</div>
-        <div className="flex justify-between mb-1.5">
-          <span className="font-mono" style={{ fontSize: 11, color: "var(--txt2)" }}>PROGRESS</span>
-          <span className="font-mono font-semibold" style={{ fontSize: 11, color: "var(--cyan)" }}>
-            {done.length}/{MODULES.length} Modules
-          </span>
-        </div>
-        <Bar pct={pct} color="var(--cyan)" />
-        {user.lensActivated && (
-          <div
-            className="flex items-center gap-2 mt-3"
-            style={{ background: "rgba(0,212,255,.08)", border: "1px solid rgba(0,212,255,.22)", borderRadius: 10, padding: "8px 12px" }}
-          >
-            <Microscope size={16} color="var(--cyan)" />
-            <span className="font-semibold" style={{ fontSize: 12, color: "var(--cyan)" }}>Annotation Lens Active · You are live!</span>
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-10 py-6 sm:py-8">
+          <div className="font-black text-2xl sm:text-3xl text-white mb-1" style={{ fontFamily: "system-ui,sans-serif" }}>
+            Training Center
           </div>
-        )}
+          <div className="text-sm mb-4" style={{ color: "var(--txt2)" }}>Free · Mandatory · Self-paced · 6–7 hours</div>
+          <div className="flex justify-between mb-1.5">
+            <span className="font-mono text-[11px]" style={{ color: "var(--txt2)" }}>PROGRESS</span>
+            <span className="font-mono font-semibold text-[11px]" style={{ color: "var(--cyan)" }}>{done.length}/{MODULES.length} Modules</span>
+          </div>
+          <Bar pct={pct} color="var(--cyan)" />
+          {user.lensActivated && (
+            <div
+              className="flex items-center gap-2 mt-3 rounded-xl px-3 py-2"
+              style={{ background: "rgba(0,212,255,.08)", border: "1px solid rgba(0,212,255,.22)" }}
+            >
+              <Microscope size={16} color="var(--cyan)" />
+              <span className="font-semibold text-xs" style={{ color: "var(--cyan)" }}>Annotation Lens Active · You are live!</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      <div style={{ padding: "0 18px" }}>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-10 pb-8">
+        {/* Warning banner */}
         <div
-          className="flex gap-2.5 items-start mb-[18px]"
-          style={{
-            background: "rgba(255,184,0,.08)", border: "1px solid rgba(255,184,0,.2)",
-            borderRadius: 12, padding: "12px 14px",
-          }}
+          className="flex gap-2.5 items-start mb-5 rounded-xl px-4 py-3"
+          style={{ background: "rgba(255,184,0,.08)", border: "1px solid rgba(255,184,0,.2)" }}
         >
-          <AlertTriangle size={18} color="#FFB800" className="flex-shrink-0 mt-0.5" />
+          <AlertTriangle size={18} color="#FFB800" className="shrink-0 mt-0.5" />
           <div>
-            <div className="font-semibold mb-0.5" style={{ fontSize: 13, color: "#FFB800" }}>Mandatory Before You Earn</div>
-            <div style={{ fontSize: 12, color: "var(--txt2)" }}>
+            <div className="font-semibold text-sm mb-0.5" style={{ color: "#FFB800" }}>Mandatory Before You Earn</div>
+            <div className="text-xs leading-relaxed" style={{ color: "var(--txt2)" }}>
               Training is 100% free. Complete all modules, pass the quiz, then activate your Annotation Lens ($3.80) to go live.
             </div>
           </div>
         </div>
 
-        {MODULES.map((m, i) => {
-          const isDone = done.includes(m.id);
-          const locked = i > 0 && !done.includes(MODULES[i - 1].id);
-          return (
-            <div
-              key={m.id}
-              onClick={() => !locked && (setModId(m.id), setView("module"))}
-              style={{
-                background: "var(--s1)",
-                border: `1px solid ${isDone ? "rgba(0,229,160,.28)" : "var(--b1)"}`,
-                borderRadius: 14, padding: "14px 16px", marginBottom: 8,
-                cursor: locked ? "not-allowed" : "pointer",
-                opacity: locked ? 0.4 : 1,
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="flex items-center justify-center flex-shrink-0"
-                  style={{
-                    width: 42, height: 42, borderRadius: 12,
-                    background: isDone ? "rgba(0,229,160,.1)" : "var(--s2)",
-                    border: `1px solid ${isDone ? "rgba(0,229,160,.28)" : "var(--b1)"}`,
-                    color: isDone ? "#00E5A0" : "var(--txt2)",
-                  }}
-                >
-                  {isDone ? <Check size={20} color="#00E5A0" /> : moduleIcons[m.id]}
-                </div>
-                <div className="flex-1">
-                  <div className="font-semibold" style={{ fontSize: 14 }}>{m.title}</div>
-                  <div className="font-mono" style={{ fontSize: 11, color: "var(--txt2)", marginTop: 2 }}>
-                    {m.lessons} lessons · {m.dur}
+        {/* Module list — single col on mobile, 2-col on lg */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-6">
+          {MODULES.map((m, i) => {
+            const isDone = done.includes(m.id);
+            const locked = i > 0 && !done.includes(MODULES[i - 1].id);
+            return (
+              <div
+                key={m.id}
+                onClick={() => !locked && (setModId(m.id), setView("module"))}
+                className="rounded-2xl px-4 py-3.5 transition-all"
+                style={{
+                  background: "var(--s1)",
+                  border: `1px solid ${isDone ? "rgba(0,229,160,.28)" : "var(--b1)"}`,
+                  cursor: locked ? "not-allowed" : "pointer",
+                  opacity: locked ? 0.4 : 1,
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="flex items-center justify-center shrink-0 rounded-xl"
+                    style={{
+                      width: 44, height: 44,
+                      background: isDone ? "rgba(0,229,160,.1)" : "var(--s2)",
+                      border: `1px solid ${isDone ? "rgba(0,229,160,.28)" : "var(--b1)"}`,
+                      color: isDone ? "#00E5A0" : "var(--txt2)",
+                    }}
+                  >
+                    {isDone ? <Check size={20} color="#00E5A0" /> : moduleIcons[m.id]}
                   </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm text-white">{m.title}</div>
+                    <div className="font-mono text-[11px] mt-0.5" style={{ color: "var(--txt2)" }}>
+                      {m.lessons} lessons · {m.dur}
+                    </div>
+                  </div>
+                  {isDone
+                    ? <span className="font-semibold text-xs shrink-0" style={{ color: "#00E5A0" }}>Done</span>
+                    : locked
+                      ? <Lock size={15} color="var(--txt3)" className="shrink-0" />
+                      : <ChevronRight size={14} color="var(--cyan)" className="shrink-0" />
+                  }
                 </div>
-                {isDone
-                  ? <span className="font-semibold" style={{ color: "#00E5A0", fontSize: 12 }}>Done</span>
-                  : locked
-                    ? <Lock size={15} color="var(--txt3)" />
-                    : <ChevronRight size={14} color="var(--cyan)" />
-                }
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
 
-        <div style={{ marginTop: 18, marginBottom: 30 }}>
-          <div
-            className="font-bold mb-2.5"
-            style={{ fontFamily: "-apple-system-ui-serif,sans-serif", fontSize: 15 }}
-          >
+        {/* Certification quiz */}
+        <div>
+          <div className="font-bold text-base text-white mb-3" style={{ fontFamily: "system-ui,sans-serif" }}>
             Certification Quiz
           </div>
           <div
+            className="rounded-2xl p-4 sm:p-5"
             style={{
               background: user.quizPassed ? "rgba(0,229,160,.07)" : "var(--s1)",
               border: `1px solid ${user.quizPassed ? "rgba(0,229,160,.28)" : "rgba(139,92,246,.28)"}`,
-              borderRadius: 14, padding: "16px",
             }}
           >
-            <div className="flex gap-3 items-center mb-3">
-              {user.quizPassed
-                ? <Trophy size={26} color="#FFB800" />
-                : <CheckCircle size={26} color="#8B5CF6" />
-              }
+            <div className="flex gap-3 items-center mb-4">
+              {user.quizPassed ? <Trophy size={28} color="#FFB800" /> : <CheckCircle size={28} color="#8B5CF6" />}
               <div>
-                <div className="font-semibold" style={{ fontSize: 14 }}>DEELAi Annotator Certification</div>
-                <div style={{ fontSize: 12, color: "var(--txt2)" }}>6 questions · Pass: 5/6 · Free retakes</div>
+                <div className="font-semibold text-sm text-white">DEELAi Annotator Certification</div>
+                <div className="text-xs mt-0.5" style={{ color: "var(--txt2)" }}>6 questions · Pass: 5/6 · Free retakes</div>
               </div>
             </div>
             {user.quizPassed ? (
               <>
-                <div className="font-semibold mb-2.5" style={{ fontSize: 12, color: "#00E5A0" }}>
-                  ✓ Certified — {user.lensActivated ? "Lens active · You are live!" : "Activate your Lens to go live →"}
+                <div className="font-semibold text-xs mb-3" style={{ color: "#00E5A0" }}>
+                  Certified — {user.lensActivated ? "Lens active · You are live!" : "Activate your Lens to go live →"}
                 </div>
                 {!user.lensActivated && (
                   <button
                     onClick={() => setView("cert")}
-                    className="w-full flex items-center justify-center gap-2 font-bold"
+                    className="w-full flex items-center justify-center gap-2 font-bold text-white min-h-[48px] rounded-xl text-sm"
                     style={{
-                      padding: "12px", borderRadius: 10, border: "none", cursor: "pointer",
-                      background: "linear-gradient(135deg,#00D4FF,#0055DD)", color: "#fff",
-                      fontFamily: "-apple-system-ui-serif,sans-serif", fontSize: 14,
+                      border: "none", cursor: "pointer",
+                      background: "linear-gradient(135deg,#00D4FF,#0055DD)",
+                      fontFamily: "system-ui,sans-serif",
                     }}
                   >
                     <Microscope size={16} /> View Certificate & Activate <ChevronRight size={14} />
@@ -543,12 +514,11 @@ export default function TrainingScreen({ user, setUser }: Props) {
               <button
                 disabled={!allDone}
                 onClick={() => { setQi(0); setSel(null); setAnswers([]); setQuizDone(false); setView("quiz"); }}
-                className="w-full font-bold"
+                className="w-full font-bold text-white min-h-[48px] rounded-xl text-sm"
                 style={{
-                  padding: "13px", borderRadius: 10, border: "none",
+                  border: "none",
                   background: allDone ? "linear-gradient(135deg,#8B5CF6,#6D28D9)" : "var(--s3)",
-                  color: "#fff",
-                  fontFamily: "-apple-system-ui-serif,sans-serif", fontSize: 14,
+                  fontFamily: "system-ui,sans-serif",
                   cursor: allDone ? "pointer" : "not-allowed",
                   opacity: allDone ? 1 : 0.5,
                 }}

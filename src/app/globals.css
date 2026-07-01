@@ -31,12 +31,18 @@ html, body {
   height: 100%;
   background: var(--bg);
   -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
 }
 
 body {
   color: var(--txt);
   font-family: -apple-system, 'SF Pro Text', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Ensure content areas scroll, not the whole page */
+#__next, main {
+  height: 100%;
 }
 
 input, button {
