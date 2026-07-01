@@ -7,6 +7,8 @@ import {
   ChevronDown, CheckCircle2, XCircle, Clock, AlertCircle,
   Trash2, Edit2, Plus, X, Save, RefreshCw, Menu, UserCheck,
   TrendingUp, DollarSign, CheckSquare, BarChart3,
+  Radio, Key, Link, Copy, ExternalLink, ToggleLeft, ToggleRight,
+  CircleDot, Coins,
 } from "lucide-react";
 import { ALL_PERMISSIONS, PERMISSION_LABELS, ADMIN_REGIONS, type Permission } from "@/lib/adminConfig";
 
@@ -22,6 +24,20 @@ interface Stats {
   totalJobs: number; approvedJobs: number; pendingJobs: number; rejectedJobs: number;
   totalSalaryPaid: number; pendingPayouts: number;
   totalReferrals: number; activeReferrals: number; totalSubAdmins: number;
+  totalChannels: number; pendingRegistrations: number;
+}
+interface Channel {
+  id: string; ownerEmail: string; channelName: string; estTime: string;
+  paystackPublicKey: string; paystackSecretKey: string;
+  referralCommissionRate: number; jobPassFee: number;
+  isActive: boolean; balance: number; createdAt: string;
+}
+interface Registration {
+  id: string; name: string; email: string;
+  permitType: "full-time" | "part-time";
+  accountStatus: "pending" | "approved" | "rejected";
+  cvUrl?: string; jobPassPaid: boolean; jobPassAmount: number;
+  channelId: string; registeredAt?: string;
 }
 interface AdminUser {
   id: string; email: string; name: string; level: string; salary: number;
@@ -60,15 +76,16 @@ const C = {
 };
 
 /* ─── Tabs ───────────────────────────────────────────────────────── */
-type TabId = "overview"|"users"|"jobs"|"payments"|"referrals"|"settings"|"subadmins";
-const ALL_TABS: { id: TabId; label: string; icon: React.ElementType; perm?: Permission }[] = [
-  { id: "overview",   label: "Overview",    icon: LayoutDashboard },
-  { id: "users",      label: "Users",       icon: Users,           perm: "manage_users" },
-  { id: "jobs",       label: "Jobs",        icon: Briefcase,       perm: "manage_jobs" },
-  { id: "payments",   label: "Payments",    icon: CreditCard,      perm: "manage_payments" },
-  { id: "referrals",  label: "Referrals",   icon: Network,         perm: "manage_referrals" },
-  { id: "settings",   label: "Settings",    icon: Settings },
-  { id: "subadmins",  label: "Sub-Admins",  icon: ShieldCheck },
+type TabId = "overview"|"users"|"jobs"|"payments"|"referrals"|"settings"|"subadmins"|"channels";
+const ALL_TABS: { id: TabId; label: string; icon: React.ElementType; perm?: Permission; superOnly?: boolean }[] = [
+  { id: "overview",   label: "Overview",         icon: LayoutDashboard },
+  { id: "users",      label: "Users",            icon: Users,           perm: "manage_users" },
+  { id: "jobs",       label: "Jobs",             icon: Briefcase,       perm: "manage_jobs" },
+  { id: "payments",   label: "Payments",         icon: CreditCard,      perm: "manage_payments" },
+  { id: "referrals",  label: "Referrals",        icon: Network,         perm: "manage_referrals" },
+  { id: "channels",   label: "Channel Settings", icon: Radio },
+  { id: "settings",   label: "Settings",         icon: Settings },
+  { id: "subadmins",  label: "Sub-Admins",       icon: ShieldCheck,     superOnly: true },
 ];
 
 /* ═══════════════════════════════════════════════════════════════════ */
@@ -93,7 +110,8 @@ export default function AdminDashboard() {
   const canSeeTab = useCallback((t: typeof ALL_TABS[0]) => {
     if (!adminInfo) return false;
     if (adminInfo.isSuperAdmin) return true;
-    if (!t.perm) return t.id !== "subadmins"; // sub-admins tab = super admin only
+    if (t.superOnly) return false;                        // super-admin-only tabs
+    if (!t.perm) return true;                             // no perm = all admins
     return adminInfo.permissions.includes(t.perm);
   }, [adminInfo]);
 
@@ -264,6 +282,7 @@ export default function AdminDashboard() {
           {tab === "jobs"      && <JobsTab />}
           {tab === "payments"  && <PaymentsTab />}
           {tab === "referrals" && <ReferralsTab />}
+          {tab === "channels"  && <ChannelSettingsTab adminInfo={adminInfo} />}
           {tab === "settings"  && <SettingsTab isSuperAdmin={adminInfo.isSuperAdmin} />}
           {tab === "subadmins" && adminInfo.isSuperAdmin && <SubAdminsTab />}
         </div>
@@ -303,11 +322,12 @@ function OverviewTab() {
   if (!stats) return <ErrorMsg msg="Failed to load stats" />;
 
   const cards = [
-    { label:"Total Users",     value: stats.totalUsers,                    icon: Users,        color: C.cyan,   sub: `${stats.activeUsers} active` },
-    { label:"Jobs Processed",  value: stats.totalJobs,                     icon: CheckSquare,  color: C.green,  sub: `${stats.pendingJobs} pending` },
-    { label:"Total Paid Out",  value: `$${stats.totalSalaryPaid.toLocaleString()}`, icon: DollarSign, color: C.gold, sub: `$${stats.pendingPayouts.toLocaleString()} pending` },
-    { label:"Active Recruits", value: stats.activeReferrals,               icon: Network,      color: C.purple, sub: `${stats.totalReferrals} total` },
-    { label:"Permanent Staff", value: stats.permanentStaff,                icon: UserCheck,    color: C.cyan,   sub: `${stats.suspendedUsers} suspended` },
+    { label:"Total Users",          value: stats.totalUsers,                    icon: Users,        color: C.cyan,   sub: `${stats.activeUsers} active` },
+    { label:"Jobs Processed",       value: stats.totalJobs,                     icon: CheckSquare,  color: C.green,  sub: `${stats.pendingJobs} pending` },
+    { label:"Total Paid Out",       value: `$${stats.totalSalaryPaid.toLocaleString()}`, icon: DollarSign, color: C.gold, sub: `$${stats.pendingPayouts.toLocaleString()} pending` },
+    { label:"Active Recruits",      value: stats.activeReferrals,               icon: Network,      color: C.purple, sub: `${stats.totalReferrals} total` },
+    { label:"Active Channels",      value: stats.totalChannels,                 icon: Radio,        color: C.cyan,   sub: `${stats.pendingRegistrations} pending reg.` },
+    { label:"Permanent Staff",      value: stats.permanentStaff,                icon: UserCheck,    color: C.cyan,   sub: `${stats.suspendedUsers} suspended` },
     { label:"Approved Jobs",   value: stats.approvedJobs,                  icon: TrendingUp,   color: C.green,  sub: `${stats.rejectedJobs} rejected` },
     { label:"Pending Payouts", value: `$${stats.pendingPayouts.toLocaleString()}`, icon: CreditCard, color: C.gold, sub: "awaiting release" },
     { label:"Sub-Admins",      value: stats.totalSubAdmins,                icon: ShieldCheck,  color: C.purple, sub: "active admins" },
@@ -1208,6 +1228,394 @@ function PayStatusPill({ status }: { status: string }) {
       background:`${c}15`, color: c,
     }}>
       {status.toUpperCase()}
+    </span>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════ */
+/* CHANNEL SETTINGS TAB                                                */
+/* ═══════════════════════════════════════════════════════════════════ */
+function ChannelSettingsTab({ adminInfo }: { adminInfo: AdminInfo }) {
+  const [channel, setChannel]   = useState<Channel | null>(null);
+  const [loading, setLoading]   = useState(true);
+  const [form, setForm]         = useState<Partial<Channel>>({});
+  const [saving, setSaving]     = useState(false);
+  const [saved, setSaved]       = useState(false);
+  const [saveErr, setSaveErr]   = useState("");
+  const [showSecret, setShowSecret] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  // Registrations
+  const [regs, setRegs]         = useState<Registration[]>([]);
+  const [regsLoading, setRegsLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<"" | "pending" | "approved" | "rejected">("");
+  const [actioning, setActioning] = useState<string | null>(null);
+
+  const loadChannel = useCallback(async () => {
+    setLoading(true);
+    const res = await fetch("/api/admin/channels");
+    const data = await res.json();
+    const ch: Channel | null = adminInfo.isSuperAdmin
+      ? (data.channels?.[0] ?? null)
+      : (data.channel ?? null);
+    setChannel(ch);
+    if (ch) setForm(ch);
+    setLoading(false);
+  }, [adminInfo.isSuperAdmin]);
+
+  const loadRegs = useCallback(async () => {
+    setRegsLoading(true);
+    const p = statusFilter ? `?status=${statusFilter}` : "";
+    const res = await fetch(`/api/admin/channels/registrations${p}`);
+    const data = await res.json();
+    setRegs(data.registrations ?? []);
+    setRegsLoading(false);
+  }, [statusFilter]);
+
+  useEffect(() => { loadChannel(); }, [loadChannel]);
+  useEffect(() => { if (channel) loadRegs(); }, [channel, loadRegs, statusFilter]);
+
+  async function saveChannel() {
+    setSaveErr(""); setSaving(true);
+    let res: Response;
+    if (channel) {
+      res = await fetch("/api/admin/channels", {
+        method:"PATCH", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ channelId: channel.id, ...form }),
+      });
+    } else {
+      res = await fetch("/api/admin/channels", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify(form),
+      });
+    }
+    const data = await res.json();
+    setSaving(false);
+    if (!res.ok) { setSaveErr(data.error ?? "Save failed"); return; }
+    setChannel(data.channel);
+    setForm(data.channel);
+    setSaved(true); setTimeout(() => setSaved(false), 2500);
+  }
+
+  async function reviewReg(userId: string, action: "approve" | "reject") {
+    setActioning(userId);
+    await fetch("/api/admin/channels/registrations", {
+      method:"PATCH", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ userId, action }),
+    });
+    await loadRegs();
+    setActioning(null);
+  }
+
+  function copyLink() {
+    if (!channel) return;
+    navigator.clipboard.writeText(`${window.location.origin}/channel/${channel.id}`);
+    setCopiedLink(true); setTimeout(() => setCopiedLink(false), 2000);
+  }
+
+  function f(key: keyof Channel) {
+    return (e: React.ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, [key]: e.target.value }));
+  }
+
+  const fieldStyle: React.CSSProperties = {
+    width:"100%", background:C.s2, border:`1px solid ${C.s3}`, borderRadius:8,
+    padding:"9px 11px", color:C.txt, fontSize:"13px", outline:"none",
+  };
+
+  if (loading) return <Spinner />;
+
+  return (
+    <div style={{ animation:"fadeUp 0.3s ease" }}>
+      <SectionTitle
+        title="Channel Settings"
+        sub={adminInfo.isSuperAdmin
+          ? `${adminInfo.email} — super admin view`
+          : channel ? `Channel ${channel.channelName} · ${channel.id}` : "Set up your channel to accept registrations"}
+      />
+
+      {/* ── Channel config card ─────────────────────────────────────── */}
+      <div style={{
+        background:C.s1, border:`1px solid ${C.s3}`, borderRadius:12, padding:20, marginBottom:20,
+      }}>
+        <h3 style={{ color:C.txt, fontSize:"14px", fontWeight:700, marginBottom:16, display:"flex", alignItems:"center", gap:8 }}>
+          <Radio size={14} color={C.cyan} /> Channel Configuration
+        </h3>
+
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))", gap:12 }}>
+          {/* Channel name */}
+          <div>
+            <label style={labelStyle}>Channel Name</label>
+            <input
+              value={form.channelName ?? ""} onChange={f("channelName")}
+              placeholder="A, B, C or custom" style={fieldStyle}
+            />
+          </div>
+          {/* Est time */}
+          <div>
+            <label style={labelStyle}>Est. Processing Time</label>
+            <input
+              value={form.estTime ?? ""} onChange={f("estTime")}
+              placeholder="e.g. 2 min" style={fieldStyle}
+            />
+          </div>
+          {/* Job pass fee */}
+          <div>
+            <label style={labelStyle}>Registration Fee (₦)</label>
+            <input
+              type="number" min="0" value={form.jobPassFee ?? ""} onChange={f("jobPassFee")}
+              placeholder="0" style={fieldStyle}
+            />
+          </div>
+          {/* Commission rate */}
+          <div>
+            <label style={labelStyle}>Commission Rate (%)</label>
+            <input
+              type="number" min="0" max="100" value={form.referralCommissionRate ?? ""} onChange={f("referralCommissionRate")}
+              placeholder="10" style={fieldStyle}
+            />
+          </div>
+        </div>
+
+        {/* Paystack keys */}
+        <div style={{ marginTop:14 }}>
+          <h4 style={{ color:C.txt2, fontSize:"12px", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:10, display:"flex", alignItems:"center", gap:6 }}>
+            <Key size={12} color={C.gold} /> Paystack Integration
+          </h4>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+            <div>
+              <label style={labelStyle}>Public Key</label>
+              <input
+                value={form.paystackPublicKey ?? ""} onChange={f("paystackPublicKey")}
+                placeholder="pk_live_…" style={fieldStyle}
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>
+                Secret Key
+                <button
+                  type="button" onClick={() => setShowSecret((p) => !p)}
+                  style={{ marginLeft:6, background:"none", border:"none", cursor:"pointer", color:C.txt3, fontSize:"10px" }}
+                >
+                  {showSecret ? "hide" : "show"}
+                </button>
+              </label>
+              <input
+                type={showSecret ? "text" : "password"}
+                value={form.paystackSecretKey ?? ""} onChange={f("paystackSecretKey")}
+                placeholder="sk_live_…" style={fieldStyle}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Active toggle */}
+        <div style={{ display:"flex", alignItems:"center", gap:10, marginTop:14 }}>
+          <button
+            type="button"
+            onClick={() => setForm((p) => ({ ...p, isActive: !p.isActive }))}
+            style={{ background:"none", border:"none", cursor:"pointer", padding:0, display:"flex", alignItems:"center", gap:6 }}
+          >
+            {form.isActive
+              ? <ToggleRight size={28} color={C.green} />
+              : <ToggleLeft  size={28} color={C.txt3} />
+            }
+            <span style={{ color: form.isActive ? C.green : C.txt3, fontSize:"13px", fontWeight:600 }}>
+              {form.isActive ? "Channel Active — accepting registrations" : "Channel Inactive — registrations paused"}
+            </span>
+          </button>
+        </div>
+
+        {saveErr && (
+          <div style={{ display:"flex", gap:6, background:`${C.red}11`, border:`1px solid ${C.red}33`, borderRadius:7, padding:"8px 10px", marginTop:12 }}>
+            <AlertCircle size={13} color={C.red} style={{ flexShrink:0 }} />
+            <span style={{ color:C.red, fontSize:"12px" }}>{saveErr}</span>
+          </div>
+        )}
+
+        <div style={{ display:"flex", alignItems:"center", gap:10, marginTop:16, flexWrap:"wrap" }}>
+          <button
+            onClick={saveChannel} disabled={saving || saved}
+            style={{
+              background: saved ? C.green : C.cyan, color:"#060A12",
+              border:"none", borderRadius:8, padding:"9px 18px",
+              fontWeight:700, fontSize:"13px", cursor:"pointer",
+              display:"flex", alignItems:"center", gap:6,
+            }}
+          >
+            {saving ? <><Loader2 size={13} style={{ animation:"spin 1s linear infinite" }} /> Saving…</> :
+             saved  ? <><CheckCircle2 size={13} /> Saved!</> :
+                      <><Save size={13} /> {channel ? "Update Channel" : "Create Channel"}</>}
+          </button>
+
+          {channel && (
+            <button
+              onClick={copyLink}
+              style={{
+                background: copiedLink ? `${C.green}15` : C.s3,
+                color: copiedLink ? C.green : C.txt2,
+                border:`1px solid ${copiedLink ? C.green+"40" : C.s3}`,
+                borderRadius:8, padding:"9px 14px",
+                fontSize:"13px", cursor:"pointer",
+                display:"flex", alignItems:"center", gap:6,
+              }}
+            >
+              {copiedLink ? <><CheckCircle2 size={13} /> Copied!</> : <><Copy size={13} /> Copy Reg. Link</>}
+            </button>
+          )}
+
+          {channel && (
+            <a
+              href={`/channel/${channel.id}`} target="_blank" rel="noopener noreferrer"
+              style={{
+                background:"transparent", color:C.txt2, border:`1px solid ${C.s3}`,
+                borderRadius:8, padding:"9px 14px", fontSize:"13px", textDecoration:"none",
+                display:"inline-flex", alignItems:"center", gap:6,
+              }}
+            >
+              <ExternalLink size={13} /> Preview Page
+            </a>
+          )}
+        </div>
+      </div>
+
+      {/* ── Balance card ────────────────────────────────────────────── */}
+      {channel && (
+        <div style={{
+          background:`${C.gold}08`, border:`1px solid ${C.gold}25`,
+          borderRadius:12, padding:"14px 18px", marginBottom:20,
+          display:"flex", alignItems:"center", gap:12,
+        }}>
+          <Coins size={20} color={C.gold} />
+          <div>
+            <div style={{ color:C.txt3, fontSize:"11px", fontWeight:600, textTransform:"uppercase", letterSpacing:"0.06em" }}>
+              Commission Earnings
+            </div>
+            <div style={{ color:C.gold, fontSize:"22px", fontWeight:700 }}>
+              ₦{channel.balance.toLocaleString(undefined, { minimumFractionDigits:2 })}
+            </div>
+          </div>
+          <div style={{ marginLeft:"auto", color:C.txt3, fontSize:"12px" }}>
+            {channel.referralCommissionRate}% of each ₦{Number(channel.jobPassFee ?? 0).toLocaleString()} fee
+          </div>
+        </div>
+      )}
+
+      {/* ── Registrations table ─────────────────────────────────────── */}
+      {channel && (
+        <div style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:12, padding:20 }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14, flexWrap:"wrap", gap:8 }}>
+            <h3 style={{ color:C.txt, fontSize:"14px", fontWeight:700, margin:0, display:"flex", alignItems:"center", gap:8 }}>
+              <Users size={14} color={C.cyan} /> Channel Registrations
+              {regs.length > 0 && (
+                <span style={{ background:C.s3, borderRadius:10, padding:"2px 7px", fontSize:"11px", color:C.txt2 }}>
+                  {regs.length}
+                </span>
+              )}
+            </h3>
+            <div style={{ display:"flex", gap:6 }}>
+              <Select
+                value={statusFilter}
+                onChange={(v) => setStatusFilter(v as "" | "pending" | "approved" | "rejected")}
+                options={[
+                  { v:"",         l:"All Status" },
+                  { v:"pending",  l:"Pending"    },
+                  { v:"approved", l:"Approved"   },
+                  { v:"rejected", l:"Rejected"   },
+                ]}
+              />
+              <RefreshBtn onClick={loadRegs} />
+            </div>
+          </div>
+
+          {regsLoading ? <Spinner /> : regs.length === 0 ? (
+            <EmptyState msg={statusFilter ? `No ${statusFilter} registrations` : "No registrations yet. Share your registration link to get started."} />
+          ) : (
+            <div style={{ overflowX:"auto" }}>
+              <table style={{ width:"100%", borderCollapse:"collapse", fontSize:"13px" }}>
+                <thead>
+                  <tr style={{ borderBottom:`1px solid ${C.s3}` }}>
+                    {["Name","Email","Permit","Fee Paid","Status","Registered","Actions"].map((h) => (
+                      <th key={h} style={{ color:C.txt3, fontWeight:600, fontSize:"11px", textAlign:"left", padding:"6px 8px", whiteSpace:"nowrap" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {regs.map((r) => (
+                    <tr key={r.id} style={{ borderBottom:`1px solid ${C.s3}22` }}>
+                      <td style={{ padding:"8px 8px", color:C.txt, fontWeight:500 }}>{r.name}</td>
+                      <td style={{ padding:"8px 8px", color:C.txt2 }}>{r.email}</td>
+                      <td style={{ padding:"8px 8px" }}>
+                        <span style={{
+                          fontSize:"10px", fontWeight:700, padding:"2px 6px", borderRadius:4,
+                          background: r.permitType==="full-time" ? `${C.cyan}15` : `${C.purple}15`,
+                          color: r.permitType==="full-time" ? C.cyan : C.purple,
+                          textTransform:"capitalize",
+                        }}>
+                          {r.permitType}
+                        </span>
+                      </td>
+                      <td style={{ padding:"8px 8px" }}>
+                        {r.jobPassPaid
+                          ? <span style={{ color:C.green, fontSize:"12px", fontWeight:600 }}>₦{r.jobPassAmount.toLocaleString()} ✓</span>
+                          : <span style={{ color:C.txt3, fontSize:"12px" }}>Not paid</span>
+                        }
+                      </td>
+                      <td style={{ padding:"8px 8px" }}>
+                        <RegStatusPill status={r.accountStatus} />
+                      </td>
+                      <td style={{ padding:"8px 8px", color:C.txt3, fontSize:"11px" }}>
+                        {r.registeredAt ? new Date(r.registeredAt).toLocaleDateString() : "—"}
+                      </td>
+                      <td style={{ padding:"8px 8px" }}>
+                        {r.accountStatus === "pending" && (
+                          <div style={{ display:"flex", gap:4 }}>
+                            <ActionBtn
+                              label="Approve" color={C.green}
+                              disabled={actioning===r.id}
+                              onClick={() => reviewReg(r.id, "approve")}
+                            />
+                            <ActionBtn
+                              label="Reject"  color={C.red}
+                              disabled={actioning===r.id}
+                              onClick={() => reviewReg(r.id, "reject")}
+                            />
+                          </div>
+                        )}
+                        {r.accountStatus !== "pending" && (
+                          <span style={{ color:C.txt3, fontSize:"11px" }}>—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const labelStyle: React.CSSProperties = {
+  display:"block", color:"#7D8BAA", fontSize:"10px", fontWeight:700,
+  textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:5,
+};
+
+function RegStatusPill({ status }: { status: string }) {
+  const map = {
+    pending:  { color: C.gold,  icon: Clock },
+    approved: { color: C.green, icon: CheckCircle2 },
+    rejected: { color: C.red,   icon: XCircle },
+  } as const;
+  const { color, icon: Icon } = map[status as keyof typeof map] ?? { color: C.txt3, icon: CircleDot };
+  return (
+    <span style={{
+      fontSize:"10px", fontWeight:700, padding:"2px 7px", borderRadius:4,
+      background:`${color}15`, color,
+      display:"inline-flex", alignItems:"center", gap:3,
+    }}>
+      <Icon size={9} /> {status.toUpperCase()}
     </span>
   );
 }
