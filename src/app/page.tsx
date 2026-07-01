@@ -1,10 +1,7 @@
-"use client";
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import {
-  ArrowRight, Clock, Users, Shield, Star, Zap,
-  CheckCircle2, Loader2, ChevronRight, Globe2, MapPin,
-} from "lucide-react";
+// Server component — no "use client". Static HTML rendered on the server,
+// only ChannelList (the interactive channel grid) ships client-side JS.
+import { ArrowRight, Shield, Zap, Star, Users } from "lucide-react";
+import ChannelList from "@/components/ChannelList";
 
 const C = {
   bg: "#060A12", s1: "#0C1220", s2: "#101829", s3: "#162035",
@@ -12,22 +9,11 @@ const C = {
   txt: "#EEF2FF", txt2: "#7D8BAA", txt3: "#4A5470",
 };
 
-interface Channel {
-  id: string;
-  channelName: string;
-  description: string;
-  estTime: string;
-  jobPassFee: number;
-  region: string;
-}
-
-const CHANNEL_COLORS = ["#00D4FF", "#00E5A0", "#FFB800", "#8B5CF6", "#FF4D6D"];
-
 const PERKS = [
-  { icon: Zap,    label: "Daily Payouts",      desc: "Get paid every day you work"        },
-  { icon: Shield, label: "Secure Platform",    desc: "Bank-grade data security"           },
-  { icon: Star,   label: "Skill Certificates", desc: "Earn certificates as you progress"  },
-  { icon: Users,  label: "Global Community",   desc: "Join thousands of remote workers"   },
+  { icon: Zap,    label: "Daily Payouts",      desc: "Get paid every day you work"       },
+  { icon: Shield, label: "Secure Platform",    desc: "Bank-grade data security"          },
+  { icon: Star,   label: "Skill Certificates", desc: "Earn certificates as you progress" },
+  { icon: Users,  label: "Global Community",   desc: "Join thousands of remote workers"  },
 ];
 
 const STATS = [
@@ -37,64 +23,11 @@ const STATS = [
   { value: "24 hrs", label: "Max Review Time" },
 ];
 
-// Map sub-admin region strings → display continent
-const REGION_TO_CONTINENT: Record<string, string> = {
-  "West Africa":    "Africa",    "East Africa":   "Africa",
-  "South Africa":   "Africa",    "North Africa":  "Africa",    "Central Africa": "Africa",
-  "North America":  "Americas",  "South America": "Americas",
-  "Latin America":  "Americas",  "Central America": "Americas",
-  "Europe":         "Europe",    "Western Europe": "Europe",
-  "Eastern Europe": "Europe",    "Southern Europe": "Europe",
-  "Asia":           "Asia Pacific", "South East Asia": "Asia Pacific",
-  "South Asia":     "Asia Pacific", "East Asia":       "Asia Pacific",
-  "Oceania":        "Asia Pacific", "Pacific":         "Asia Pacific",
-  "Middle East":    "Middle East",  "MENA":            "Middle East",
-};
-
-const CONTINENT_ORDER = ["Africa", "Americas", "Europe", "Asia Pacific", "Middle East", "Global"];
-
-const CONTINENT_COLOR: Record<string, string> = {
-  "Africa":       "#00E5A0",
-  "Americas":     "#00D4FF",
-  "Europe":       "#8B5CF6",
-  "Asia Pacific": "#FFB800",
-  "Middle East":  "#FF4D6D",
-  "Global":       "#7D8BAA",
-};
-
 export default function LandingPage() {
-  const router     = useRouter();
-  const [channels, setChannels] = useState<Channel[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [selected, setSelected] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch("/api/channels")
-      .then((r) => r.json())
-      .then((d) => setChannels(d.channels ?? []))
-      .finally(() => setLoading(false));
-  }, []);
-
-  function selectChannel(id: string) {
-    setSelected(id);
-    router.push(`/register?channel=${id}`);
-  }
-
-  // Group channels continent → [channels]
-  const grouped: Record<string, Channel[]> = {};
-  for (const ch of channels) {
-    const continent = REGION_TO_CONTINENT[ch.region] ?? ch.region ?? "Global";
-    (grouped[continent] ??= []).push(ch);
-  }
-  const visibleContinents = [
-    ...CONTINENT_ORDER.filter((c) => grouped[c]),
-    ...Object.keys(grouped).filter((c) => !CONTINENT_ORDER.includes(c)),
-  ];
-
   return (
     <div style={{ minHeight: "100vh", background: C.bg, color: C.txt }}>
 
-      {/* ── Nav ─────────────────────────────────────────────────────── */}
+      {/* ── Nav ──────────────────────────────────────────────────────── */}
       <nav style={{
         position: "sticky", top: 0, zIndex: 50,
         background: `${C.bg}e8`, backdropFilter: "blur(12px)",
@@ -169,7 +102,7 @@ export default function LandingPage() {
           }}>I have an account</a>
         </div>
 
-        {/* Stats — CSS grid handles responsive */}
+        {/* Stats */}
         <div className="lp-stats">
           {STATS.map((s, i) => (
             <div key={i} className={`lp-stat${i < STATS.length - 1 ? " lp-stat-divider" : ""}`}>
@@ -201,7 +134,7 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* ── Channel selection — continent → agent rows ────────────────── */}
+      {/* ── Channel selection ─────────────────────────────────────────── */}
       <div id="channels" style={{ maxWidth: 1100, margin: "0 auto", padding: "56px 16px" }}>
         <div style={{ textAlign: "center", marginBottom: 40 }}>
           <h2 style={{ fontSize: "clamp(22px, 5vw, 38px)", fontWeight: 800, margin: "0 0 10px" }}>
@@ -211,132 +144,7 @@ export default function LandingPage() {
             Channels are managed by regional agents. Find your region and click Join to register.
           </p>
         </div>
-
-        {loading ? (
-          <div style={{ textAlign: "center", padding: "40px 0" }}>
-            <Loader2 size={30} color={C.cyan} className="spin-icon" />
-          </div>
-        ) : channels.length === 0 ? (
-          <div style={{ textAlign: "center", color: C.txt3, padding: "40px 0" }}>
-            No channels are currently open for registration. Check back soon.
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 36 }}>
-            {visibleContinents.map((continent) => {
-              const cColor = CONTINENT_COLOR[continent] ?? C.txt2;
-              const agents = grouped[continent];
-              return (
-                <div key={continent}>
-                  {/* ── Continent header ── */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                    <div style={{
-                      width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-                      background: `${cColor}18`, border: `1px solid ${cColor}35`,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                    }}>
-                      <Globe2 size={13} color={cColor} />
-                    </div>
-                    <span style={{ color: C.txt, fontSize: 15, fontWeight: 800, whiteSpace: "nowrap" }}>
-                      {continent}
-                    </span>
-                    <span style={{
-                      fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 10, flexShrink: 0,
-                      background: `${cColor}14`, border: `1px solid ${cColor}30`, color: cColor,
-                    }}>
-                      {agents.length} agent{agents.length !== 1 ? "s" : ""}
-                    </span>
-                    <div style={{ flex: 1, height: 1, background: C.s3 }} />
-                  </div>
-
-                  {/* ── Agent rows ── */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {agents.map((ch, idx) => {
-                      const color = CHANNEL_COLORS[(CONTINENT_ORDER.indexOf(continent) * 3 + idx) % CHANNEL_COLORS.length];
-                      const isSel = selected === ch.id;
-                      return (
-                        <div
-                          key={ch.id}
-                          onClick={() => selectChannel(ch.id)}
-                          className="agent-row"
-                          style={{
-                            background: isSel ? `${color}0c` : C.s1,
-                            border: `1.5px solid ${isSel ? color : C.s3}`,
-                            borderRadius: 12, padding: "14px 14px",
-                            cursor: "pointer", display: "flex", alignItems: "center", gap: 12,
-                          }}
-                        >
-                          {/* Avatar */}
-                          <div style={{
-                            width: 42, height: 42, borderRadius: 10, flexShrink: 0,
-                            background: `${color}18`, border: `1.5px solid ${color}40`,
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            fontSize: 18, fontWeight: 900, color, fontFamily: "system-ui",
-                            overflow: "hidden",
-                          }}>
-                            {ch.channelName.charAt(0).toUpperCase()}
-                          </div>
-
-                          {/* Info */}
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", marginBottom: 6 }}>
-                              <span style={{ color: C.txt, fontWeight: 700, fontSize: 14, whiteSpace: "nowrap" }}>
-                                Channel {ch.channelName}
-                              </span>
-                              <span style={{
-                                display: "inline-flex", alignItems: "center", gap: 4, flexShrink: 0,
-                                fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 10,
-                                background: `${C.green}12`, border: `1px solid ${C.green}30`, color: C.green,
-                              }}>
-                                <span style={{ width: 4, height: 4, borderRadius: "50%", background: C.green, display: "inline-block" }} />
-                                OPEN
-                              </span>
-                              <span style={{ color: C.txt3, fontSize: 11, display: "inline-flex", alignItems: "center", gap: 3 }}>
-                                <MapPin size={9} color={C.txt3} style={{ flexShrink: 0 }} />
-                                {ch.region}
-                              </span>
-                            </div>
-                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                              <span style={{
-                                fontSize: 11, fontWeight: 600, padding: "2px 7px", borderRadius: 4,
-                                background: `${C.gold}12`, border: `1px solid ${C.gold}28`, color: C.gold,
-                                display: "inline-flex", alignItems: "center", gap: 3, whiteSpace: "nowrap",
-                              }}>
-                                <Clock size={9} /> {ch.estTime} review
-                              </span>
-                              {ch.jobPassFee > 0 && (
-                                <span style={{
-                                  fontSize: 11, fontWeight: 600, padding: "2px 7px", borderRadius: 4,
-                                  background: `${color}12`, border: `1px solid ${color}28`, color,
-                                  whiteSpace: "nowrap",
-                                }}>
-                                  ₦{ch.jobPassFee.toLocaleString()} fee
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Join button */}
-                          <button className="agent-join-btn" style={{
-                            background: isSel ? color : `${color}18`,
-                            border: `1.5px solid ${color}50`, borderRadius: 8,
-                            color: isSel ? "#060A12" : color,
-                            fontWeight: 700, fontSize: 13, cursor: "pointer",
-                            display: "inline-flex", alignItems: "center", gap: 5, flexShrink: 0,
-                            padding: "8px 14px", whiteSpace: "nowrap",
-                          }}>
-                            {isSel
-                              ? <><CheckCircle2 size={13} /> Joined</>
-                              : <>Join <ChevronRight size={13} /></>}
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <ChannelList />
       </div>
 
       {/* ── How it works ─────────────────────────────────────────────── */}
@@ -347,10 +155,10 @@ export default function LandingPage() {
           </h2>
           <div className="lp-steps">
             {[
-              { step: "01", title: "Pick a Channel",  desc: "Find a regional agent channel that matches your schedule and goals." },
-              { step: "02", title: "Register",         desc: "Fill in your details, get your job pass, and upload your CV." },
-              { step: "03", title: "Get Approved",     desc: "Channel admin reviews and approves your account within 24 hrs." },
-              { step: "04", title: "Start Earning",    desc: "Log in, complete annotation tasks, and get paid daily." },
+              { step: "01", title: "Pick a Channel", desc: "Find a regional agent channel that matches your schedule and goals." },
+              { step: "02", title: "Register",        desc: "Fill in your details, get your job pass, and upload your CV." },
+              { step: "03", title: "Get Approved",    desc: "Channel admin reviews and approves your account within 24 hrs." },
+              { step: "04", title: "Start Earning",   desc: "Log in, complete annotation tasks, and get paid daily." },
             ].map(({ step, title, desc }) => (
               <div key={step} style={{ textAlign: "center" }}>
                 <div style={{
@@ -380,11 +188,8 @@ export default function LandingPage() {
       <style>{`
         *, *::before, *::after { box-sizing: border-box; }
         html { scroll-behavior: smooth; }
-        /* body only — do NOT set overflow-x:hidden on html or iOS kills vertical scroll */
         body { overflow-x: hidden; }
 
-        @keyframes spin-anim { to { transform: rotate(360deg); } }
-        .spin-icon { animation: spin-anim 1s linear infinite; }
         .pulse-dot { animation: pulse 2s infinite; }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
@@ -410,14 +215,12 @@ export default function LandingPage() {
         .lp-steps { display: grid; grid-template-columns: repeat(2,1fr); gap: 24px; }
         @media (min-width:640px) { .lp-steps { grid-template-columns: repeat(4,1fr); } }
 
-        /* Nav hide sign-in on very narrow */
+        /* Nav */
         @media (max-width:340px) { .nav-signin { display: none; } }
 
-        /* Agent row hover */
+        /* Agent row hover (also set in globals.css) */
         .agent-row { transition: border-color 0.15s, background 0.15s; }
-        .agent-row:hover { border-color: ${C.cyan}60 !important; }
-
-        /* Hide join button text label on very narrow, show icon only */
+        .agent-row:hover { border-color: #00D4FF60 !important; }
         @media (max-width:380px) { .agent-join-btn { padding: 8px 10px; } }
       `}</style>
     </div>

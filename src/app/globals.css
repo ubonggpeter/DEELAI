@@ -31,7 +31,6 @@ html, body {
   height: 100%;
   background: var(--bg);
   -webkit-tap-highlight-color: transparent;
-  overflow: hidden;
 }
 
 body {
