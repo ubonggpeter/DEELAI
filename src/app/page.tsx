@@ -143,7 +143,7 @@ export default function LandingPage() {
         </div>
 
         {/* Stats */}
-        <div className="lp-stats" style={{ marginTop: 48, borderTop: `1px solid ${C.s3}`, paddingTop: 32 }}>
+        <div className="lp-stats">
           {STATS.map((s, i) => (
             <div key={i} className={`lp-stat${i < STATS.length - 1 ? " lp-stat-divider" : ""}`}>
               <div style={{ color: C.cyan, fontSize: "clamp(18px, 4vw, 26px)", fontWeight: 800 }}>{s.value}</div>
@@ -222,8 +222,9 @@ export default function LandingPage() {
                       background: `${color}18`, border: `1.5px solid ${color}40`,
                       display: "flex", alignItems: "center", justifyContent: "center",
                       fontSize: 20, fontWeight: 900, color, fontFamily: "system-ui", flexShrink: 0,
+                      overflow: "hidden",
                     }}>
-                      {ch.channelName}
+                      {ch.channelName.charAt(0).toUpperCase()}
                     </div>
                     <div style={{
                       display: "flex", alignItems: "center", gap: 5,
@@ -319,8 +320,9 @@ export default function LandingPage() {
       </div>
 
       <style>{`
-        * { box-sizing: border-box; }
+        *, *::before, *::after { box-sizing: border-box; }
         html { scroll-behavior: smooth; }
+        html, body { overflow-x: hidden; }
         @keyframes spin-anim { to { transform: rotate(360deg); } }
         .spin-icon { animation: spin-anim 1s linear infinite; }
         .pulse-dot { animation: pulse 2s infinite; }
@@ -340,8 +342,9 @@ export default function LandingPage() {
           .lp-stat:nth-child(1), .lp-stat:nth-child(2) { border-bottom: 1px solid ${C.s3}; padding-bottom: 14px; }
         }
 
-        /* Perks grid */
-        .lp-perks { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        /* Perks grid: 1 col mobile → 2 col 480px → 4 col 768px */
+        .lp-perks { display: grid; grid-template-columns: 1fr; gap: 14px; }
+        @media (min-width:480px) { .lp-perks { grid-template-columns: 1fr 1fr; gap: 16px; } }
         @media (min-width:768px) { .lp-perks { grid-template-columns: repeat(4,1fr); gap: 20px; } }
 
         /* Channel cards grid: 1 col mobile → 2 col tablet → 3 col desktop */

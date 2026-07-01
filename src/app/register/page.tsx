@@ -212,10 +212,12 @@ function PageShell({ step, channelName, children }: { step: number; channelName:
       </div>
 
       <style>{`
-        * { box-sizing: border-box; }
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body { overflow-x: hidden; }
         @keyframes spin-anim { to { transform: rotate(360deg); } }
         .spin-icon { animation: spin-anim 1s linear infinite; }
-        input:focus { outline: none; }
+        /* 16px prevents iOS Safari from auto-zooming on input focus */
+        input, textarea, select { font-size: 16px !important; outline: none; }
 
         /* Stepper — compact on mobile, full on wider */
         .reg-stepper { display: flex; align-items: center; gap: 3px; overflow: hidden; }

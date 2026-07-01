@@ -77,7 +77,7 @@ export default function VerifyPage() {
         </p>
         <a href="mailto:support@deelai.uk" style={{ color:C.cyan, fontSize:13, textDecoration:"none" }}>Contact Support</a>
       </div>
-      <style>{`*{box-sizing:border-box}`}</style>
+      <style>{`*,*::before,*::after{box-sizing:border-box} html,body{overflow-x:hidden}`}</style>
     </div>
   );
 
@@ -119,7 +119,7 @@ export default function VerifyPage() {
             </a>
           </div>
         </div>
-        <style>{`*{box-sizing:border-box}`}</style>
+        <style>{`*,*::before,*::after{box-sizing:border-box} html,body{overflow-x:hidden}`}</style>
       </div>
     );
   }
@@ -210,10 +210,13 @@ function PageShell({ step, channelName, children }: { step: number; channelName:
         <div style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:14, padding:"22px 18px" }}>{children}</div>
       </div>
       <style>{`
-        * { box-sizing: border-box; }
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body { overflow-x: hidden; }
         @keyframes spin-anim { to { transform: rotate(360deg); } }
         .spin-icon { animation: spin-anim 1s linear infinite; }
-        .reg-stepper { display: flex; align-items: center; gap: 3px; }
+        /* 16px prevents iOS Safari auto-zoom on input focus */
+        input, textarea, select { font-size: 16px !important; outline: none; }
+        .reg-stepper { display: flex; align-items: center; gap: 3px; overflow: hidden; }
         .reg-step-item { display: flex; align-items: center; gap: 5px; min-width: 0; }
         .reg-step-label { display: none; }
         .reg-step-sep { width: 12px; height: 1px; background: ${C.s3}; flex-shrink: 0; }
