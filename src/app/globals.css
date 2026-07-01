@@ -1,0 +1,122 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #060A12;
+  --s1: #0C1220;
+  --s2: #101829;
+  --s3: #162035;
+  --b1: rgba(255,255,255,.06);
+  --b2: rgba(255,255,255,.11);
+  --cyan: #00D4FF;
+  --cyan-d: rgba(0,212,255,.12);
+  --green: #00E5A0;
+  --green-d: rgba(0,229,160,.12);
+  --gold: #FFB800;
+  --red: #FF4D6D;
+  --purple: #8B5CF6;
+  --txt: #EEF2FF;
+  --txt2: #7D8BAA;
+  --txt3: #4A5470;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  color: var(--txt);
+  font-family: -apple-system, 'SF Pro Text', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+input, button {
+  font-family: inherit;
+  -webkit-appearance: none;
+  outline: none;
+}
+
+input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}
+
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-thumb { background: var(--s3); border-radius: 3px; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes liveBlip {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+@keyframes lensGlow {
+  0%, 100% { box-shadow: 0 0 24px rgba(0,212,255,.4); }
+  50% { box-shadow: 0 0 48px rgba(0,212,255,.7); }
+}
+@keyframes lensRipple {
+  0% { transform: scale(1); opacity: .5; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+@keyframes certIn {
+  from { opacity: 0; transform: scale(.88); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes streak {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+@keyframes boardPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .5; }
+}
+@keyframes liveBlipAnim {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+@keyframes tickerSlide {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes rowFade {
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-fadeUp { animation: fadeUp .4s ease; }
+.animate-fadeIn { animation: fadeIn .4s ease; }
+.animate-certIn { animation: certIn .55s ease; }
+.animate-slideRight { animation: slideRight .3s ease; }
+.animate-lensGlow { animation: lensGlow 2.5s ease-in-out infinite; }
+.animate-lensRipple { animation: lensRipple 2s ease-out infinite; }
+.animate-lensRipple2 { animation: lensRipple 2s ease-out infinite .7s; }
+.animate-streak { animation: streak 1.5s ease-in-out infinite; }
+.animate-boardPulse { animation: boardPulse 1.2s ease-in-out infinite; }
+.animate-liveBlip { animation: liveBlipAnim 1.2s ease-in-out infinite; }
+.animate-spin-custom { animation: spin .8s linear infinite; }
+.animate-tickerSlide { animation: tickerSlide .4s ease; }
+.animate-rowFade { animation: rowFade .3s ease both; }
+
+.agent-row:hover { background: rgba(255,255,255,.04) !important; }
