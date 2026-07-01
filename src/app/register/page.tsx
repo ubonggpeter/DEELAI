@@ -22,7 +22,6 @@ function RegisterPageInner() {
 
   const [channel, setChannel]   = useState<ChannelInfo | null>(null);
   const [chError, setChError]   = useState("");
-
   const [name,     setName]     = useState("");
   const [email,    setEmail]    = useState("");
   const [phone,    setPhone]    = useState("");
@@ -47,7 +46,6 @@ function RegisterPageInner() {
     if (password.length < 6)  { setError("Password must be at least 6 characters"); return; }
     if (!terms) { setError("Please accept the terms and conditions"); return; }
     setError(""); setLoading(true);
-
     try {
       const res  = await fetch("/api/auth/register", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -75,10 +73,9 @@ function RegisterPageInner() {
   return (
     <PageShell step={1} channelName={channel?.channelName ?? "…"}>
       <h2 style={{ color:C.txt, fontSize:20, fontWeight:700, margin:"0 0 4px" }}>Personal Details</h2>
-      <p style={{ color:C.txt2, fontSize:13, margin:"0 0 24px" }}>Create your DEELAI account</p>
+      <p style={{ color:C.txt2, fontSize:13, margin:"0 0 22px" }}>Create your DEELAI account</p>
 
       <form onSubmit={handleSubmit} style={{ display:"flex", flexDirection:"column", gap:14 }}>
-        {/* Full name */}
         <Field label="Full Name" required>
           <div style={wrap}>
             <User size={15} color={C.txt3} style={{ position:"absolute", left:11, top:"50%", transform:"translateY(-50%)" }} />
@@ -86,7 +83,6 @@ function RegisterPageInner() {
           </div>
         </Field>
 
-        {/* Email */}
         <Field label="Email Address" required>
           <div style={wrap}>
             <Mail size={15} color={C.txt3} style={{ position:"absolute", left:11, top:"50%", transform:"translateY(-50%)" }} />
@@ -94,7 +90,6 @@ function RegisterPageInner() {
           </div>
         </Field>
 
-        {/* Phone */}
         <Field label="Phone Number" required>
           <div style={wrap}>
             <Phone size={15} color={C.txt3} style={{ position:"absolute", left:11, top:"50%", transform:"translateY(-50%)" }} />
@@ -102,8 +97,8 @@ function RegisterPageInner() {
           </div>
         </Field>
 
-        {/* Password */}
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+        {/* Password — 2-col on tablet+, 1-col on mobile */}
+        <div className="pw-grid">
           <Field label="Password" required>
             <div style={wrap}>
               <Lock size={15} color={C.txt3} style={{ position:"absolute", left:11, top:"50%", transform:"translateY(-50%)" }} />
@@ -131,7 +126,7 @@ function RegisterPageInner() {
           </div>
           <span style={{ color:C.txt2, fontSize:13, lineHeight:1.5 }}>
             I accept the{" "}
-            <a href="#" style={{ color:C.cyan, textDecoration:"none" }}>Terms & Conditions</a>
+            <a href="#" style={{ color:C.cyan, textDecoration:"none" }}>Terms &amp; Conditions</a>
             {" "}and{" "}
             <a href="#" style={{ color:C.cyan, textDecoration:"none" }}>Privacy Policy</a>
           </span>
@@ -150,7 +145,7 @@ function RegisterPageInner() {
           padding:"12px", fontSize:15, fontWeight:800, cursor: loading ? "not-allowed" : "pointer",
           display:"flex", alignItems:"center", justifyContent:"center", gap:8, marginTop:4,
         }}>
-          {loading ? <><Loader2 size={16} style={{ animation:"spin 1s linear infinite" }} /> Creating account…</> : "Continue to Job Pass →"}
+          {loading ? <><Loader2 size={16} className="spin-icon" /> Creating account…</> : "Continue to Job Pass →"}
         </button>
       </form>
 
@@ -173,45 +168,69 @@ function Field({ label, required, children }: { label: string; required?: boolea
   );
 }
 
+const STEPS = ["Personal Details", "Job Pass", "Verify Account"];
+
 function PageShell({ step, channelName, children }: { step: number; channelName: string; children: React.ReactNode }) {
-  const steps = ["Personal Details","Job Pass","Verify Account"];
   return (
-    <div style={{ minHeight:"100vh", background:C.bg, padding:"24px 16px" }}>
-      {/* Brand */}
-      <div style={{ maxWidth:520, margin:"0 auto 24px", display:"flex", alignItems:"center", gap:9 }}>
+    <div style={{ minHeight:"100vh", background:C.bg, padding:"20px 14px" }}>
+      <div style={{ maxWidth:520, margin:"0 auto 20px", display:"flex", alignItems:"center", gap:9 }}>
         <a href="/" style={{ textDecoration:"none", display:"flex", alignItems:"center", gap:9 }}>
-          <div style={{ width:32, height:32, borderRadius:8, background:"linear-gradient(135deg,#00D4FF,#0055DD)", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:900, color:"#fff", fontSize:14, fontFamily:"system-ui" }}>D</div>
-          <span style={{ fontWeight:900, fontSize:18, color:"#fff", fontFamily:"system-ui" }}>DEEL<span style={{ color:C.cyan }}>Ai</span></span>
+          <div style={{ width:30, height:30, borderRadius:8, background:"linear-gradient(135deg,#00D4FF,#0055DD)", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:900, color:"#fff", fontSize:13, fontFamily:"system-ui", flexShrink:0 }}>D</div>
+          <span style={{ fontWeight:900, fontSize:17, color:C.txt, fontFamily:"system-ui" }}>DEEL<span style={{ color:C.cyan }}>Ai</span></span>
         </a>
       </div>
 
       <div style={{ maxWidth:520, margin:"0 auto" }}>
-        {/* Progress */}
-        <div style={{ marginBottom:24 }}>
-          <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-            {steps.map((s, i) => (
-              <div key={s} style={{ display:"flex", alignItems:"center", gap:5 }}>
-                <div style={{ width:22, height:22, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, background: i+1<step ? C.green : i+1===step ? C.cyan : C.s3, color: i+1<=step ? "#060A12" : C.txt3 }}>
-                  {i+1 < step ? "✓" : i+1}
-                </div>
-                <span style={{ color: i+1===step ? C.txt : C.txt3, fontSize:12, fontWeight: i+1===step ? 600 : 400 }}>{s}</span>
-                {i < 2 && <div style={{ width:24, height:1, background:C.s3, marginLeft:4 }} />}
+        {/* Stepper */}
+        <div className="reg-stepper" style={{ marginBottom:20 }}>
+          {STEPS.map((s, i) => (
+            <div key={s} className="reg-step-item">
+              <div style={{
+                width:24, height:24, borderRadius:"50%", flexShrink:0,
+                display:"flex", alignItems:"center", justifyContent:"center",
+                fontSize:11, fontWeight:700,
+                background: i+1<step ? C.green : i+1===step ? C.cyan : C.s3,
+                color: i+1<=step ? "#060A12" : C.txt3,
+              }}>
+                {i+1 < step ? "✓" : i+1}
               </div>
-            ))}
-          </div>
+              <span className="reg-step-label" style={{ color: i+1===step ? C.txt : C.txt3, fontSize:12, fontWeight: i+1===step ? 600 : 400, whiteSpace:"nowrap" }}>{s}</span>
+              {i < 2 && <div className="reg-step-sep" />}
+            </div>
+          ))}
         </div>
 
         {/* Channel badge */}
-        <div style={{ display:"flex", alignItems:"center", gap:8, background:`${C.cyan}10`, border:`1px solid ${C.cyan}25`, borderRadius:8, padding:"8px 12px", marginBottom:20 }}>
-          <Shield size={14} color={C.cyan} />
-          <span style={{ color:C.txt2, fontSize:12 }}>Registering under <strong style={{ color:C.cyan }}>Channel {channelName}</strong></span>
+        <div style={{ display:"flex", alignItems:"center", gap:8, background:`${C.cyan}10`, border:`1px solid ${C.cyan}25`, borderRadius:8, padding:"8px 12px", marginBottom:18 }}>
+          <Shield size={13} color={C.cyan} style={{ flexShrink:0 }} />
+          <span style={{ color:C.txt2, fontSize:12, wordBreak:"break-all" }}>Registering under <strong style={{ color:C.cyan }}>Channel {channelName}</strong></span>
         </div>
 
-        <div style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:14, padding:"24px 22px" }}>
+        <div style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:14, padding:"22px 18px" }}>
           {children}
         </div>
       </div>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}} *{box-sizing:border-box} input:focus{outline:none}`}</style>
+
+      <style>{`
+        * { box-sizing: border-box; }
+        @keyframes spin-anim { to { transform: rotate(360deg); } }
+        .spin-icon { animation: spin-anim 1s linear infinite; }
+        input:focus { outline: none; }
+
+        /* Stepper — compact on mobile, full on wider */
+        .reg-stepper { display: flex; align-items: center; gap: 3px; overflow: hidden; }
+        .reg-step-item { display: flex; align-items: center; gap: 5px; min-width: 0; }
+        .reg-step-label { display: none; }
+        .reg-step-sep { width: 12px; height: 1px; background: ${C.s3}; flex-shrink: 0; }
+        @media (min-width: 400px) {
+          .reg-step-label { display: inline; overflow: hidden; text-overflow: ellipsis; }
+          .reg-step-sep { flex: 1; min-width: 8px; max-width: 32px; }
+        }
+
+        /* Password grid — 1 col on mobile, 2 col on wider */
+        .pw-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+        @media (min-width: 440px) { .pw-grid { grid-template-columns: 1fr 1fr; } }
+      `}</style>
     </div>
   );
 }

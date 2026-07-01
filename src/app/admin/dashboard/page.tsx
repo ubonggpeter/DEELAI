@@ -133,7 +133,7 @@ export default function AdminDashboard() {
   const visibleTabs = ALL_TABS.filter(canSeeTab);
 
   return (
-    <div style={{ display:"flex", height:"100vh", background:C.bg, overflow:"hidden" }}>
+    <div style={{ display:"flex", minHeight:"100vh", background:C.bg, overflow:"hidden" }}>
       {/* ── Sidebar ────────────────────────────────────────────────── */}
       <>
         {/* Mobile overlay */}
@@ -249,7 +249,7 @@ export default function AdminDashboard() {
       </>
 
       {/* ── Main content ───────────────────────────────────────────── */}
-      <main style={{ flex:1, overflow:"auto", display:"flex", flexDirection:"column" }}>
+      <main className="admin-main" style={{ flex:1, overflow:"auto", display:"flex", flexDirection:"column" }}>
         {/* Top bar */}
         <div style={{
           background:C.s1, borderBottom:`1px solid ${C.s3}`,
@@ -276,7 +276,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Tab content */}
-        <div style={{ flex:1, padding:"20px", maxWidth:"1400px", width:"100%", margin:"0 auto" }}>
+        <div className="admin-tab-content" style={{ flex:1, padding:"20px", maxWidth:"1400px", width:"100%", margin:"0 auto" }}>
           {tab === "overview"  && <OverviewTab />}
           {tab === "users"     && <UsersTab />}
           {tab === "jobs"      && <JobsTab />}
@@ -293,15 +293,33 @@ export default function AdminDashboard() {
         @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
         .admin-sidebar { box-shadow: 4px 0 24px #000a; }
         @media (min-width: 768px) {
-          .admin-sidebar { transform: translateX(0) !important; position: relative !important; }
+          /* Keep sidebar fixed, offset main with margin */
+          .admin-sidebar { transform: translateX(0) !important; }
           .md-hidden { display: none !important; }
-          main { margin-left: 240px; }
+          .admin-main { margin-left: 240px; }
         }
         button:focus-visible { outline: 2px solid #00D4FF55; }
         * { box-sizing: border-box; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #162035; border-radius: 4px; }
+
+        /* Responsive 2-col grids collapse to 1-col on mobile */
+        .admin-2col { display: grid; grid-template-columns: 1fr; gap: 10px; }
+        .admin-perm-grid { display: grid; grid-template-columns: 1fr; gap: 6px; }
+        @media (min-width: 480px) {
+          .admin-2col { grid-template-columns: 1fr 1fr; }
+          .admin-perm-grid { grid-template-columns: 1fr 1fr; }
+        }
+
+        /* Overflow-x scroll wrapper for tables */
+        .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .table-scroll table { min-width: 500px; }
+
+        /* Tab content padding on small screens */
+        @media (max-width: 480px) {
+          .admin-tab-content { padding: 14px !important; }
+        }
       `}</style>
     </div>
   );
@@ -444,7 +462,7 @@ function UsersTab() {
       </div>
 
       {loading ? <Spinner /> : (
-        <div style={{ overflowX:"auto" }}>
+        <div className="table-scroll">
           <table style={{ width:"100%", borderCollapse:"collapse", fontSize:"13px" }}>
             <thead>
               <tr style={{ borderBottom:`1px solid ${C.s3}` }}>
@@ -543,7 +561,7 @@ function JobsTab() {
         <RefreshBtn onClick={load} />
       </div>
       {loading ? <Spinner /> : (
-        <div style={{ overflowX:"auto" }}>
+        <div className="table-scroll">
           <table style={{ width:"100%", borderCollapse:"collapse", fontSize:"13px" }}>
             <thead>
               <tr style={{ borderBottom:`1px solid ${C.s3}` }}>
@@ -627,7 +645,7 @@ function PaymentsTab() {
         <RefreshBtn onClick={load} />
       </div>
       {loading ? <Spinner /> : (
-        <div style={{ overflowX:"auto" }}>
+        <div className="table-scroll">
           <table style={{ width:"100%", borderCollapse:"collapse", fontSize:"13px" }}>
             <thead>
               <tr style={{ borderBottom:`1px solid ${C.s3}` }}>
@@ -680,7 +698,7 @@ function ReferralsTab() {
     <div style={{ animation:"fadeUp 0.3s ease" }}>
       <SectionTitle title="Referral Network" sub={`${refs.length} referrals · $${totalBonus} in bonuses`} />
       {loading ? <Spinner /> : (
-        <div style={{ overflowX:"auto" }}>
+        <div className="table-scroll">
           <table style={{ width:"100%", borderCollapse:"collapse", fontSize:"13px" }}>
             <thead>
               <tr style={{ borderBottom:`1px solid ${C.s3}` }}>
@@ -852,14 +870,14 @@ function SubAdminsTab() {
 
   return (
     <div style={{ animation:"fadeUp 0.3s ease" }}>
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20, gap:10, flexWrap:"wrap" }}>
         <SectionTitle title="Sub-Admin Management" sub={`${subAdmins.length} active sub-admins`} noMargin />
         <button
           onClick={() => { setEditTarget(null); setShowForm(true); }}
           style={{
             background:C.cyan, color:"#060A12", border:"none", borderRadius:8,
             padding:"8px 14px", fontWeight:700, fontSize:"13px", cursor:"pointer",
-            display:"flex", alignItems:"center", gap:6,
+            display:"flex", alignItems:"center", gap:6, flexShrink:0,
           }}
         >
           <Plus size={14} /> Add Sub-Admin
@@ -1006,7 +1024,7 @@ function SubAdminForm({
         </button>
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:12 }}>
+      <div className="admin-2col" style={{ marginBottom:12 }}>
         <div>
           <label style={{ color:C.txt3, fontSize:"11px", fontWeight:600, textTransform:"uppercase", display:"block", marginBottom:4 }}>
             Email
@@ -1048,7 +1066,7 @@ function SubAdminForm({
         <label style={{ color:C.txt3, fontSize:"11px", fontWeight:600, textTransform:"uppercase", display:"block", marginBottom:8 }}>
           Permissions
         </label>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6 }}>
+        <div className="admin-perm-grid">
           {ALL_PERMISSIONS.map((p) => (
             <label key={p} style={{
               display:"flex", alignItems:"center", gap:8, cursor:"pointer",
@@ -1381,7 +1399,7 @@ function ChannelSettingsTab({ adminInfo }: { adminInfo: AdminInfo }) {
           <h4 style={{ color:C.txt2, fontSize:"12px", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:10, display:"flex", alignItems:"center", gap:6 }}>
             <Key size={12} color={C.gold} /> Paystack Integration
           </h4>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+          <div className="admin-2col">
             <div>
               <label style={labelStyle}>Public Key</label>
               <input
@@ -1409,15 +1427,15 @@ function ChannelSettingsTab({ adminInfo }: { adminInfo: AdminInfo }) {
         </div>
 
         {/* Active toggle */}
-        <div style={{ display:"flex", alignItems:"center", gap:10, marginTop:14 }}>
+        <div style={{ marginTop:14 }}>
           <button
             type="button"
             onClick={() => setForm((p) => ({ ...p, isActive: !p.isActive }))}
-            style={{ background:"none", border:"none", cursor:"pointer", padding:0, display:"flex", alignItems:"center", gap:6 }}
+            style={{ background:"none", border:"none", cursor:"pointer", padding:0, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}
           >
             {form.isActive
-              ? <ToggleRight size={28} color={C.green} />
-              : <ToggleLeft  size={28} color={C.txt3} />
+              ? <ToggleRight size={28} color={C.green} style={{ flexShrink:0 }} />
+              : <ToggleLeft  size={28} color={C.txt3}  style={{ flexShrink:0 }} />
             }
             <span style={{ color: form.isActive ? C.green : C.txt3, fontSize:"13px", fontWeight:600 }}>
               {form.isActive ? "Channel Active — accepting registrations" : "Channel Inactive — registrations paused"}
@@ -1483,9 +1501,9 @@ function ChannelSettingsTab({ adminInfo }: { adminInfo: AdminInfo }) {
         <div style={{
           background:`${C.gold}08`, border:`1px solid ${C.gold}25`,
           borderRadius:12, padding:"14px 18px", marginBottom:20,
-          display:"flex", alignItems:"center", gap:12,
+          display:"flex", alignItems:"center", gap:12, flexWrap:"wrap",
         }}>
-          <Coins size={20} color={C.gold} />
+          <Coins size={20} color={C.gold} style={{ flexShrink:0 }} />
           <div>
             <div style={{ color:C.txt3, fontSize:"11px", fontWeight:600, textTransform:"uppercase", letterSpacing:"0.06em" }}>
               Commission Earnings
@@ -1494,7 +1512,7 @@ function ChannelSettingsTab({ adminInfo }: { adminInfo: AdminInfo }) {
               ₦{channel.balance.toLocaleString(undefined, { minimumFractionDigits:2 })}
             </div>
           </div>
-          <div style={{ marginLeft:"auto", color:C.txt3, fontSize:"12px" }}>
+          <div style={{ color:C.txt3, fontSize:"12px" }}>
             {channel.referralCommissionRate}% of each ₦{Number(channel.jobPassFee ?? 0).toLocaleString()} fee
           </div>
         </div>
@@ -1530,7 +1548,7 @@ function ChannelSettingsTab({ adminInfo }: { adminInfo: AdminInfo }) {
           {regsLoading ? <Spinner /> : regs.length === 0 ? (
             <EmptyState msg={statusFilter ? `No ${statusFilter} registrations` : "No registrations yet. Share your registration link to get started."} />
           ) : (
-            <div style={{ overflowX:"auto" }}>
+            <div className="table-scroll">
               <table style={{ width:"100%", borderCollapse:"collapse", fontSize:"13px" }}>
                 <thead>
                   <tr style={{ borderBottom:`1px solid ${C.s3}` }}>

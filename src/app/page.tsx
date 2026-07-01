@@ -22,10 +22,16 @@ interface Channel {
 
 const CHANNEL_COLORS = ["#00D4FF", "#00E5A0", "#FFB800", "#8B5CF6", "#FF4D6D"];
 const PERKS = [
-  { icon: Zap,         label: "Daily Payouts",        desc: "Get paid every day you work"         },
-  { icon: Shield,      label: "Secure Platform",      desc: "Bank-grade data security"            },
-  { icon: Star,        label: "Skill Certificates",   desc: "Earn certificates as you progress"   },
-  { icon: Users,       label: "Global Community",     desc: "Join thousands of remote workers"    },
+  { icon: Zap,    label: "Daily Payouts",      desc: "Get paid every day you work"         },
+  { icon: Shield, label: "Secure Platform",    desc: "Bank-grade data security"            },
+  { icon: Star,   label: "Skill Certificates", desc: "Earn certificates as you progress"   },
+  { icon: Users,  label: "Global Community",   desc: "Join thousands of remote workers"    },
+];
+const STATS = [
+  { value: "2,400+", label: "Active Workers" },
+  { value: "$1.2M+", label: "Total Paid Out" },
+  { value: "99.2%",  label: "Accuracy Rate"  },
+  { value: "24 hrs", label: "Max Review Time" },
 ];
 
 export default function LandingPage() {
@@ -48,38 +54,38 @@ export default function LandingPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, color: C.txt }}>
+
       {/* ── Nav ─────────────────────────────────────────────────────── */}
       <nav style={{
         position: "sticky", top: 0, zIndex: 50,
         background: `${C.bg}e8`, backdropFilter: "blur(12px)",
         borderBottom: `1px solid ${C.s3}`,
-        padding: "0 20px",
+        padding: "0 16px",
       }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", height: 60, gap: 12 }}>
-          {/* Logo */}
-          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", height: 56, gap: 10, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             <div style={{
-              width: 32, height: 32, borderRadius: 8,
+              width: 30, height: 30, borderRadius: 8, flexShrink: 0,
               background: "linear-gradient(135deg,#00D4FF,#0055DD)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontWeight: 900, color: "#fff", fontSize: 15, fontFamily: "system-ui",
+              fontWeight: 900, color: "#fff", fontSize: 14, fontFamily: "system-ui",
             }}>D</div>
-            <span style={{ fontWeight: 900, fontSize: 18, fontFamily: "system-ui" }}>
+            <span style={{ fontWeight: 900, fontSize: 17, fontFamily: "system-ui", whiteSpace: "nowrap" }}>
               DEEL<span style={{ color: C.cyan }}>Ai</span>
             </span>
           </div>
           <div style={{ flex: 1 }} />
-          <a href="/login" style={{
-            color: C.txt2, fontSize: 14, textDecoration: "none",
-            padding: "6px 14px", borderRadius: 7, border: `1px solid ${C.s3}`,
-            transition: "all 0.15s",
+          <a href="/login" className="nav-signin" style={{
+            color: C.txt2, fontSize: 13, textDecoration: "none",
+            padding: "6px 12px", borderRadius: 7, border: `1px solid ${C.s3}`,
+            whiteSpace: "nowrap", flexShrink: 0,
           }}>
             Sign In
           </a>
           <a href="#channels" style={{
             background: C.cyan, color: "#060A12",
-            fontSize: 14, fontWeight: 700, textDecoration: "none",
-            padding: "7px 16px", borderRadius: 7,
+            fontSize: 13, fontWeight: 700, textDecoration: "none",
+            padding: "7px 14px", borderRadius: 7, whiteSpace: "nowrap", flexShrink: 0,
           }}>
             Join Now
           </a>
@@ -87,22 +93,19 @@ export default function LandingPage() {
       </nav>
 
       {/* ── Hero ─────────────────────────────────────────────────────── */}
-      <div style={{
-        maxWidth: 1100, margin: "0 auto", padding: "72px 20px 56px",
-        textAlign: "center",
-      }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "60px 16px 48px", textAlign: "center" }}>
         <div style={{
           display: "inline-flex", alignItems: "center", gap: 6,
           background: `${C.cyan}15`, border: `1px solid ${C.cyan}30`,
-          borderRadius: 20, padding: "4px 12px", marginBottom: 24,
+          borderRadius: 20, padding: "4px 12px", marginBottom: 20,
         }}>
-          <div style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, animation: "pulse 2s infinite" }} />
+          <div style={{ width: 6, height: 6, borderRadius: "50%", background: C.green }} className="pulse-dot" />
           <span style={{ color: C.cyan, fontSize: 12, fontWeight: 700 }}>Actively hiring • Remote positions available</span>
         </div>
 
         <h1 style={{
-          fontSize: "clamp(32px, 7vw, 64px)", fontWeight: 900, lineHeight: 1.1,
-          margin: "0 0 20px", letterSpacing: "-0.02em",
+          fontSize: "clamp(28px, 7vw, 60px)", fontWeight: 900, lineHeight: 1.1,
+          margin: "0 0 18px", letterSpacing: "-0.02em",
         }}>
           Earn From Anywhere With<br />
           <span style={{
@@ -114,65 +117,57 @@ export default function LandingPage() {
         </h1>
 
         <p style={{
-          color: C.txt2, fontSize: "clamp(15px, 2.5vw, 18px)",
-          maxWidth: 560, margin: "0 auto 36px", lineHeight: 1.7,
+          color: C.txt2, fontSize: "clamp(14px, 2.5vw, 17px)",
+          maxWidth: 520, margin: "0 auto 32px", lineHeight: 1.7,
         }}>
           Join our global network of remote data annotators. Work on your schedule,
           earn a real salary, and grow your career — all from home.
         </p>
 
-        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
           <a href="#channels" style={{
             background: `linear-gradient(135deg, ${C.cyan}, #0099BB)`,
-            color: "#060A12", fontWeight: 800, fontSize: 16,
-            padding: "13px 28px", borderRadius: 10, textDecoration: "none",
+            color: "#060A12", fontWeight: 800, fontSize: 15,
+            padding: "12px 24px", borderRadius: 10, textDecoration: "none",
             display: "inline-flex", alignItems: "center", gap: 8,
           }}>
-            Choose Your Channel <ArrowRight size={18} />
+            Choose Your Channel <ArrowRight size={17} />
           </a>
           <a href="/login" style={{
             background: C.s1, border: `1px solid ${C.s3}`,
-            color: C.txt2, fontSize: 15,
-            padding: "13px 24px", borderRadius: 10, textDecoration: "none",
+            color: C.txt2, fontSize: 14,
+            padding: "12px 20px", borderRadius: 10, textDecoration: "none",
           }}>
             I have an account
           </a>
         </div>
 
         {/* Stats */}
-        <div style={{
-          display: "flex", gap: 0, justifyContent: "center", flexWrap: "wrap",
-          marginTop: 56, borderTop: `1px solid ${C.s3}`, paddingTop: 36,
-        }}>
-          {[
-            { value: "2,400+", label: "Active Workers" },
-            { value: "$1.2M+", label: "Total Paid Out" },
-            { value: "99.2%", label: "Accuracy Rate" },
-            { value: "24 hrs", label: "Max Review Time" },
-          ].map((s, i) => (
-            <div key={i} style={{ flex: "1 1 120px", padding: "12px 20px", borderRight: i < 3 ? `1px solid ${C.s3}` : undefined }}>
-              <div style={{ color: C.cyan, fontSize: "clamp(20px, 4vw, 28px)", fontWeight: 800 }}>{s.value}</div>
-              <div style={{ color: C.txt3, fontSize: 12, marginTop: 2 }}>{s.label}</div>
+        <div className="lp-stats" style={{ marginTop: 48, borderTop: `1px solid ${C.s3}`, paddingTop: 32 }}>
+          {STATS.map((s, i) => (
+            <div key={i} className={`lp-stat${i < STATS.length - 1 ? " lp-stat-divider" : ""}`}>
+              <div style={{ color: C.cyan, fontSize: "clamp(18px, 4vw, 26px)", fontWeight: 800 }}>{s.value}</div>
+              <div style={{ color: C.txt3, fontSize: 11, marginTop: 2 }}>{s.label}</div>
             </div>
           ))}
         </div>
       </div>
 
       {/* ── Perks ────────────────────────────────────────────────────── */}
-      <div style={{ background: C.s1, borderTop: `1px solid ${C.s3}`, borderBottom: `1px solid ${C.s3}`, padding: "40px 20px" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 20 }}>
+      <div style={{ background: C.s1, borderTop: `1px solid ${C.s3}`, borderBottom: `1px solid ${C.s3}`, padding: "32px 16px" }}>
+        <div className="lp-perks" style={{ maxWidth: 1100, margin: "0 auto" }}>
           {PERKS.map(({ icon: Icon, label, desc }) => (
-            <div key={label} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+            <div key={label} style={{ display: "flex", alignItems: "flex-start", gap: 11 }}>
               <div style={{
-                width: 36, height: 36, borderRadius: 9, flexShrink: 0,
+                width: 34, height: 34, borderRadius: 9, flexShrink: 0,
                 background: `${C.cyan}15`, border: `1px solid ${C.cyan}25`,
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}>
-                <Icon size={17} color={C.cyan} />
+                <Icon size={16} color={C.cyan} />
               </div>
               <div>
-                <div style={{ color: C.txt, fontSize: 14, fontWeight: 700 }}>{label}</div>
-                <div style={{ color: C.txt3, fontSize: 12, marginTop: 2 }}>{desc}</div>
+                <div style={{ color: C.txt, fontSize: 13, fontWeight: 700 }}>{label}</div>
+                <div style={{ color: C.txt3, fontSize: 11, marginTop: 2 }}>{desc}</div>
               </div>
             </div>
           ))}
@@ -180,85 +175,78 @@ export default function LandingPage() {
       </div>
 
       {/* ── Channel selection ─────────────────────────────────────────── */}
-      <div id="channels" style={{ maxWidth: 1100, margin: "0 auto", padding: "64px 20px" }}>
-        <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <h2 style={{ fontSize: "clamp(24px, 5vw, 40px)", fontWeight: 800, margin: "0 0 12px" }}>
+      <div id="channels" style={{ maxWidth: 1100, margin: "0 auto", padding: "56px 16px" }}>
+        <div style={{ textAlign: "center", marginBottom: 36 }}>
+          <h2 style={{ fontSize: "clamp(22px, 5vw, 38px)", fontWeight: 800, margin: "0 0 10px" }}>
             Choose Your Channel
           </h2>
-          <p style={{ color: C.txt2, fontSize: 15, maxWidth: 480, margin: "0 auto" }}>
+          <p style={{ color: C.txt2, fontSize: 14, maxWidth: 440, margin: "0 auto" }}>
             Each channel is managed by a dedicated sub-admin. Select the one that fits your goals.
           </p>
         </div>
 
         {loading ? (
           <div style={{ textAlign: "center", padding: "40px 0" }}>
-            <Loader2 size={32} color={C.cyan} style={{ animation: "spin 1s linear infinite" }} />
+            <Loader2 size={30} color={C.cyan} className="spin-icon" />
           </div>
         ) : channels.length === 0 ? (
           <div style={{ textAlign: "center", color: C.txt3, padding: "40px 0" }}>
             No channels are currently open for registration. Check back soon.
           </div>
         ) : (
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))",
-            gap: 20,
-          }}>
+          <div className="channel-grid">
             {channels.map((ch, i) => {
               const color = CHANNEL_COLORS[i % CHANNEL_COLORS.length];
-              const isSelected = selected === ch.id;
+              const isSel = selected === ch.id;
               return (
                 <div
                   key={ch.id}
                   onClick={() => selectChannel(ch.id)}
+                  className="channel-card"
                   style={{
                     background: C.s1,
-                    border: `1.5px solid ${isSelected ? color : C.s3}`,
-                    borderRadius: 16, padding: "24px",
-                    cursor: "pointer", transition: "all 0.2s",
-                    position: "relative", overflow: "hidden",
+                    border: `1.5px solid ${isSel ? color : C.s3}`,
+                    borderRadius: 16, padding: "22px",
+                    cursor: "pointer", position: "relative", overflow: "hidden",
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = color + "80")}
-                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = isSelected ? color : C.s3)}
                 >
-                  {/* Glow top-left */}
                   <div style={{
                     position: "absolute", top: -40, left: -40,
-                    width: 120, height: 120, borderRadius: "50%",
+                    width: 110, height: 110, borderRadius: "50%",
                     background: `${color}10`, pointerEvents: "none",
                   }} />
 
-                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14 }}>
                     <div style={{
-                      width: 48, height: 48, borderRadius: 12,
+                      width: 44, height: 44, borderRadius: 11,
                       background: `${color}18`, border: `1.5px solid ${color}40`,
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 22, fontWeight: 900, color, fontFamily: "system-ui",
+                      fontSize: 20, fontWeight: 900, color, fontFamily: "system-ui", flexShrink: 0,
                     }}>
                       {ch.channelName}
                     </div>
                     <div style={{
                       display: "flex", alignItems: "center", gap: 5,
                       background: `${C.green}12`, border: `1px solid ${C.green}30`,
-                      borderRadius: 20, padding: "3px 9px",
+                      borderRadius: 20, padding: "3px 8px", flexShrink: 0,
                     }}>
                       <div style={{ width: 5, height: 5, borderRadius: "50%", background: C.green }} />
                       <span style={{ color: C.green, fontSize: 10, fontWeight: 700 }}>OPEN</span>
                     </div>
                   </div>
 
-                  <h3 style={{ color: C.txt, fontSize: 17, fontWeight: 700, margin: "0 0 8px" }}>
+                  <h3 style={{ color: C.txt, fontSize: 16, fontWeight: 700, margin: "0 0 7px", wordBreak: "break-word" }}>
                     Channel {ch.channelName}
                   </h3>
-                  <p style={{ color: C.txt2, fontSize: 13, lineHeight: 1.6, margin: "0 0 18px" }}>
+                  <p style={{ color: C.txt2, fontSize: 13, lineHeight: 1.6, margin: "0 0 16px", wordBreak: "break-word" }}>
                     {ch.description}
                   </p>
 
-                  <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", gap: 7, marginBottom: 18, flexWrap: "wrap" }}>
                     <span style={{
                       fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 5,
                       background: `${C.gold}12`, border: `1px solid ${C.gold}30`, color: C.gold,
-                      display: "flex", alignItems: "center", gap: 4,
+                      display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap",
                     }}>
                       <Clock size={10} /> {ch.estTime} review
                     </span>
@@ -266,6 +254,7 @@ export default function LandingPage() {
                       <span style={{
                         fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 5,
                         background: `${color}12`, border: `1px solid ${color}30`, color,
+                        whiteSpace: "nowrap",
                       }}>
                         ₦{ch.jobPassFee.toLocaleString()} job pass
                       </span>
@@ -277,9 +266,10 @@ export default function LandingPage() {
                     border: `1px solid ${color}40`, borderRadius: 9,
                     padding: "10px", color, fontWeight: 700, fontSize: 14,
                     cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                    transition: "background 0.15s",
                   }}>
-                    {isSelected ? <><CheckCircle2 size={15} /> Selected</> : <>Join Channel {ch.channelName} <ChevronRight size={15} /></>}
+                    {isSel
+                      ? <><CheckCircle2 size={14} /> Selected</>
+                      : <>Join Channel {ch.channelName} <ChevronRight size={14} /></>}
                   </button>
                 </div>
               );
@@ -289,28 +279,28 @@ export default function LandingPage() {
       </div>
 
       {/* ── How it works ─────────────────────────────────────────────── */}
-      <div style={{ background: C.s1, borderTop: `1px solid ${C.s3}`, padding: "56px 20px" }}>
+      <div style={{ background: C.s1, borderTop: `1px solid ${C.s3}`, padding: "48px 16px" }}>
         <div style={{ maxWidth: 900, margin: "0 auto" }}>
-          <h2 style={{ textAlign: "center", fontSize: "clamp(20px, 4vw, 32px)", fontWeight: 800, marginBottom: 40 }}>
+          <h2 style={{ textAlign: "center", fontSize: "clamp(18px, 4vw, 30px)", fontWeight: 800, marginBottom: 36 }}>
             How It Works
           </h2>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 24 }}>
+          <div className="lp-steps">
             {[
-              { step:"01", title:"Pick a Channel",  desc:"Select the channel that matches your schedule and goals." },
-              { step:"02", title:"Register",         desc:"Fill in your details, get your job pass, and upload your CV." },
-              { step:"03", title:"Get Approved",     desc:"Channel admin reviews and approves your account within 24 hrs." },
-              { step:"04", title:"Start Earning",    desc:"Log in, complete annotation tasks, and get paid daily." },
+              { step: "01", title: "Pick a Channel",  desc: "Select the channel that matches your schedule and goals." },
+              { step: "02", title: "Register",         desc: "Fill in your details, get your job pass, and upload your CV." },
+              { step: "03", title: "Get Approved",     desc: "Channel admin reviews and approves your account within 24 hrs." },
+              { step: "04", title: "Start Earning",    desc: "Log in, complete annotation tasks, and get paid daily." },
             ].map(({ step, title, desc }) => (
               <div key={step} style={{ textAlign: "center" }}>
                 <div style={{
-                  width: 40, height: 40, borderRadius: 10, margin: "0 auto 12px",
+                  width: 38, height: 38, borderRadius: 10, margin: "0 auto 10px",
                   background: `${C.cyan}15`, border: `1px solid ${C.cyan}30`,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  color: C.cyan, fontWeight: 800, fontFamily: "monospace", fontSize: 14,
+                  color: C.cyan, fontWeight: 800, fontFamily: "monospace", fontSize: 13,
                 }}>
                   {step}
                 </div>
-                <div style={{ color: C.txt, fontWeight: 700, fontSize: 14, marginBottom: 6 }}>{title}</div>
+                <div style={{ color: C.txt, fontWeight: 700, fontSize: 13, marginBottom: 5 }}>{title}</div>
                 <div style={{ color: C.txt3, fontSize: 12, lineHeight: 1.6 }}>{desc}</div>
               </div>
             ))}
@@ -319,20 +309,56 @@ export default function LandingPage() {
       </div>
 
       {/* ── Footer ───────────────────────────────────────────────────── */}
-      <div style={{ borderTop: `1px solid ${C.s3}`, padding: "24px 20px", textAlign: "center" }}>
+      <div style={{ borderTop: `1px solid ${C.s3}`, padding: "20px 16px", textAlign: "center" }}>
         <div style={{ color: C.txt3, fontSize: 12 }}>
           © 2026 DEELAI · Remote Work Platform ·{" "}
-          <a href="/login"   style={{ color: C.txt2, textDecoration: "none" }}>Sign In</a>
+          <a href="/login" style={{ color: C.txt2, textDecoration: "none" }}>Sign In</a>
           {" · "}
-          <a href="/admin"   style={{ color: C.txt2, textDecoration: "none" }}>Admin</a>
+          <a href="/admin" style={{ color: C.txt2, textDecoration: "none" }}>Admin</a>
         </div>
       </div>
 
       <style>{`
-        @keyframes spin  { to { transform: rotate(360deg); } }
-        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
         * { box-sizing: border-box; }
         html { scroll-behavior: smooth; }
+        @keyframes spin-anim { to { transform: rotate(360deg); } }
+        .spin-icon { animation: spin-anim 1s linear infinite; }
+        .pulse-dot { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+        /* Stats grid */
+        .lp-stats { display: grid; grid-template-columns: repeat(2,1fr); padding-top: 32px; border-top: 1px solid ${C.s3}; margin-top: 48px; }
+        .lp-stat { padding: 12px 8px; text-align: center; }
+        .lp-stat-divider { border-right: 1px solid ${C.s3}; }
+        @media (min-width:600px) {
+          .lp-stats { grid-template-columns: repeat(4,1fr); }
+          .lp-stat-divider { border-right: 1px solid ${C.s3}; }
+          .lp-stat:nth-child(2) { border-right: 1px solid ${C.s3}; }
+        }
+        @media (max-width:599px) {
+          .lp-stat:nth-child(2) { border-right: none; }
+          .lp-stat:nth-child(1), .lp-stat:nth-child(2) { border-bottom: 1px solid ${C.s3}; padding-bottom: 14px; }
+        }
+
+        /* Perks grid */
+        .lp-perks { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        @media (min-width:768px) { .lp-perks { grid-template-columns: repeat(4,1fr); gap: 20px; } }
+
+        /* Channel cards grid: 1 col mobile → 2 col tablet → 3 col desktop */
+        .channel-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+        @media (min-width:560px)  { .channel-grid { grid-template-columns: repeat(2,1fr); } }
+        @media (min-width:960px)  { .channel-grid { grid-template-columns: repeat(3,1fr); } }
+
+        /* Channel card hover */
+        .channel-card { transition: border-color 0.2s, transform 0.15s; }
+        .channel-card:hover { transform: translateY(-2px); }
+
+        /* How it works steps */
+        .lp-steps { display: grid; grid-template-columns: repeat(2,1fr); gap: 24px; }
+        @media (min-width:640px) { .lp-steps { grid-template-columns: repeat(4,1fr); } }
+
+        /* Nav sign-in button hide on very small */
+        @media (max-width:340px) { .nav-signin { display: none; } }
       `}</style>
     </div>
   );
