@@ -1,6 +1,6 @@
 /**
  * Server-side in-memory store.
- * In production this would be a real database (Postgres/Supabase).
+ * In production replace with Postgres/Supabase + bcrypt.
  * Data persists for the lifetime of the Node.js server process.
  */
 import { SUPER_ADMIN_EMAIL, type Permission } from "./adminConfig";
@@ -18,15 +18,16 @@ export interface SubAdmin {
 
 export interface Channel {
   id: string;
-  ownerEmail: string;          // sub-admin who owns this channel
-  channelName: string;         // A / B / C / D / E or custom
-  estTime: string;             // e.g. "2 min"
+  ownerEmail: string;
+  channelName: string;
+  description: string;
+  estTime: string;
   paystackPublicKey: string;
   paystackSecretKey: string;
-  referralCommissionRate: number; // percentage, default 10
-  jobPassFee: number;          // amount users pay to register
+  referralCommissionRate: number;
+  jobPassFee: number;
   isActive: boolean;
-  balance: number;             // total commission earnings
+  balance: number;
   createdAt: string;
 }
 
@@ -46,6 +47,7 @@ export interface AdminUser {
   id: string;
   email: string;
   name: string;
+  phone: string;
   level: string;
   salary: number;
   jobsDone: number;
@@ -59,7 +61,6 @@ export interface AdminUser {
   is_super_admin: boolean;
   admin_permissions: Permission[];
   admin_region: string | null;
-  // Channel registration fields
   channelId?: string;
   permitType?: PermitType;
   accountStatus: AccountStatus;
@@ -70,61 +71,99 @@ export interface AdminUser {
 }
 
 export interface Job {
-  id: string;
-  userId: string;
-  userName: string;
+  id: string; userId: string; userName: string;
   type: "Image Annotation" | "Voice Transcription" | "Content Intelligence";
-  batchId: string;
-  status: "Approved" | "Pending" | "Rejected";
-  earnings: number;
-  submittedAt: string;
-  accuracy: number;
+  batchId: string; status: "Approved" | "Pending" | "Rejected";
+  earnings: number; submittedAt: string; accuracy: number;
 }
 
 export interface Payment {
-  id: string;
-  userId: string;
-  userName: string;
-  amount: number;
+  id: string; userId: string; userName: string; amount: number;
   method: "Bank Transfer" | "USDT / Crypto" | "PayPal";
-  status: "Paid" | "Pending" | "Processing";
-  date: string;
-  ref: string;
+  status: "Paid" | "Pending" | "Processing"; date: string; ref: string;
 }
 
 export interface Referral {
-  id: string;
-  referrerId: string;
-  referrerName: string;
-  recruitName: string;
-  recruitEmail: string;
-  status: "Training" | "Active" | "Inactive";
-  bonusEarned: number;
-  joinedAt: string;
+  id: string; referrerId: string; referrerName: string;
+  recruitName: string; recruitEmail: string;
+  status: "Training" | "Active" | "Inactive"; bonusEarned: number; joinedAt: string;
 }
 
 export interface PlatformSettings {
-  registrationOpen: boolean;
-  maintenanceMode: boolean;
-  payoutsEnabled: boolean;
-  newJobsEnabled: boolean;
-  announcement: string;
+  registrationOpen: boolean; maintenanceMode: boolean;
+  payoutsEnabled: boolean; newJobsEnabled: boolean; announcement: string;
+}
+
+export interface UserSession {
+  userId: string;
+  email: string;
+  name: string;
+  accountStatus: AccountStatus;
+  channelId?: string;
 }
 
 /* ── Seed data ──────────────────────────────────────────────────────── */
-const seedUsers: AdminUser[] = [
-  { id:"u1",  email:"chidi@deelai.uk",  name:"Chidi Okonkwo",  level:"PERMANENT STAFF", salary:18420, jobsDone:1241, accuracy:98.7, streak:42, tier:"Permanent", status:"Active",    joinedAt:"2025-11-10", country:"NG", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, accountStatus:"approved", jobPassPaid:true,  jobPassAmount:50 },
-  { id:"u2",  email:"aisha@deelai.uk",  name:"Aisha Mensah",   level:"PERMANENT STAFF", salary:16800, jobsDone:1102, accuracy:98.2, streak:35, tier:"Permanent", status:"Active",    joinedAt:"2025-11-14", country:"GH", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, accountStatus:"approved", jobPassPaid:true,  jobPassAmount:50 },
-  { id:"u3",  email:"kwame@deelai.uk",  name:"Kwame Asante",   level:"PERMANENT STAFF", salary:15990, jobsDone:1044, accuracy:97.9, streak:28, tier:"Permanent", status:"Active",    joinedAt:"2025-11-20", country:"GH", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, accountStatus:"approved", jobPassPaid:true,  jobPassAmount:50 },
-  { id:"u4",  email:"amara@deelai.uk",  name:"Amara Osei",     level:"ASSOCIATE STAFF", salary:14750, jobsDone:984,  accuracy:97.4, streak:21, tier:"Associate", status:"Active",    joinedAt:"2025-12-01", country:"NG", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, accountStatus:"approved", jobPassPaid:true,  jobPassAmount:50 },
-  { id:"u5",  email:"fatima@deelai.uk", name:"Fatima Bello",   level:"ASSOCIATE STAFF", salary:13200, jobsDone:901,  accuracy:96.8, streak:14, tier:"Associate", status:"Active",    joinedAt:"2025-12-05", country:"NG", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, accountStatus:"pending",  jobPassPaid:false, jobPassAmount:0  },
-  { id:"u6",  email:"emeka@deelai.uk",  name:"Emeka Nwosu",    level:"ASSOCIATE STAFF", salary:12800, jobsDone:876,  accuracy:96.1, streak:10, tier:"Associate", status:"Active",    joinedAt:"2025-12-10", country:"NG", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, accountStatus:"pending",  jobPassPaid:false, jobPassAmount:0  },
-  { id:"u7",  email:"sade@deelai.uk",   name:"Sade Williams",  level:"ASSOCIATE STAFF", salary:11500, jobsDone:820,  accuracy:95.5, streak:7,  tier:"Associate", status:"Active",    joinedAt:"2025-12-15", country:"GB", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, accountStatus:"rejected", jobPassPaid:false, jobPassAmount:0  },
-  { id:"u8",  email:"tunde@deelai.uk",  name:"Tunde Adeyemi",  level:"ASSOCIATE STAFF", salary:10900, jobsDone:794,  accuracy:94.9, streak:5,  tier:"Associate", status:"Active",    joinedAt:"2026-01-03", country:"NG", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, accountStatus:"approved", jobPassPaid:true,  jobPassAmount:50 },
-  { id:"u9",  email:"gideon@deelai.uk", name:"Gideon NSE",     level:"ASSOCIATE STAFF", salary:9400,  jobsDone:620,  accuracy:93.2, streak:3,  tier:"Associate", status:"Suspended", joinedAt:"2026-01-10", country:"NG", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, accountStatus:"approved", jobPassPaid:true,  jobPassAmount:50 },
-  { id:"u10", email:"ravi@deelai.uk",   name:"Ravi Sharma",    level:"ASSOCIATE STAFF", salary:8750,  jobsDone:540,  accuracy:92.8, streak:0,  tier:"Associate", status:"Active",    joinedAt:"2026-01-18", country:"IN", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, accountStatus:"pending",  jobPassPaid:false, jobPassAmount:0  },
-  { id:"u0",  email:SUPER_ADMIN_EMAIL,  name:"Super Admin",    level:"SUPER ADMIN",     salary:0,     jobsDone:0,    accuracy:100,   streak:0,  tier:"Permanent", status:"Active",    joinedAt:"2025-10-01", country:"NG", is_admin:true,  is_super_admin:true,  admin_permissions:[], admin_region:"Global", accountStatus:"approved", jobPassPaid:false, jobPassAmount:0 },
+const seedSubAdmins: SubAdmin[] = [
+  { id:"sa-seed-1", email:"channel.a@deelai.uk", name:"Channel A Admin", region:"West Africa",   permissions:["manage_users","manage_jobs","manage_payments","manage_referrals","view_reports"], createdAt:"2026-01-15T10:00:00Z", createdBy:SUPER_ADMIN_EMAIL },
+  { id:"sa-seed-2", email:"channel.b@deelai.uk", name:"Channel B Admin", region:"East Africa",   permissions:["manage_users","manage_jobs","view_reports"],                                      createdAt:"2026-01-20T10:00:00Z", createdBy:SUPER_ADMIN_EMAIL },
+  { id:"sa-seed-3", email:"channel.c@deelai.uk", name:"Channel C Admin", region:"North America", permissions:["manage_users","manage_payments","view_reports"],                                  createdAt:"2026-02-01T10:00:00Z", createdBy:SUPER_ADMIN_EMAIL },
 ];
+
+const seedChannels: Channel[] = [
+  {
+    id:"ch-a", ownerEmail:"channel.a@deelai.uk", channelName:"A",
+    description:"Full-time positions for dedicated remote workers. Competitive pay with daily payouts and fast-track approval.",
+    estTime:"2 min", paystackPublicKey:"", paystackSecretKey:"",
+    referralCommissionRate:10, jobPassFee:5000, isActive:true, balance:12500,
+    createdAt:"2026-01-15T10:00:00Z",
+  },
+  {
+    id:"ch-b", ownerEmail:"channel.b@deelai.uk", channelName:"B",
+    description:"Flexible part-time schedule. Perfect for students and anyone looking to earn on their own timetable.",
+    estTime:"5 min", paystackPublicKey:"", paystackSecretKey:"",
+    referralCommissionRate:12, jobPassFee:3500, isActive:true, balance:8400,
+    createdAt:"2026-01-20T10:00:00Z",
+  },
+  {
+    id:"ch-c", ownerEmail:"channel.c@deelai.uk", channelName:"C",
+    description:"Premium channel for experienced data annotators. Higher base pay and exclusive high-value batches.",
+    estTime:"10 min", paystackPublicKey:"", paystackSecretKey:"",
+    referralCommissionRate:15, jobPassFee:7500, isActive:true, balance:22500,
+    createdAt:"2026-02-01T10:00:00Z",
+  },
+];
+
+const seedUsers: AdminUser[] = [
+  { id:"u1",  email:"chidi@deelai.uk",  phone:"", name:"Chidi Okonkwo",  level:"PERMANENT STAFF", salary:18420, jobsDone:1241, accuracy:98.7, streak:42, tier:"Permanent", status:"Active",    joinedAt:"2025-11-10", country:"NG", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, channelId:"ch-a", permitType:"full-time",  accountStatus:"approved", jobPassPaid:true,  jobPassAmount:5000 },
+  { id:"u2",  email:"aisha@deelai.uk",  phone:"", name:"Aisha Mensah",   level:"PERMANENT STAFF", salary:16800, jobsDone:1102, accuracy:98.2, streak:35, tier:"Permanent", status:"Active",    joinedAt:"2025-11-14", country:"GH", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, channelId:"ch-b", permitType:"full-time",  accountStatus:"approved", jobPassPaid:true,  jobPassAmount:3500 },
+  { id:"u3",  email:"kwame@deelai.uk",  phone:"", name:"Kwame Asante",   level:"PERMANENT STAFF", salary:15990, jobsDone:1044, accuracy:97.9, streak:28, tier:"Permanent", status:"Active",    joinedAt:"2025-11-20", country:"GH", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, channelId:"ch-a", permitType:"full-time",  accountStatus:"approved", jobPassPaid:true,  jobPassAmount:5000 },
+  { id:"u4",  email:"amara@deelai.uk",  phone:"", name:"Amara Osei",     level:"ASSOCIATE STAFF", salary:14750, jobsDone:984,  accuracy:97.4, streak:21, tier:"Associate", status:"Active",    joinedAt:"2025-12-01", country:"NG", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, channelId:"ch-b", permitType:"part-time",  accountStatus:"approved", jobPassPaid:true,  jobPassAmount:3500 },
+  { id:"u5",  email:"fatima@deelai.uk", phone:"", name:"Fatima Bello",   level:"ASSOCIATE STAFF", salary:13200, jobsDone:901,  accuracy:96.8, streak:14, tier:"Associate", status:"Active",    joinedAt:"2025-12-05", country:"NG", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, channelId:"ch-a", permitType:"part-time",  accountStatus:"pending",  jobPassPaid:false, jobPassAmount:0    },
+  { id:"u6",  email:"emeka@deelai.uk",  phone:"", name:"Emeka Nwosu",    level:"ASSOCIATE STAFF", salary:12800, jobsDone:876,  accuracy:96.1, streak:10, tier:"Associate", status:"Active",    joinedAt:"2025-12-10", country:"NG", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, channelId:"ch-c", permitType:"full-time",  accountStatus:"pending",  jobPassPaid:false, jobPassAmount:0    },
+  { id:"u7",  email:"sade@deelai.uk",   phone:"", name:"Sade Williams",  level:"ASSOCIATE STAFF", salary:11500, jobsDone:820,  accuracy:95.5, streak:7,  tier:"Associate", status:"Active",    joinedAt:"2025-12-15", country:"GB", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, channelId:"ch-b", permitType:"part-time",  accountStatus:"rejected", jobPassPaid:false, jobPassAmount:0    },
+  { id:"u8",  email:"tunde@deelai.uk",  phone:"", name:"Tunde Adeyemi",  level:"ASSOCIATE STAFF", salary:10900, jobsDone:794,  accuracy:94.9, streak:5,  tier:"Associate", status:"Active",    joinedAt:"2026-01-03", country:"NG", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, channelId:"ch-a", permitType:"full-time",  accountStatus:"approved", jobPassPaid:true,  jobPassAmount:5000 },
+  { id:"u9",  email:"gideon@deelai.uk", phone:"", name:"Gideon NSE",     level:"ASSOCIATE STAFF", salary:9400,  jobsDone:620,  accuracy:93.2, streak:3,  tier:"Associate", status:"Suspended", joinedAt:"2026-01-10", country:"NG", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, channelId:"ch-c", permitType:"part-time",  accountStatus:"approved", jobPassPaid:true,  jobPassAmount:7500 },
+  { id:"u10", email:"ravi@deelai.uk",   phone:"", name:"Ravi Sharma",    level:"ASSOCIATE STAFF", salary:8750,  jobsDone:540,  accuracy:92.8, streak:0,  tier:"Associate", status:"Active",    joinedAt:"2026-01-18", country:"IN", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, channelId:"ch-b", permitType:"part-time",  accountStatus:"pending",  jobPassPaid:false, jobPassAmount:0    },
+  { id:"u0",  email:SUPER_ADMIN_EMAIL,  phone:"", name:"Super Admin",    level:"SUPER ADMIN",     salary:0,     jobsDone:0,    accuracy:100,   streak:0,  tier:"Permanent", status:"Active",    joinedAt:"2025-10-01", country:"NG", is_admin:true,  is_super_admin:true,  admin_permissions:[], admin_region:"Global", accountStatus:"approved", jobPassPaid:false, jobPassAmount:0 },
+];
+
+// Default passwords for seeded users (demo only — use bcrypt in production)
+const seedPasswords: Record<string, string> = {
+  "chidi@deelai.uk":        "demo1234",
+  "aisha@deelai.uk":        "demo1234",
+  "kwame@deelai.uk":        "demo1234",
+  "amara@deelai.uk":        "demo1234",
+  "fatima@deelai.uk":       "demo1234",
+  "emeka@deelai.uk":        "demo1234",
+  "sade@deelai.uk":         "demo1234",
+  "tunde@deelai.uk":        "demo1234",
+  "gideon@deelai.uk":       "demo1234",
+  "ravi@deelai.uk":         "demo1234",
+  "channel.a@deelai.uk":    "admin1234",
+  "channel.b@deelai.uk":    "admin1234",
+  "channel.c@deelai.uk":    "admin1234",
+  [SUPER_ADMIN_EMAIL]:      "superadmin1234",
+};
 
 const seedJobs: Job[] = [
   { id:"j1",  userId:"u1", userName:"Chidi Okonkwo", type:"Image Annotation",     batchId:"A-2291", status:"Approved", earnings:12.50, submittedAt:"2026-07-01T10:02:00Z", accuracy:99.1 },
@@ -165,26 +204,21 @@ class AdminStore {
   jobs:               Job[]               = [...seedJobs];
   payments:           Payment[]           = [...seedPayments];
   referrals:          Referral[]          = [...seedReferrals];
-  subAdmins:          SubAdmin[]          = [];
-  channels:           Channel[]           = [];
+  subAdmins:          SubAdmin[]          = [...seedSubAdmins];
+  channels:           Channel[]           = [...seedChannels];
   channelCommissions: ChannelCommission[] = [];
+  passwords:          Map<string, string> = new Map(Object.entries(seedPasswords));
   settings:           PlatformSettings   = {
-    registrationOpen:  true,
-    maintenanceMode:   false,
-    payoutsEnabled:    true,
-    newJobsEnabled:    true,
-    announcement:      "",
+    registrationOpen: true, maintenanceMode: false,
+    payoutsEnabled: true, newJobsEnabled: true, announcement: "",
   };
 
-  /* ── Auth helpers ─────────────────────────────────────────────────── */
+  /* ── Auth: admin ──────────────────────────────────────────────────── */
   isAdmin(email: string): boolean {
     if (email === SUPER_ADMIN_EMAIL) return true;
     return this.subAdmins.some((s) => s.email === email);
   }
-
-  isSuperAdmin(email: string): boolean {
-    return email === SUPER_ADMIN_EMAIL;
-  }
+  isSuperAdmin(email: string): boolean { return email === SUPER_ADMIN_EMAIL; }
 
   getAdminInfo(email: string) {
     if (email === SUPER_ADMIN_EMAIL) {
@@ -199,6 +233,23 @@ class AdminStore {
     if (this.isSuperAdmin(email)) return true;
     const sa = this.subAdmins.find((s) => s.email === email);
     return sa ? sa.permissions.includes(perm) : false;
+  }
+
+  /* ── Auth: user (workers) ─────────────────────────────────────────── */
+  verifyPassword(email: string, password: string): boolean {
+    return this.passwords.get(email) === password;
+  }
+
+  setPassword(email: string, password: string) {
+    this.passwords.set(email, password);
+  }
+
+  getUserByEmail(email: string): AdminUser | null {
+    return this.users.find((u) => u.email === email) ?? null;
+  }
+
+  getUserById(id: string): AdminUser | null {
+    return this.users.find((u) => u.id === id) ?? null;
   }
 
   /* ── Sub-admin CRUD ───────────────────────────────────────────────── */
@@ -234,21 +285,18 @@ class AdminStore {
   getChannelByOwner(email: string): Channel | null {
     return this.channels.find((c) => c.ownerEmail === email) ?? null;
   }
-
   getChannelById(id: string): Channel | null {
     return this.channels.find((c) => c.id === id) ?? null;
+  }
+  getActiveChannels(): Channel[] {
+    return this.channels.filter((c) => c.isActive);
   }
 
   createChannel(data: Omit<Channel, "id" | "balance" | "createdAt">): Channel {
     if (this.channels.some((c) => c.ownerEmail === data.ownerEmail)) {
       throw new Error("Channel already exists for this admin");
     }
-    const ch: Channel = {
-      ...data,
-      id: `ch-${Date.now()}`,
-      balance: 0,
-      createdAt: new Date().toISOString(),
-    };
+    const ch: Channel = { ...data, id: `ch-${Date.now()}`, balance: 0, createdAt: new Date().toISOString() };
     this.channels.push(ch);
     return ch;
   }
@@ -264,62 +312,67 @@ class AdminStore {
   getChannelRegistrations(channelId: string): AdminUser[] {
     return this.users.filter((u) => u.channelId === channelId);
   }
-
   getAllRegistrations(): AdminUser[] {
     return this.users.filter((u) => !!u.channelId);
   }
 
+  /** Create or update a user record during the registration flow. */
   registerUser(data: {
-    name: string;
-    email: string;
-    channelId: string;
-    permitType: PermitType;
-    cvUrl?: string;
-    jobPassPaid: boolean;
-    jobPassAmount: number;
+    name: string; email: string; phone: string; password: string;
+    channelId: string; permitType?: PermitType;
+    cvUrl?: string; jobPassPaid?: boolean; jobPassAmount?: number;
     paystackRef?: string;
   }): AdminUser {
     const existing = this.users.find((u) => u.email === data.email);
     if (existing) {
-      // Update existing user with channel registration
-      existing.channelId    = data.channelId;
-      existing.permitType   = data.permitType;
-      existing.accountStatus = "pending";
-      existing.cvUrl        = data.cvUrl;
-      existing.jobPassPaid  = data.jobPassPaid;
-      existing.jobPassAmount = data.jobPassAmount;
-      existing.registeredAt = new Date().toISOString();
-      if (data.jobPassPaid) this._creditCommission(data.channelId, existing.id, existing.name, data.jobPassAmount);
+      if (data.channelId)   existing.channelId    = data.channelId;
+      if (data.permitType)  existing.permitType   = data.permitType;
+      if (data.cvUrl)       existing.cvUrl        = data.cvUrl;
+      if (data.phone)       existing.phone        = data.phone;
+      if (data.jobPassPaid !== undefined) existing.jobPassPaid  = data.jobPassPaid;
+      if (data.jobPassAmount !== undefined) existing.jobPassAmount = data.jobPassAmount;
+      if (!existing.registeredAt) existing.registeredAt = new Date().toISOString();
+      this.setPassword(data.email, data.password || this.passwords.get(data.email) || "");
+      if (data.jobPassPaid) this._creditCommission(data.channelId, existing.id, existing.name, data.jobPassAmount ?? 0);
       return existing;
     }
     const newUser: AdminUser = {
-      id:            `u-${Date.now()}`,
-      email:         data.email,
-      name:          data.name,
-      level:         "ASSOCIATE STAFF",
-      salary:        0,
-      jobsDone:      0,
-      accuracy:      0,
-      streak:        0,
-      tier:          "Associate",
-      status:        "Active",
-      joinedAt:      new Date().toISOString().split("T")[0],
-      country:       "",
-      is_admin:      false,
-      is_super_admin:false,
-      admin_permissions:[],
-      admin_region:  null,
-      channelId:     data.channelId,
-      permitType:    data.permitType,
-      accountStatus: "pending",
-      cvUrl:         data.cvUrl,
-      jobPassPaid:   data.jobPassPaid,
-      jobPassAmount: data.jobPassAmount,
-      registeredAt:  new Date().toISOString(),
+      id:              `u-${Date.now()}`,
+      email:           data.email,
+      name:            data.name,
+      phone:           data.phone,
+      level:           "ASSOCIATE STAFF",
+      salary:          0, jobsDone: 0, accuracy: 0, streak: 0,
+      tier:            "Associate",
+      status:          "Active",
+      joinedAt:        new Date().toISOString().split("T")[0],
+      country:         "",
+      is_admin:        false, is_super_admin: false,
+      admin_permissions: [], admin_region: null,
+      channelId:       data.channelId,
+      permitType:      data.permitType,
+      accountStatus:   "pending",
+      cvUrl:           data.cvUrl,
+      jobPassPaid:     data.jobPassPaid   ?? false,
+      jobPassAmount:   data.jobPassAmount ?? 0,
+      registeredAt:    new Date().toISOString(),
     };
     this.users.push(newUser);
-    if (data.jobPassPaid) this._creditCommission(data.channelId, newUser.id, newUser.name, data.jobPassAmount);
+    this.setPassword(data.email, data.password);
+    if (data.jobPassPaid) this._creditCommission(data.channelId, newUser.id, newUser.name, data.jobPassAmount ?? 0);
     return newUser;
+  }
+
+  /** Update job-pass payment info after Paystack callback. */
+  updateJobPass(userId: string, permitType: PermitType, jobPassAmount: number, channelId: string, paystackRef: string) {
+    const u = this.users.find((u) => u.id === userId);
+    if (!u) return null;
+    u.permitType    = permitType;
+    u.jobPassPaid   = true;
+    u.jobPassAmount = jobPassAmount;
+    this._creditCommission(channelId, userId, u.name, jobPassAmount);
+    void paystackRef; // stored for audit in production
+    return u;
   }
 
   approveRegistration(userId: string): AdminUser | null {
@@ -338,48 +391,43 @@ class AdminStore {
 
   private _creditCommission(channelId: string, userId: string, userName: string, paidAmount: number) {
     const ch = this.channels.find((c) => c.id === channelId);
-    if (!ch) return;
+    if (!ch || paidAmount <= 0) return;
     const commission = (paidAmount * ch.referralCommissionRate) / 100;
     ch.balance += commission;
     this.channelCommissions.push({
-      id: `cc-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
-      channelId,
-      userId,
-      userName,
-      amount: commission,
+      id: `cc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      channelId, userId, userName, amount: commission,
       createdAt: new Date().toISOString(),
     });
   }
 
-  /* ── User CRUD ────────────────────────────────────────────────────── */
+  /* ── User management ──────────────────────────────────────────────── */
   suspendUser(id: string)  { const u = this.users.find((u) => u.id === id); if (u) u.status = "Suspended"; return u ?? null; }
   activateUser(id: string) { const u = this.users.find((u) => u.id === id); if (u) u.status = "Active";    return u ?? null; }
 
   /* ── Stats ────────────────────────────────────────────────────────── */
   getStats() {
     const totalSalaryPaid = this.payments.filter((p) => p.status === "Paid").reduce((s, p) => s + p.amount, 0);
-    const pendingPayouts  = this.payments.filter((p) => p.status === "Pending" || p.status === "Processing").reduce((s, p) => s + p.amount, 0);
+    const pendingPayouts  = this.payments.filter((p) => p.status !== "Paid").reduce((s, p) => s + p.amount, 0);
     return {
-      totalUsers:       this.users.filter((u) => !u.is_super_admin).length,
-      activeUsers:      this.users.filter((u) => u.status === "Active" && !u.is_super_admin).length,
-      suspendedUsers:   this.users.filter((u) => u.status === "Suspended").length,
-      permanentStaff:   this.users.filter((u) => u.tier === "Permanent" && !u.is_super_admin).length,
-      totalJobs:        this.jobs.length,
-      approvedJobs:     this.jobs.filter((j) => j.status === "Approved").length,
-      pendingJobs:      this.jobs.filter((j) => j.status === "Pending").length,
-      rejectedJobs:     this.jobs.filter((j) => j.status === "Rejected").length,
-      totalSalaryPaid,
-      pendingPayouts,
-      totalReferrals:   this.referrals.length,
-      activeReferrals:  this.referrals.filter((r) => r.status === "Active").length,
-      totalSubAdmins:   this.subAdmins.length,
-      totalChannels:    this.channels.length,
+      totalUsers:           this.users.filter((u) => !u.is_super_admin).length,
+      activeUsers:          this.users.filter((u) => u.status === "Active" && !u.is_super_admin).length,
+      suspendedUsers:       this.users.filter((u) => u.status === "Suspended").length,
+      permanentStaff:       this.users.filter((u) => u.tier === "Permanent" && !u.is_super_admin).length,
+      totalJobs:            this.jobs.length,
+      approvedJobs:         this.jobs.filter((j) => j.status === "Approved").length,
+      pendingJobs:          this.jobs.filter((j) => j.status === "Pending").length,
+      rejectedJobs:         this.jobs.filter((j) => j.status === "Rejected").length,
+      totalSalaryPaid, pendingPayouts,
+      totalReferrals:       this.referrals.length,
+      activeReferrals:      this.referrals.filter((r) => r.status === "Active").length,
+      totalSubAdmins:       this.subAdmins.length,
+      totalChannels:        this.channels.length,
       pendingRegistrations: this.users.filter((u) => u.accountStatus === "pending").length,
     };
   }
 }
 
-// Global singleton
 const g = global as typeof global & { adminStore?: AdminStore };
 if (!g.adminStore) g.adminStore = new AdminStore();
 export const adminStore = g.adminStore;

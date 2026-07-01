@@ -41,11 +41,13 @@ export default function SlideMenu({
   open,
   onClose,
   setScreen,
+  onLogout,
 }: {
   user: UserType;
   open: boolean;
   onClose: () => void;
   setScreen: (s: Screen) => void;
+  onLogout?: () => void;
 }) {
   if (!open) return null;
 
@@ -193,6 +195,7 @@ export default function SlideMenu({
         {/* Logout */}
         <div className="p-5">
           <button
+            onClick={() => { onClose(); onLogout?.(); }}
             className="w-full py-3.5 rounded-[12px] flex items-center justify-center gap-2 font-semibold text-[14px] cursor-pointer"
             style={{
               border: "1px solid rgba(255,77,109,.3)",

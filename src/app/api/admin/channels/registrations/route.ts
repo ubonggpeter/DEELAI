@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminStore } from "@/lib/adminStore";
 import { ADMIN_COOKIE } from "@/lib/adminConfig";
+import { sendEmail, tplUserApproved, tplUserRejected } from "@/lib/emailService";
 
-// GET — list registrations under the caller's channel (or all for super admin)
 export async function GET(req: NextRequest) {
   const email = req.cookies.get(ADMIN_COOKIE)?.value;
   if (!email || !adminStore.isAdmin(email)) {
@@ -39,7 +39,6 @@ export async function GET(req: NextRequest) {
   });
 }
 
-// PATCH — approve or reject a registration
 export async function PATCH(req: NextRequest) {
   const email = req.cookies.get(ADMIN_COOKIE)?.value;
   if (!email || !adminStore.isAdmin(email)) {
@@ -47,7 +46,6 @@ export async function PATCH(req: NextRequest) {
   }
   const { userId, action } = await req.json() as { userId: string; action: "approve" | "reject" };
 
-  // Sub-admin can only approve/reject users in their channel
   if (!adminStore.isSuperAdmin(email)) {
     const ch = adminStore.getChannelByOwner(email);
     const user = adminStore.users.find((u) => u.id === userId);
@@ -61,5 +59,16 @@ export async function PATCH(req: NextRequest) {
     action === "reject"  ? adminStore.rejectRegistration(userId)  : null;
 
   if (!updated) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+  // Send email to user
+  const firstName = updated.name.split(" ")[0];
+  const dashUrl   = `${process.env.NEXT_PUBLIC_URL ?? "https://deelai.vercel.app"}/dashboard`;
+
+  if (action === "approve") {
+    await sendEmail({ to: updated.email, subject: "Your DEELAI Account Has Been Approved!", html: tplUserApproved(firstName, dashUrl) });
+  } else {
+    await sendEmail({ to: updated.email, subject: "DEELAI Application Update", html: tplUserRejected(firstName) });
+  }
+
   return NextResponse.json({ user: updated });
 }

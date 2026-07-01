@@ -1,5 +1,6 @@
 export const SUPER_ADMIN_EMAIL = "mentormedia4sure@gmail.com";
-export const ADMIN_COOKIE = "deelai_admin_session";
+export const ADMIN_COOKIE     = "deelai_admin_session";
+export const USER_COOKIE      = "deelai_user_session";
 
 export const ALL_PERMISSIONS = [
   "manage_users",

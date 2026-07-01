@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Sub-admin only" }, { status: 403 });
   }
   const body = await req.json();
-  const { channelName, estTime, paystackPublicKey, paystackSecretKey, referralCommissionRate, jobPassFee, isActive } = body;
+  const { channelName, estTime, description, paystackPublicKey, paystackSecretKey, referralCommissionRate, jobPassFee, isActive } = body;
   if (!channelName || !estTime) {
     return NextResponse.json({ error: "channelName and estTime are required" }, { status: 400 });
   }
@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
       ownerEmail: email,
       channelName,
       estTime,
+      description:           description            ?? "",
       paystackPublicKey:     paystackPublicKey     ?? "",
       paystackSecretKey:     paystackSecretKey      ?? "",
       referralCommissionRate: Number(referralCommissionRate ?? 10),

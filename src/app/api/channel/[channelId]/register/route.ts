@@ -10,6 +10,8 @@ export async function POST(req: NextRequest, { params }: { params: { channelId: 
   const body = await req.json() as {
     name: string;
     email: string;
+    phone?: string;
+    password?: string;
     permitType: PermitType;
     cvUrl?: string;
     paystackRef?: string;
@@ -32,6 +34,8 @@ export async function POST(req: NextRequest, { params }: { params: { channelId: 
   const user = adminStore.registerUser({
     name:          body.name,
     email:         body.email.toLowerCase(),
+    phone:         body.phone         ?? "",
+    password:      body.password      ?? "",
     channelId:     params.channelId,
     permitType:    body.permitType,
     cvUrl:         body.cvUrl,
