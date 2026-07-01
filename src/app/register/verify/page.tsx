@@ -77,7 +77,7 @@ export default function VerifyPage() {
         </p>
         <a href="mailto:support@deelai.uk" style={{ color:C.cyan, fontSize:13, textDecoration:"none" }}>Contact Support</a>
       </div>
-      <style>{`*,*::before,*::after{box-sizing:border-box} html,body{overflow-x:hidden}`}</style>
+      <style>{`*,*::before,*::after{box-sizing:border-box} body{overflow-x:hidden}`}</style>
     </div>
   );
 
@@ -119,7 +119,7 @@ export default function VerifyPage() {
             </a>
           </div>
         </div>
-        <style>{`*,*::before,*::after{box-sizing:border-box} html,body{overflow-x:hidden}`}</style>
+        <style>{`*,*::before,*::after{box-sizing:border-box} body{overflow-x:hidden}`}</style>
       </div>
     );
   }
@@ -211,7 +211,8 @@ function PageShell({ step, channelName, children }: { step: number; channelName:
       </div>
       <style>{`
         *, *::before, *::after { box-sizing: border-box; }
-        html, body { overflow-x: hidden; }
+        /* body only — NOT html, or iOS Safari kills vertical scroll */
+        body { overflow-x: hidden; }
         @keyframes spin-anim { to { transform: rotate(360deg); } }
         .spin-icon { animation: spin-anim 1s linear infinite; }
         /* 16px prevents iOS Safari auto-zoom on input focus */

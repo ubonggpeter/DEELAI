@@ -1,15 +1,19 @@
 import { NextResponse } from "next/server";
 import { adminStore } from "@/lib/adminStore";
 
-// Public — list all active channels for the landing page
+// Public — list active channels with owner region for landing page grouping
 export async function GET() {
-  const channels = adminStore.getActiveChannels().map((c) => ({
-    id:          c.id,
-    channelName: c.channelName,
-    description: c.description,
-    estTime:     c.estTime,
-    jobPassFee:  c.jobPassFee,
-    isActive:    c.isActive,
-  }));
+  const channels = adminStore.getActiveChannels().map((c) => {
+    const owner = adminStore.subAdmins.find((s) => s.email === c.ownerEmail);
+    return {
+      id:          c.id,
+      channelName: c.channelName,
+      description: c.description,
+      estTime:     c.estTime,
+      jobPassFee:  c.jobPassFee,
+      isActive:    c.isActive,
+      region:      owner?.region ?? "Global",
+    };
+  });
   return NextResponse.json({ channels });
 }

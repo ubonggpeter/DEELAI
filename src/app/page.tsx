@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight, Clock, Users, Shield, Star, Zap,
-  CheckCircle2, Loader2, ChevronRight,
+  CheckCircle2, Loader2, ChevronRight, Globe2, MapPin,
 } from "lucide-react";
 
 const C = {
@@ -18,15 +18,18 @@ interface Channel {
   description: string;
   estTime: string;
   jobPassFee: number;
+  region: string;
 }
 
 const CHANNEL_COLORS = ["#00D4FF", "#00E5A0", "#FFB800", "#8B5CF6", "#FF4D6D"];
+
 const PERKS = [
-  { icon: Zap,    label: "Daily Payouts",      desc: "Get paid every day you work"         },
-  { icon: Shield, label: "Secure Platform",    desc: "Bank-grade data security"            },
-  { icon: Star,   label: "Skill Certificates", desc: "Earn certificates as you progress"   },
-  { icon: Users,  label: "Global Community",   desc: "Join thousands of remote workers"    },
+  { icon: Zap,    label: "Daily Payouts",      desc: "Get paid every day you work"        },
+  { icon: Shield, label: "Secure Platform",    desc: "Bank-grade data security"           },
+  { icon: Star,   label: "Skill Certificates", desc: "Earn certificates as you progress"  },
+  { icon: Users,  label: "Global Community",   desc: "Join thousands of remote workers"   },
 ];
+
 const STATS = [
   { value: "2,400+", label: "Active Workers" },
   { value: "$1.2M+", label: "Total Paid Out" },
@@ -34,8 +37,33 @@ const STATS = [
   { value: "24 hrs", label: "Max Review Time" },
 ];
 
+// Map sub-admin region strings → display continent
+const REGION_TO_CONTINENT: Record<string, string> = {
+  "West Africa":    "Africa",    "East Africa":   "Africa",
+  "South Africa":   "Africa",    "North Africa":  "Africa",    "Central Africa": "Africa",
+  "North America":  "Americas",  "South America": "Americas",
+  "Latin America":  "Americas",  "Central America": "Americas",
+  "Europe":         "Europe",    "Western Europe": "Europe",
+  "Eastern Europe": "Europe",    "Southern Europe": "Europe",
+  "Asia":           "Asia Pacific", "South East Asia": "Asia Pacific",
+  "South Asia":     "Asia Pacific", "East Asia":       "Asia Pacific",
+  "Oceania":        "Asia Pacific", "Pacific":         "Asia Pacific",
+  "Middle East":    "Middle East",  "MENA":            "Middle East",
+};
+
+const CONTINENT_ORDER = ["Africa", "Americas", "Europe", "Asia Pacific", "Middle East", "Global"];
+
+const CONTINENT_COLOR: Record<string, string> = {
+  "Africa":       "#00E5A0",
+  "Americas":     "#00D4FF",
+  "Europe":       "#8B5CF6",
+  "Asia Pacific": "#FFB800",
+  "Middle East":  "#FF4D6D",
+  "Global":       "#7D8BAA",
+};
+
 export default function LandingPage() {
-  const router   = useRouter();
+  const router     = useRouter();
   const [channels, setChannels] = useState<Channel[]>([]);
   const [loading,  setLoading]  = useState(true);
   const [selected, setSelected] = useState<string | null>(null);
@@ -51,6 +79,17 @@ export default function LandingPage() {
     setSelected(id);
     router.push(`/register?channel=${id}`);
   }
+
+  // Group channels continent → [channels]
+  const grouped: Record<string, Channel[]> = {};
+  for (const ch of channels) {
+    const continent = REGION_TO_CONTINENT[ch.region] ?? ch.region ?? "Global";
+    (grouped[continent] ??= []).push(ch);
+  }
+  const visibleContinents = [
+    ...CONTINENT_ORDER.filter((c) => grouped[c]),
+    ...Object.keys(grouped).filter((c) => !CONTINENT_ORDER.includes(c)),
+  ];
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, color: C.txt }}>
@@ -79,16 +118,12 @@ export default function LandingPage() {
             color: C.txt2, fontSize: 13, textDecoration: "none",
             padding: "6px 12px", borderRadius: 7, border: `1px solid ${C.s3}`,
             whiteSpace: "nowrap", flexShrink: 0,
-          }}>
-            Sign In
-          </a>
+          }}>Sign In</a>
           <a href="#channels" style={{
             background: C.cyan, color: "#060A12",
             fontSize: 13, fontWeight: 700, textDecoration: "none",
             padding: "7px 14px", borderRadius: 7, whiteSpace: "nowrap", flexShrink: 0,
-          }}>
-            Join Now
-          </a>
+          }}>Join Now</a>
         </div>
       </nav>
 
@@ -108,18 +143,12 @@ export default function LandingPage() {
           margin: "0 0 18px", letterSpacing: "-0.02em",
         }}>
           Earn From Anywhere With<br />
-          <span style={{
-            background: `linear-gradient(135deg, ${C.cyan}, #0099BB)`,
-            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-          }}>
+          <span style={{ background: `linear-gradient(135deg, ${C.cyan}, #0099BB)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
             DEELAI
           </span>
         </h1>
 
-        <p style={{
-          color: C.txt2, fontSize: "clamp(14px, 2.5vw, 17px)",
-          maxWidth: 520, margin: "0 auto 32px", lineHeight: 1.7,
-        }}>
+        <p style={{ color: C.txt2, fontSize: "clamp(14px, 2.5vw, 17px)", maxWidth: 520, margin: "0 auto 32px", lineHeight: 1.7 }}>
           Join our global network of remote data annotators. Work on your schedule,
           earn a real salary, and grow your career — all from home.
         </p>
@@ -137,12 +166,10 @@ export default function LandingPage() {
             background: C.s1, border: `1px solid ${C.s3}`,
             color: C.txt2, fontSize: 14,
             padding: "12px 20px", borderRadius: 10, textDecoration: "none",
-          }}>
-            I have an account
-          </a>
+          }}>I have an account</a>
         </div>
 
-        {/* Stats */}
+        {/* Stats — CSS grid handles responsive */}
         <div className="lp-stats">
           {STATS.map((s, i) => (
             <div key={i} className={`lp-stat${i < STATS.length - 1 ? " lp-stat-divider" : ""}`}>
@@ -174,14 +201,14 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* ── Channel selection ─────────────────────────────────────────── */}
+      {/* ── Channel selection — continent → agent rows ────────────────── */}
       <div id="channels" style={{ maxWidth: 1100, margin: "0 auto", padding: "56px 16px" }}>
-        <div style={{ textAlign: "center", marginBottom: 36 }}>
+        <div style={{ textAlign: "center", marginBottom: 40 }}>
           <h2 style={{ fontSize: "clamp(22px, 5vw, 38px)", fontWeight: 800, margin: "0 0 10px" }}>
             Choose Your Channel
           </h2>
-          <p style={{ color: C.txt2, fontSize: 14, maxWidth: 440, margin: "0 auto" }}>
-            Each channel is managed by a dedicated sub-admin. Select the one that fits your goals.
+          <p style={{ color: C.txt2, fontSize: 14, maxWidth: 480, margin: "0 auto" }}>
+            Channels are managed by regional agents. Find your region and click Join to register.
           </p>
         </div>
 
@@ -194,84 +221,117 @@ export default function LandingPage() {
             No channels are currently open for registration. Check back soon.
           </div>
         ) : (
-          <div className="channel-grid">
-            {channels.map((ch, i) => {
-              const color = CHANNEL_COLORS[i % CHANNEL_COLORS.length];
-              const isSel = selected === ch.id;
+          <div style={{ display: "flex", flexDirection: "column", gap: 36 }}>
+            {visibleContinents.map((continent) => {
+              const cColor = CONTINENT_COLOR[continent] ?? C.txt2;
+              const agents = grouped[continent];
               return (
-                <div
-                  key={ch.id}
-                  onClick={() => selectChannel(ch.id)}
-                  className="channel-card"
-                  style={{
-                    background: C.s1,
-                    border: `1.5px solid ${isSel ? color : C.s3}`,
-                    borderRadius: 16, padding: "22px",
-                    cursor: "pointer", position: "relative", overflow: "hidden",
-                  }}
-                >
-                  <div style={{
-                    position: "absolute", top: -40, left: -40,
-                    width: 110, height: 110, borderRadius: "50%",
-                    background: `${color}10`, pointerEvents: "none",
-                  }} />
-
-                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14 }}>
+                <div key={continent}>
+                  {/* ── Continent header ── */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
                     <div style={{
-                      width: 44, height: 44, borderRadius: 11,
-                      background: `${color}18`, border: `1.5px solid ${color}40`,
+                      width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+                      background: `${cColor}18`, border: `1px solid ${cColor}35`,
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 20, fontWeight: 900, color, fontFamily: "system-ui", flexShrink: 0,
-                      overflow: "hidden",
                     }}>
-                      {ch.channelName.charAt(0).toUpperCase()}
+                      <Globe2 size={13} color={cColor} />
                     </div>
-                    <div style={{
-                      display: "flex", alignItems: "center", gap: 5,
-                      background: `${C.green}12`, border: `1px solid ${C.green}30`,
-                      borderRadius: 20, padding: "3px 8px", flexShrink: 0,
-                    }}>
-                      <div style={{ width: 5, height: 5, borderRadius: "50%", background: C.green }} />
-                      <span style={{ color: C.green, fontSize: 10, fontWeight: 700 }}>OPEN</span>
-                    </div>
-                  </div>
-
-                  <h3 style={{ color: C.txt, fontSize: 16, fontWeight: 700, margin: "0 0 7px", wordBreak: "break-word" }}>
-                    Channel {ch.channelName}
-                  </h3>
-                  <p style={{ color: C.txt2, fontSize: 13, lineHeight: 1.6, margin: "0 0 16px", wordBreak: "break-word" }}>
-                    {ch.description}
-                  </p>
-
-                  <div style={{ display: "flex", gap: 7, marginBottom: 18, flexWrap: "wrap" }}>
-                    <span style={{
-                      fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 5,
-                      background: `${C.gold}12`, border: `1px solid ${C.gold}30`, color: C.gold,
-                      display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap",
-                    }}>
-                      <Clock size={10} /> {ch.estTime} review
+                    <span style={{ color: C.txt, fontSize: 15, fontWeight: 800, whiteSpace: "nowrap" }}>
+                      {continent}
                     </span>
-                    {ch.jobPassFee > 0 && (
-                      <span style={{
-                        fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 5,
-                        background: `${color}12`, border: `1px solid ${color}30`, color,
-                        whiteSpace: "nowrap",
-                      }}>
-                        ₦{ch.jobPassFee.toLocaleString()} job pass
-                      </span>
-                    )}
+                    <span style={{
+                      fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 10, flexShrink: 0,
+                      background: `${cColor}14`, border: `1px solid ${cColor}30`, color: cColor,
+                    }}>
+                      {agents.length} agent{agents.length !== 1 ? "s" : ""}
+                    </span>
+                    <div style={{ flex: 1, height: 1, background: C.s3 }} />
                   </div>
 
-                  <button style={{
-                    width: "100%", background: `${color}15`,
-                    border: `1px solid ${color}40`, borderRadius: 9,
-                    padding: "10px", color, fontWeight: 700, fontSize: 14,
-                    cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                  }}>
-                    {isSel
-                      ? <><CheckCircle2 size={14} /> Selected</>
-                      : <>Join Channel {ch.channelName} <ChevronRight size={14} /></>}
-                  </button>
+                  {/* ── Agent rows ── */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {agents.map((ch, idx) => {
+                      const color = CHANNEL_COLORS[(CONTINENT_ORDER.indexOf(continent) * 3 + idx) % CHANNEL_COLORS.length];
+                      const isSel = selected === ch.id;
+                      return (
+                        <div
+                          key={ch.id}
+                          onClick={() => selectChannel(ch.id)}
+                          className="agent-row"
+                          style={{
+                            background: isSel ? `${color}0c` : C.s1,
+                            border: `1.5px solid ${isSel ? color : C.s3}`,
+                            borderRadius: 12, padding: "14px 14px",
+                            cursor: "pointer", display: "flex", alignItems: "center", gap: 12,
+                          }}
+                        >
+                          {/* Avatar */}
+                          <div style={{
+                            width: 42, height: 42, borderRadius: 10, flexShrink: 0,
+                            background: `${color}18`, border: `1.5px solid ${color}40`,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 18, fontWeight: 900, color, fontFamily: "system-ui",
+                            overflow: "hidden",
+                          }}>
+                            {ch.channelName.charAt(0).toUpperCase()}
+                          </div>
+
+                          {/* Info */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", marginBottom: 6 }}>
+                              <span style={{ color: C.txt, fontWeight: 700, fontSize: 14, whiteSpace: "nowrap" }}>
+                                Channel {ch.channelName}
+                              </span>
+                              <span style={{
+                                display: "inline-flex", alignItems: "center", gap: 4, flexShrink: 0,
+                                fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 10,
+                                background: `${C.green}12`, border: `1px solid ${C.green}30`, color: C.green,
+                              }}>
+                                <span style={{ width: 4, height: 4, borderRadius: "50%", background: C.green, display: "inline-block" }} />
+                                OPEN
+                              </span>
+                              <span style={{ color: C.txt3, fontSize: 11, display: "inline-flex", alignItems: "center", gap: 3 }}>
+                                <MapPin size={9} color={C.txt3} style={{ flexShrink: 0 }} />
+                                {ch.region}
+                              </span>
+                            </div>
+                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                              <span style={{
+                                fontSize: 11, fontWeight: 600, padding: "2px 7px", borderRadius: 4,
+                                background: `${C.gold}12`, border: `1px solid ${C.gold}28`, color: C.gold,
+                                display: "inline-flex", alignItems: "center", gap: 3, whiteSpace: "nowrap",
+                              }}>
+                                <Clock size={9} /> {ch.estTime} review
+                              </span>
+                              {ch.jobPassFee > 0 && (
+                                <span style={{
+                                  fontSize: 11, fontWeight: 600, padding: "2px 7px", borderRadius: 4,
+                                  background: `${color}12`, border: `1px solid ${color}28`, color,
+                                  whiteSpace: "nowrap",
+                                }}>
+                                  ₦{ch.jobPassFee.toLocaleString()} fee
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Join button */}
+                          <button className="agent-join-btn" style={{
+                            background: isSel ? color : `${color}18`,
+                            border: `1.5px solid ${color}50`, borderRadius: 8,
+                            color: isSel ? "#060A12" : color,
+                            fontWeight: 700, fontSize: 13, cursor: "pointer",
+                            display: "inline-flex", alignItems: "center", gap: 5, flexShrink: 0,
+                            padding: "8px 14px", whiteSpace: "nowrap",
+                          }}>
+                            {isSel
+                              ? <><CheckCircle2 size={13} /> Joined</>
+                              : <>Join <ChevronRight size={13} /></>}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               );
             })}
@@ -287,7 +347,7 @@ export default function LandingPage() {
           </h2>
           <div className="lp-steps">
             {[
-              { step: "01", title: "Pick a Channel",  desc: "Select the channel that matches your schedule and goals." },
+              { step: "01", title: "Pick a Channel",  desc: "Find a regional agent channel that matches your schedule and goals." },
               { step: "02", title: "Register",         desc: "Fill in your details, get your job pass, and upload your CV." },
               { step: "03", title: "Get Approved",     desc: "Channel admin reviews and approves your account within 24 hrs." },
               { step: "04", title: "Start Earning",    desc: "Log in, complete annotation tasks, and get paid daily." },
@@ -322,46 +382,45 @@ export default function LandingPage() {
       <style>{`
         *, *::before, *::after { box-sizing: border-box; }
         html { scroll-behavior: smooth; }
-        html, body { overflow-x: hidden; }
+        /* body only — do NOT set overflow-x:hidden on html or iOS kills vertical scroll */
+        body { overflow-x: hidden; }
+
         @keyframes spin-anim { to { transform: rotate(360deg); } }
         .spin-icon { animation: spin-anim 1s linear infinite; }
         .pulse-dot { animation: pulse 2s infinite; }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
-        /* Stats grid */
-        .lp-stats { display: grid; grid-template-columns: repeat(2,1fr); padding-top: 32px; border-top: 1px solid ${C.s3}; margin-top: 48px; }
+        /* Stats grid: 2×2 mobile → 4×1 desktop */
+        .lp-stats {
+          display: grid; grid-template-columns: repeat(2,1fr);
+          padding-top: 32px; border-top: 1px solid ${C.s3}; margin-top: 48px;
+        }
         .lp-stat { padding: 12px 8px; text-align: center; }
         .lp-stat-divider { border-right: 1px solid ${C.s3}; }
-        @media (min-width:600px) {
-          .lp-stats { grid-template-columns: repeat(4,1fr); }
-          .lp-stat-divider { border-right: 1px solid ${C.s3}; }
-          .lp-stat:nth-child(2) { border-right: 1px solid ${C.s3}; }
-        }
+        @media (min-width:600px) { .lp-stats { grid-template-columns: repeat(4,1fr); } }
         @media (max-width:599px) {
           .lp-stat:nth-child(2) { border-right: none; }
           .lp-stat:nth-child(1), .lp-stat:nth-child(2) { border-bottom: 1px solid ${C.s3}; padding-bottom: 14px; }
         }
 
-        /* Perks grid: 1 col mobile → 2 col 480px → 4 col 768px */
+        /* Perks grid: 1 col → 2 col 480px → 4 col 768px */
         .lp-perks { display: grid; grid-template-columns: 1fr; gap: 14px; }
         @media (min-width:480px) { .lp-perks { grid-template-columns: 1fr 1fr; gap: 16px; } }
         @media (min-width:768px) { .lp-perks { grid-template-columns: repeat(4,1fr); gap: 20px; } }
 
-        /* Channel cards grid: 1 col mobile → 2 col tablet → 3 col desktop */
-        .channel-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
-        @media (min-width:560px)  { .channel-grid { grid-template-columns: repeat(2,1fr); } }
-        @media (min-width:960px)  { .channel-grid { grid-template-columns: repeat(3,1fr); } }
-
-        /* Channel card hover */
-        .channel-card { transition: border-color 0.2s, transform 0.15s; }
-        .channel-card:hover { transform: translateY(-2px); }
-
-        /* How it works steps */
+        /* How it works steps: 2 col → 4 col */
         .lp-steps { display: grid; grid-template-columns: repeat(2,1fr); gap: 24px; }
         @media (min-width:640px) { .lp-steps { grid-template-columns: repeat(4,1fr); } }
 
-        /* Nav sign-in button hide on very small */
+        /* Nav hide sign-in on very narrow */
         @media (max-width:340px) { .nav-signin { display: none; } }
+
+        /* Agent row hover */
+        .agent-row { transition: border-color 0.15s, background 0.15s; }
+        .agent-row:hover { border-color: ${C.cyan}60 !important; }
+
+        /* Hide join button text label on very narrow, show icon only */
+        @media (max-width:380px) { .agent-join-btn { padding: 8px 10px; } }
       `}</style>
     </div>
   );
