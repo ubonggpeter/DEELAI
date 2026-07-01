@@ -100,6 +100,8 @@ export default function Dashboard() {
     router.push("/login");
   }
 
+  const isSuperAdmin = session?.email === "mentormedia4sure@gmail.com";
+
   return (
     <div className="flex h-dvh overflow-hidden" style={{ background: "var(--bg)" }}>
       <Sidebar
@@ -110,6 +112,29 @@ export default function Dashboard() {
         onMenuOpen={() => setMenuOpen(true)}
       />
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        {/* Admin shortcut bar — super admin only */}
+        {isSuperAdmin && (
+          <div style={{
+            background: "#FFB80012", borderBottom: "1px solid #FFB80028",
+            padding: "6px 16px", display: "flex", alignItems: "center",
+            justifyContent: "space-between", gap: 10, flexShrink: 0,
+          }}>
+            <span style={{ color: "#FFB800", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>
+              ⚡ Super Admin
+            </span>
+            <button
+              onClick={() => router.push("/admin/dashboard")}
+              style={{
+                background: "linear-gradient(135deg,#FFB800,#CC9200)",
+                color: "#060A12", border: "none", borderRadius: 7,
+                padding: "5px 14px", fontSize: 12, fontWeight: 800,
+                cursor: "pointer", whiteSpace: "nowrap",
+              }}
+            >
+              Admin Panel →
+            </button>
+          </div>
+        )}
         <div className="flex-1 overflow-y-auto" style={{ paddingBottom: isMain ? undefined : 0 }}>
           <ScreenContent
             screen={screen} user={user} setUser={setUser}

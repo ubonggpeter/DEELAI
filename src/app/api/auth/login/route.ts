@@ -9,27 +9,44 @@ export async function POST(req: NextRequest) {
   }
   const email = rawEmail.trim().toLowerCase();
 
-  // Super admin → admin dashboard (no worker session needed)
+  // Super admin — lands on user dashboard; admin button visible there
   if (email === SUPER_ADMIN_EMAIL) {
     if (!adminStore.verifyPassword(email, password)) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
-    const res = NextResponse.json({ redirect: "/admin/dashboard" });
-    res.cookies.set(ADMIN_COOKIE, email, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 });
+    const user = adminStore.getUserByEmail(email);
+    const userSession = {
+      userId:        user?.id ?? "u0",
+      email,
+      name:          user?.name ?? "Super Admin",
+      accountStatus: "approved" as const,
+      channelId:     user?.channelId,
+    };
+    const res = NextResponse.json({ redirect: "/dashboard" });
+    // USER_COOKIE lets them use the worker dashboard
+    res.cookies.set(USER_COOKIE, JSON.stringify(userSession), {
+      httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 7,
+    });
+    // ADMIN_COOKIE lets them access /admin/dashboard when they click the Admin button
+    res.cookies.set(ADMIN_COOKIE, email, {
+      httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24,
+    });
     return res;
   }
 
-  // Sub-admin → admin dashboard
+  // Sub-admin → still uses /admin/dashboard directly
   if (adminStore.isAdmin(email)) {
     if (!adminStore.verifyPassword(email, password)) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
     const res = NextResponse.json({ redirect: "/admin/dashboard" });
-    res.cookies.set(ADMIN_COOKIE, email, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 });
+    res.cookies.set(ADMIN_COOKIE, email, {
+      httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24,
+    });
     return res;
   }
 
-  // Worker login
+  // Regular worker login
   const user = adminStore.getUserByEmail(email);
   if (!user) {
     return NextResponse.json({ error: "No account found with this email. Please register." }, { status: 404 });
@@ -40,10 +57,12 @@ export async function POST(req: NextRequest) {
 
   const session = { userId: user.id, email, name: user.name, accountStatus: user.accountStatus, channelId: user.channelId };
   const res = NextResponse.json({
-    redirect: user.accountStatus === "approved" ? "/dashboard" : null,
+    redirect:      user.accountStatus === "approved" ? "/dashboard" : null,
     accountStatus: user.accountStatus,
-    user: session,
+    user:          session,
   });
-  res.cookies.set(USER_COOKIE, JSON.stringify(session), { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 7 });
+  res.cookies.set(USER_COOKIE, JSON.stringify(session), {
+    httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 7,
+  });
   return res;
 }

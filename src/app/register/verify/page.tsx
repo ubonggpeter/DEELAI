@@ -77,7 +77,7 @@ export default function VerifyPage() {
         </p>
         <a href="mailto:support@deelai.uk" style={{ color:C.cyan, fontSize:13, textDecoration:"none" }}>Contact Support</a>
       </div>
-      <style>{`*,*::before,*::after{box-sizing:border-box} body{overflow-x:hidden}`}</style>
+      <style>{`*,*::before,*::after{box-sizing:border-box}`}</style>
     </div>
   );
 
@@ -119,7 +119,7 @@ export default function VerifyPage() {
             </a>
           </div>
         </div>
-        <style>{`*,*::before,*::after{box-sizing:border-box} body{overflow-x:hidden}`}</style>
+        <style>{`*,*::before,*::after{box-sizing:border-box}`}</style>
       </div>
     );
   }
@@ -184,7 +184,7 @@ const STEPS = ["Personal Details", "Job Pass", "Verify Account"];
 
 function PageShell({ step, channelName, children }: { step: number; channelName: string; children: React.ReactNode }) {
   return (
-    <div style={{ minHeight:"100vh", background:C.bg, padding:"20px 14px" }}>
+    <div style={{ minHeight:"100vh", background:C.bg, padding:"20px 14px 80px" }}>
       <div style={{ maxWidth:520, margin:"0 auto 20px" }}>
         <a href="/" style={{ textDecoration:"none", display:"inline-flex", alignItems:"center", gap:9 }}>
           <div style={{ width:30, height:30, borderRadius:8, background:"linear-gradient(135deg,#00D4FF,#0055DD)", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:900, color:"#fff", fontSize:13, fontFamily:"system-ui", flexShrink:0 }}>D</div>
@@ -211,8 +211,6 @@ function PageShell({ step, channelName, children }: { step: number; channelName:
       </div>
       <style>{`
         *, *::before, *::after { box-sizing: border-box; }
-        /* body only — NOT html, or iOS Safari kills vertical scroll */
-        body { overflow-x: hidden; }
         @keyframes spin-anim { to { transform: rotate(360deg); } }
         .spin-icon { animation: spin-anim 1s linear infinite; }
         /* 16px prevents iOS Safari auto-zoom on input focus */

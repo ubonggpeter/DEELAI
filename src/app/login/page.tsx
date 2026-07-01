@@ -118,9 +118,6 @@ export default function LoginPage() {
           Don&apos;t have an account?{" "}
           <a href="/" style={{ color:C.cyan, textDecoration:"none", fontWeight:600 }}>Choose a channel →</a>
         </p>
-        <p style={{ textAlign:"center", color:C.txt3, fontSize:12, marginTop:8 }}>
-          <a href="/admin/login" style={{ color:C.txt3, textDecoration:"none" }}>Admin login</a>
-        </p>
       </div>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}} *{box-sizing:border-box} input:focus{border-color:#00D4FF55!important;outline:none}`}</style>
     </div>

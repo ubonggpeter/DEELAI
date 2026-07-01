@@ -374,8 +374,6 @@ export default function LandingPage() {
         <div style={{ color: C.txt3, fontSize: 12 }}>
           © 2026 DEELAI · Remote Work Platform ·{" "}
           <a href="/login" style={{ color: C.txt2, textDecoration: "none" }}>Sign In</a>
-          {" · "}
-          <a href="/admin" style={{ color: C.txt2, textDecoration: "none" }}>Admin</a>
         </div>
       </div>
 
