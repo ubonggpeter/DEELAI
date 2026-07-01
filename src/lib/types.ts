@@ -1,5 +1,6 @@
 export interface User {
   name: string;
+  email?: string;
   level: string;
   isPermanent: boolean;
   salary: number;

@@ -12,9 +12,11 @@ import {
   ChevronRight,
   LogOut,
   Flame,
+  ShieldCheck,
   LucideIcon,
 } from "lucide-react";
 import { User as UserType, Screen } from "@/lib/types";
+import { SUPER_ADMIN_EMAIL } from "@/lib/adminConfig";
 
 interface MenuItem {
   Icon: LucideIcon;
@@ -171,6 +173,22 @@ export default function SlideMenu({
             </div>
           ))}
         </div>
+
+        {/* Admin Panel link — only for super admin */}
+        {user.email === SUPER_ADMIN_EMAIL && (
+          <a
+            href="/admin"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3.5 px-5 py-3.5"
+            style={{ borderBottom: "1px solid var(--b1)", textDecoration:"none", background:"rgba(139,92,246,.06)" }}
+            onClick={onClose}
+          >
+            <ShieldCheck size={20} color="#8B5CF6" />
+            <span className="text-[14px] font-semibold flex-1" style={{ color:"#8B5CF6" }}>Admin Panel</span>
+            <ChevronRight size={14} color="#8B5CF6" />
+          </a>
+        )}
 
         {/* Logout */}
         <div className="p-5">

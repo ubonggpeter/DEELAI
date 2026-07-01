@@ -1,15 +1,16 @@
 "use client";
 import {
   Zap, GraduationCap, Tag, Users, CreditCard,
-  Bell, User, TrendingUp, Settings, LogOut,
+  Bell, User, TrendingUp, Settings, LogOut, ShieldCheck,
   LucideIcon,
 } from "lucide-react";
 import { Screen } from "@/lib/types";
+import { SUPER_ADMIN_EMAIL } from "@/lib/adminConfig";
 
 interface SidebarProps {
   screen: Screen;
   setScreen: (s: Screen) => void;
-  user: { name: string; level: string; salary: number };
+  user: { name: string; level: string; salary: number; email?: string };
   notifCount: number;
   onMenuOpen: () => void;
 }
@@ -113,6 +114,28 @@ export default function Sidebar({ screen, setScreen, user, notifCount, onMenuOpe
           );
         })}
       </nav>
+
+      {/* Admin link — shown for admin email */}
+      {user.email === SUPER_ADMIN_EMAIL && (
+        <nav className="flex flex-col gap-1 px-3 pt-5">
+          <p className="text-[10px] font-mono tracking-[1px] px-3 pb-2" style={{ color: "var(--txt3)" }}>ADMIN</p>
+          <a
+            href="/admin"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-left border no-underline transition-all duration-150"
+            style={{
+              background: "rgba(139,92,246,.1)",
+              borderColor: "rgba(139,92,246,.25)",
+              color: "#8B5CF6",
+              textDecoration: "none",
+            }}
+          >
+            <ShieldCheck size={18} strokeWidth={2} />
+            <span className="text-[13px] font-semibold">Admin Panel</span>
+          </a>
+        </nav>
+      )}
 
       {/* Spacer */}
       <div className="flex-1" />
