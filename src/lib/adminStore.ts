@@ -25,11 +25,43 @@ export interface Channel {
   estTime: string;
   paystackPublicKey: string;
   paystackSecretKey: string;
+  lensPaystackLink: string;
   referralCommissionRate: number;
   jobPassFee: number;
   isActive: boolean;
   balance: number;
+  region: string;
   createdAt: string;
+}
+
+export interface QuizQuestion {
+  id: string;
+  q: string;
+  opts: string[];
+  ans: number;
+}
+
+export interface TrainingDoc {
+  id: string;
+  title: string;
+  url: string;
+  type: "pdf" | "doc" | "link";
+  addedAt: string;
+}
+
+export interface ReferralBonus {
+  id: string;
+  channelId: string;
+  referrerId: string;
+  referrerName: string;
+  referrerEmail: string;
+  recruitEmail: string;
+  recruitName: string;
+  amount: number;
+  status: "pending" | "claimed" | "auto-credited";
+  createdAt: string;
+  claimedAt?: string;
+  autoCreditsAt: string;
 }
 
 export interface ChannelCommission {
@@ -48,6 +80,7 @@ export interface AdminUser {
   id: string;
   email: string;
   name: string;
+  displayName?: string;
   phone: string;
   level: string;
   salary: number;
@@ -69,6 +102,12 @@ export interface AdminUser {
   jobPassPaid: boolean;
   jobPassAmount: number;
   registeredAt?: string;
+  refCode: string;
+  referredByUserId?: string;
+  quizPassed: boolean;
+  lensActivated: boolean;
+  trainingDone: boolean;
+  completedModules: number[];
 }
 
 export interface Job {
@@ -114,38 +153,38 @@ const seedChannels: Channel[] = [
   {
     id:"ch-a", ownerEmail:"channel.a@deelai.uk", channelName:"A",
     description:"Full-time positions for dedicated remote workers. Competitive pay with daily payouts and fast-track approval.",
-    estTime:"2 min", paystackPublicKey:"", paystackSecretKey:"",
-    referralCommissionRate:10, jobPassFee:5000, isActive:true, balance:12500,
+    estTime:"2 min", paystackPublicKey:"", paystackSecretKey:"", lensPaystackLink:"",
+    referralCommissionRate:10, jobPassFee:25, isActive:true, balance:125, region:"West Africa",
     createdAt:"2026-01-15T10:00:00Z",
   },
   {
     id:"ch-b", ownerEmail:"channel.b@deelai.uk", channelName:"B",
     description:"Flexible part-time schedule. Perfect for students and anyone looking to earn on their own timetable.",
-    estTime:"5 min", paystackPublicKey:"", paystackSecretKey:"",
-    referralCommissionRate:12, jobPassFee:3500, isActive:true, balance:8400,
+    estTime:"5 min", paystackPublicKey:"", paystackSecretKey:"", lensPaystackLink:"",
+    referralCommissionRate:12, jobPassFee:20, isActive:true, balance:84, region:"East Africa",
     createdAt:"2026-01-20T10:00:00Z",
   },
   {
     id:"ch-c", ownerEmail:"channel.c@deelai.uk", channelName:"C",
     description:"Premium channel for experienced data annotators. Higher base pay and exclusive high-value batches.",
-    estTime:"10 min", paystackPublicKey:"", paystackSecretKey:"",
-    referralCommissionRate:15, jobPassFee:7500, isActive:true, balance:22500,
+    estTime:"10 min", paystackPublicKey:"", paystackSecretKey:"", lensPaystackLink:"",
+    referralCommissionRate:15, jobPassFee:35, isActive:true, balance:225, region:"North America",
     createdAt:"2026-02-01T10:00:00Z",
   },
 ];
 
 const seedUsers: AdminUser[] = [
-  { id:"u1",  email:"chidi@deelai.uk",  phone:"", name:"Chidi Okonkwo",  level:"PERMANENT STAFF", salary:18420, jobsDone:1241, accuracy:98.7, streak:42, tier:"Permanent", status:"Active",    joinedAt:"2025-11-10", country:"NG", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, channelId:"ch-a", permitType:"full-time",  accountStatus:"approved", jobPassPaid:true,  jobPassAmount:5000 },
-  { id:"u2",  email:"aisha@deelai.uk",  phone:"", name:"Aisha Mensah",   level:"PERMANENT STAFF", salary:16800, jobsDone:1102, accuracy:98.2, streak:35, tier:"Permanent", status:"Active",    joinedAt:"2025-11-14", country:"GH", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, channelId:"ch-b", permitType:"full-time",  accountStatus:"approved", jobPassPaid:true,  jobPassAmount:3500 },
-  { id:"u3",  email:"kwame@deelai.uk",  phone:"", name:"Kwame Asante",   level:"PERMANENT STAFF", salary:15990, jobsDone:1044, accuracy:97.9, streak:28, tier:"Permanent", status:"Active",    joinedAt:"2025-11-20", country:"GH", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, channelId:"ch-a", permitType:"full-time",  accountStatus:"approved", jobPassPaid:true,  jobPassAmount:5000 },
-  { id:"u4",  email:"amara@deelai.uk",  phone:"", name:"Amara Osei",     level:"ASSOCIATE STAFF", salary:14750, jobsDone:984,  accuracy:97.4, streak:21, tier:"Associate", status:"Active",    joinedAt:"2025-12-01", country:"NG", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, channelId:"ch-b", permitType:"part-time",  accountStatus:"approved", jobPassPaid:true,  jobPassAmount:3500 },
-  { id:"u5",  email:"fatima@deelai.uk", phone:"", name:"Fatima Bello",   level:"ASSOCIATE STAFF", salary:13200, jobsDone:901,  accuracy:96.8, streak:14, tier:"Associate", status:"Active",    joinedAt:"2025-12-05", country:"NG", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, channelId:"ch-a", permitType:"part-time",  accountStatus:"pending",  jobPassPaid:false, jobPassAmount:0    },
-  { id:"u6",  email:"emeka@deelai.uk",  phone:"", name:"Emeka Nwosu",    level:"ASSOCIATE STAFF", salary:12800, jobsDone:876,  accuracy:96.1, streak:10, tier:"Associate", status:"Active",    joinedAt:"2025-12-10", country:"NG", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, channelId:"ch-c", permitType:"full-time",  accountStatus:"pending",  jobPassPaid:false, jobPassAmount:0    },
-  { id:"u7",  email:"sade@deelai.uk",   phone:"", name:"Sade Williams",  level:"ASSOCIATE STAFF", salary:11500, jobsDone:820,  accuracy:95.5, streak:7,  tier:"Associate", status:"Active",    joinedAt:"2025-12-15", country:"GB", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, channelId:"ch-b", permitType:"part-time",  accountStatus:"rejected", jobPassPaid:false, jobPassAmount:0    },
-  { id:"u8",  email:"tunde@deelai.uk",  phone:"", name:"Tunde Adeyemi",  level:"ASSOCIATE STAFF", salary:10900, jobsDone:794,  accuracy:94.9, streak:5,  tier:"Associate", status:"Active",    joinedAt:"2026-01-03", country:"NG", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, channelId:"ch-a", permitType:"full-time",  accountStatus:"approved", jobPassPaid:true,  jobPassAmount:5000 },
-  { id:"u9",  email:"gideon@deelai.uk", phone:"", name:"Gideon NSE",     level:"ASSOCIATE STAFF", salary:9400,  jobsDone:620,  accuracy:93.2, streak:3,  tier:"Associate", status:"Suspended", joinedAt:"2026-01-10", country:"NG", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, channelId:"ch-c", permitType:"part-time",  accountStatus:"approved", jobPassPaid:true,  jobPassAmount:7500 },
-  { id:"u10", email:"ravi@deelai.uk",   phone:"", name:"Ravi Sharma",    level:"ASSOCIATE STAFF", salary:8750,  jobsDone:540,  accuracy:92.8, streak:0,  tier:"Associate", status:"Active",    joinedAt:"2026-01-18", country:"IN", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, channelId:"ch-b", permitType:"part-time",  accountStatus:"pending",  jobPassPaid:false, jobPassAmount:0    },
-  { id:"u0",  email:SUPER_ADMIN_EMAIL,  phone:"", name:"Super Admin",    level:"SUPER ADMIN",     salary:0,     jobsDone:0,    accuracy:100,   streak:0,  tier:"Permanent", status:"Active",    joinedAt:"2025-10-01", country:"NG", is_admin:true,  is_super_admin:true,  admin_permissions:[], admin_region:"Global", accountStatus:"approved", jobPassPaid:false, jobPassAmount:0 },
+  { id:"u1",  email:"chidi@deelai.uk",  phone:"", name:"Chidi Okonkwo",  level:"PERMANENT STAFF", salary:18420, jobsDone:1241, accuracy:98.7, streak:42, tier:"Permanent", status:"Active",    joinedAt:"2025-11-10", country:"NG", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, channelId:"ch-a", permitType:"full-time",  accountStatus:"approved", jobPassPaid:true,  jobPassAmount:25, refCode:"CHDOK12", quizPassed:true,  lensActivated:true,  trainingDone:true,  completedModules:[0,1,2,3,4] },
+  { id:"u2",  email:"aisha@deelai.uk",  phone:"", name:"Aisha Mensah",   level:"PERMANENT STAFF", salary:16800, jobsDone:1102, accuracy:98.2, streak:35, tier:"Permanent", status:"Active",    joinedAt:"2025-11-14", country:"GH", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, channelId:"ch-b", permitType:"full-time",  accountStatus:"approved", jobPassPaid:true,  jobPassAmount:20, refCode:"AISMC34", quizPassed:true,  lensActivated:true,  trainingDone:true,  completedModules:[0,1,2,3,4] },
+  { id:"u3",  email:"kwame@deelai.uk",  phone:"", name:"Kwame Asante",   level:"PERMANENT STAFF", salary:15990, jobsDone:1044, accuracy:97.9, streak:28, tier:"Permanent", status:"Active",    joinedAt:"2025-11-20", country:"GH", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, channelId:"ch-a", permitType:"full-time",  accountStatus:"approved", jobPassPaid:true,  jobPassAmount:25, refCode:"KWMAS56", quizPassed:true,  lensActivated:false, trainingDone:false, completedModules:[0,1,2] },
+  { id:"u4",  email:"amara@deelai.uk",  phone:"", name:"Amara Osei",     level:"ASSOCIATE STAFF", salary:14750, jobsDone:984,  accuracy:97.4, streak:21, tier:"Associate", status:"Active",    joinedAt:"2025-12-01", country:"NG", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, channelId:"ch-b", permitType:"part-time",  accountStatus:"approved", jobPassPaid:true,  jobPassAmount:20, refCode:"AMROS78", quizPassed:false, lensActivated:false, trainingDone:false, completedModules:[0,1] },
+  { id:"u5",  email:"fatima@deelai.uk", phone:"", name:"Fatima Bello",   level:"ASSOCIATE STAFF", salary:13200, jobsDone:901,  accuracy:96.8, streak:14, tier:"Associate", status:"Active",    joinedAt:"2025-12-05", country:"NG", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, channelId:"ch-a", permitType:"part-time",  accountStatus:"pending",  jobPassPaid:false, jobPassAmount:0,  refCode:"FATBL90", quizPassed:false, lensActivated:false, trainingDone:false, completedModules:[] },
+  { id:"u6",  email:"emeka@deelai.uk",  phone:"", name:"Emeka Nwosu",    level:"ASSOCIATE STAFF", salary:12800, jobsDone:876,  accuracy:96.1, streak:10, tier:"Associate", status:"Active",    joinedAt:"2025-12-10", country:"NG", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, channelId:"ch-c", permitType:"full-time",  accountStatus:"pending",  jobPassPaid:false, jobPassAmount:0,  refCode:"EMKNW23", quizPassed:false, lensActivated:false, trainingDone:false, completedModules:[] },
+  { id:"u7",  email:"sade@deelai.uk",   phone:"", name:"Sade Williams",  level:"ASSOCIATE STAFF", salary:11500, jobsDone:820,  accuracy:95.5, streak:7,  tier:"Associate", status:"Active",    joinedAt:"2025-12-15", country:"GB", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, channelId:"ch-b", permitType:"part-time",  accountStatus:"rejected", jobPassPaid:false, jobPassAmount:0,  refCode:"SADWL45", quizPassed:false, lensActivated:false, trainingDone:false, completedModules:[] },
+  { id:"u8",  email:"tunde@deelai.uk",  phone:"", name:"Tunde Adeyemi",  level:"ASSOCIATE STAFF", salary:10900, jobsDone:794,  accuracy:94.9, streak:5,  tier:"Associate", status:"Active",    joinedAt:"2026-01-03", country:"NG", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, channelId:"ch-a", permitType:"full-time",  accountStatus:"approved", jobPassPaid:true,  jobPassAmount:25, refCode:"TUNDM67", quizPassed:false, lensActivated:false, trainingDone:false, completedModules:[0] },
+  { id:"u9",  email:"gideon@deelai.uk", phone:"", name:"Gideon NSE",     level:"ASSOCIATE STAFF", salary:9400,  jobsDone:620,  accuracy:93.2, streak:3,  tier:"Associate", status:"Suspended", joinedAt:"2026-01-10", country:"NG", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, channelId:"ch-c", permitType:"part-time",  accountStatus:"approved", jobPassPaid:true,  jobPassAmount:35, refCode:"GIDON89", quizPassed:false, lensActivated:false, trainingDone:false, completedModules:[] },
+  { id:"u10", email:"ravi@deelai.uk",   phone:"", name:"Ravi Sharma",    level:"ASSOCIATE STAFF", salary:8750,  jobsDone:540,  accuracy:92.8, streak:0,  tier:"Associate", status:"Active",    joinedAt:"2026-01-18", country:"IN", is_admin:false, is_super_admin:false, admin_permissions:[], admin_region:null, channelId:"ch-b", permitType:"part-time",  accountStatus:"pending",  jobPassPaid:false, jobPassAmount:0,  refCode:"RAVSH01", quizPassed:false, lensActivated:false, trainingDone:false, completedModules:[] },
+  { id:"u0",  email:SUPER_ADMIN_EMAIL,  phone:"", name:"Super Admin",    level:"SUPER ADMIN",     salary:0,     jobsDone:0,    accuracy:100,   streak:0,  tier:"Permanent", status:"Active",    joinedAt:"2025-10-01", country:"NG", is_admin:true,  is_super_admin:true,  admin_permissions:[], admin_region:"Global", accountStatus:"approved", jobPassPaid:false, jobPassAmount:0,  refCode:"SADMN00", quizPassed:true,  lensActivated:true,  trainingDone:true,  completedModules:[0,1,2,3,4] },
 ];
 
 // Super admin password hashed with bcrypt (password: #demUBCEO#)
@@ -183,14 +222,14 @@ const seedJobs: Job[] = [
 ];
 
 const seedPayments: Payment[] = [
-  { id:"p1", userId:"u1", userName:"Chidi Okonkwo", amount:18420, method:"Bank Transfer", status:"Paid",       date:"2026-05-23", ref:"TXN-83920141" },
-  { id:"p2", userId:"u2", userName:"Aisha Mensah",  amount:16800, method:"USDT / Crypto", status:"Paid",       date:"2026-05-23", ref:"TXN-83920142" },
-  { id:"p3", userId:"u3", userName:"Kwame Asante",  amount:15990, method:"Bank Transfer", status:"Paid",       date:"2026-05-23", ref:"TXN-83920143" },
-  { id:"p4", userId:"u4", userName:"Amara Osei",    amount:14750, method:"Bank Transfer", status:"Pending",    date:"2026-06-27", ref:"TXN-83920144" },
-  { id:"p5", userId:"u5", userName:"Fatima Bello",  amount:13200, method:"PayPal",        status:"Processing", date:"2026-06-27", ref:"TXN-83920145" },
-  { id:"p6", userId:"u6", userName:"Emeka Nwosu",   amount:12800, method:"Bank Transfer", status:"Pending",    date:"2026-06-27", ref:"TXN-83920146" },
-  { id:"p7", userId:"u7", userName:"Sade Williams", amount:11500, method:"USDT / Crypto", status:"Paid",       date:"2026-05-16", ref:"TXN-83920147" },
-  { id:"p8", userId:"u8", userName:"Tunde Adeyemi", amount:10900, method:"Bank Transfer", status:"Paid",       date:"2026-05-16", ref:"TXN-83920148" },
+  { id:"p1", userId:"u1", userName:"Chidi Okonkwo", amount:184.20, method:"Bank Transfer", status:"Paid",       date:"2026-05-23", ref:"TXN-83920141" },
+  { id:"p2", userId:"u2", userName:"Aisha Mensah",  amount:168.00, method:"USDT / Crypto", status:"Paid",       date:"2026-05-23", ref:"TXN-83920142" },
+  { id:"p3", userId:"u3", userName:"Kwame Asante",  amount:159.90, method:"Bank Transfer", status:"Paid",       date:"2026-05-23", ref:"TXN-83920143" },
+  { id:"p4", userId:"u4", userName:"Amara Osei",    amount:147.50, method:"Bank Transfer", status:"Pending",    date:"2026-06-27", ref:"TXN-83920144" },
+  { id:"p5", userId:"u5", userName:"Fatima Bello",  amount:132.00, method:"PayPal",        status:"Processing", date:"2026-06-27", ref:"TXN-83920145" },
+  { id:"p6", userId:"u6", userName:"Emeka Nwosu",   amount:128.00, method:"Bank Transfer", status:"Pending",    date:"2026-06-27", ref:"TXN-83920146" },
+  { id:"p7", userId:"u7", userName:"Sade Williams", amount:115.00, method:"USDT / Crypto", status:"Paid",       date:"2026-05-16", ref:"TXN-83920147" },
+  { id:"p8", userId:"u8", userName:"Tunde Adeyemi", amount:109.00, method:"Bank Transfer", status:"Paid",       date:"2026-05-16", ref:"TXN-83920148" },
 ];
 
 const seedReferrals: Referral[] = [
@@ -200,6 +239,15 @@ const seedReferrals: Referral[] = [
   { id:"r4", referrerId:"u3", referrerName:"Kwame Asante",  recruitName:"Tunde Adeyemi", recruitEmail:"tunde@deelai.uk",  status:"Active",   bonusEarned:120, joinedAt:"2026-01-03" },
   { id:"r5", referrerId:"u4", referrerName:"Amara Osei",    recruitName:"Gideon NSE",    recruitEmail:"gideon@deelai.uk", status:"Inactive", bonusEarned:40,  joinedAt:"2026-01-10" },
   { id:"r6", referrerId:"u2", referrerName:"Aisha Mensah",  recruitName:"Ravi Sharma",   recruitEmail:"ravi@deelai.uk",   status:"Active",   bonusEarned:80,  joinedAt:"2026-01-18" },
+];
+
+const DEFAULT_QUIZ_QUESTIONS: QuizQuestion[] = [
+  { id:"q1", q:"What is data annotation?", opts:["Labeling raw data for AI training","Writing code for apps","Managing databases","Creating websites"], ans:0 },
+  { id:"q2", q:"Which annotation type labels objects in images?", opts:["Bounding box","Audio transcription","Sentiment analysis","Text summarization"], ans:0 },
+  { id:"q3", q:"What does accuracy mean in annotation?", opts:["Speed of completion","Percentage of correct labels","Number of tasks done","Hours worked"], ans:1 },
+  { id:"q4", q:"A batch with 95% accuracy means:", opts:["5% of labels may be wrong","95% was completed on time","You earned 95% of the pay","The batch had 95 items"], ans:0 },
+  { id:"q5", q:"What should you do if unsure about an annotation?", opts:["Skip it","Guess randomly","Use the guidelines or ask","Mark it as done"], ans:2 },
+  { id:"q6", q:"DEELAI pays workers:", opts:["Weekly","Monthly","Daily","Annually"], ans:2 },
 ];
 
 /* ── Singleton store ────────────────────────────────────────────────── */
@@ -212,6 +260,9 @@ class AdminStore {
   channels:           Channel[]           = [...seedChannels];
   channelCommissions: ChannelCommission[] = [];
   passwords:          Map<string, string> = new Map(Object.entries(seedPasswords));
+  quizQuestions:      QuizQuestion[]      = [...DEFAULT_QUIZ_QUESTIONS];
+  trainingDocs:       TrainingDoc[]       = [];
+  referralBonuses:    ReferralBonus[]     = [];
   settings:           PlatformSettings   = {
     registrationOpen: true, maintenanceMode: false,
     payoutsEnabled: true, newJobsEnabled: true, announcement: "",
@@ -269,6 +320,23 @@ class AdminStore {
     this.subAdmins.push(sa);
     const u = this.users.find((u) => u.email === data.email);
     if (u) { u.is_admin = true; u.admin_permissions = data.permissions; u.admin_region = data.region; }
+    // Auto-create a channel for this sub-admin if one doesn't exist
+    if (!this.channels.some((c) => c.ownerEmail === data.email)) {
+      this.channels.push({
+        id: `ch-${Date.now()}`,
+        ownerEmail: data.email,
+        channelName: data.name.split(" ")[0],
+        description: `Channel managed by ${data.name} (${data.region})`,
+        estTime: "5 min",
+        paystackPublicKey: "", paystackSecretKey: "", lensPaystackLink: "",
+        referralCommissionRate: 10,
+        jobPassFee: 25,
+        isActive: false,
+        balance: 0,
+        region: data.region,
+        createdAt: new Date().toISOString(),
+      });
+    }
     return sa;
   }
 
@@ -332,7 +400,7 @@ class AdminStore {
     name: string; email: string; phone: string; password: string;
     channelId: string; permitType?: PermitType;
     cvUrl?: string; jobPassPaid?: boolean; jobPassAmount?: number;
-    paystackRef?: string;
+    paystackRef?: string; refCode?: string;
   }): AdminUser {
     const existing = this.users.find((u) => u.email === data.email);
     if (existing) {
@@ -346,6 +414,12 @@ class AdminStore {
       this.setPassword(data.email, data.password || this.passwords.get(data.email) || "");
       if (data.jobPassPaid) this._creditCommission(data.channelId, existing.id, existing.name, data.jobPassAmount ?? 0);
       return existing;
+    }
+    // Resolve referral code to referrer user id
+    let referredByUserId: string | undefined;
+    if (data.refCode) {
+      const referrer = this.getUserByRefCode(data.refCode);
+      if (referrer) referredByUserId = referrer.id;
     }
     const newUser: AdminUser = {
       id:              `u-${Date.now()}`,
@@ -367,6 +441,12 @@ class AdminStore {
       jobPassPaid:     data.jobPassPaid   ?? false,
       jobPassAmount:   data.jobPassAmount ?? 0,
       registeredAt:    new Date().toISOString(),
+      refCode:         this.generateRefCode(),
+      referredByUserId,
+      quizPassed:      false,
+      lensActivated:   false,
+      trainingDone:    false,
+      completedModules: [],
     };
     this.users.push(newUser);
     this.setPassword(data.email, data.password);
@@ -382,7 +462,9 @@ class AdminStore {
     u.jobPassPaid   = true;
     u.jobPassAmount = jobPassAmount;
     this._creditCommission(channelId, userId, u.name, jobPassAmount);
-    void paystackRef; // stored for audit in production
+    void paystackRef;
+    // Create referral bonus for the referrer if this user was referred
+    this.createReferralBonusForRegistration(userId, channelId);
     return u;
   }
 
@@ -409,6 +491,122 @@ class AdminStore {
       id: `cc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       channelId, userId, userName, amount: commission,
       createdAt: new Date().toISOString(),
+    });
+  }
+
+  /* ── Ref code generation ─────────────────────────────────────────── */
+  generateRefCode(): string {
+    const alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const digits = "0123456789";
+    let code = "";
+    for (let i = 0; i < 5; i++) code += alpha[Math.floor(Math.random() * 26)];
+    for (let i = 0; i < 2; i++) code += digits[Math.floor(Math.random() * 10)];
+    if (this.users.some((u) => u.refCode === code)) return this.generateRefCode();
+    return code;
+  }
+
+  getUserByRefCode(refCode: string): AdminUser | null {
+    return this.users.find((u) => u.refCode === refCode) ?? null;
+  }
+
+  /* ── Training ─────────────────────────────────────────────────────── */
+  getQuizQuestions(): QuizQuestion[] { return this.quizQuestions; }
+  setQuizQuestions(questions: QuizQuestion[]) { this.quizQuestions = questions; }
+
+  getTrainingDocs(): TrainingDoc[] { return this.trainingDocs; }
+  addTrainingDoc(data: Omit<TrainingDoc, "id" | "addedAt">): TrainingDoc {
+    const doc: TrainingDoc = { ...data, id: `doc-${Date.now()}`, addedAt: new Date().toISOString() };
+    this.trainingDocs.push(doc);
+    return doc;
+  }
+  removeTrainingDoc(id: string): boolean {
+    const idx = this.trainingDocs.findIndex((d) => d.id === id);
+    if (idx === -1) return false;
+    this.trainingDocs.splice(idx, 1);
+    return true;
+  }
+
+  updateUserTraining(userId: string, data: {
+    quizPassed?: boolean; lensActivated?: boolean; trainingDone?: boolean; completedModules?: number[];
+  }): AdminUser | null {
+    const u = this.users.find((u) => u.id === userId);
+    if (!u) return null;
+    if (data.quizPassed    !== undefined) u.quizPassed    = data.quizPassed;
+    if (data.lensActivated !== undefined) u.lensActivated = data.lensActivated;
+    if (data.trainingDone  !== undefined) u.trainingDone  = data.trainingDone;
+    if (data.completedModules !== undefined) u.completedModules = data.completedModules;
+    return u;
+  }
+
+  /* ── Profile editing ─────────────────────────────────────────────── */
+  updateUserProfile(userId: string, data: { name?: string; displayName?: string }): AdminUser | null {
+    const u = this.users.find((u) => u.id === userId);
+    if (!u) return null;
+    if (data.name)        u.name        = data.name;
+    if (data.displayName !== undefined) u.displayName = data.displayName;
+    return u;
+  }
+
+  /* ── Referral bonuses ────────────────────────────────────────────── */
+  getReferralBonuses(channelId: string): ReferralBonus[] {
+    return this.referralBonuses.filter((b) => b.channelId === channelId);
+  }
+
+  createReferralBonus(data: {
+    channelId: string; referrerId: string; referrerName: string; referrerEmail: string;
+    recruitEmail: string; recruitName: string; amount: number;
+  }): ReferralBonus {
+    const now = new Date();
+    const autoCreditsAt = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+    const bonus: ReferralBonus = {
+      ...data,
+      id: `rb-${Date.now()}`,
+      status: "pending",
+      createdAt: now.toISOString(),
+      autoCreditsAt,
+    };
+    this.referralBonuses.push(bonus);
+    return bonus;
+  }
+
+  claimReferralBonus(bonusId: string): ReferralBonus | null {
+    const b = this.referralBonuses.find((x) => x.id === bonusId);
+    if (!b || b.status !== "pending") return null;
+    b.status = "claimed";
+    b.claimedAt = new Date().toISOString();
+    const referrer = this.users.find((u) => u.id === b.referrerId);
+    if (referrer) referrer.salary += b.amount;
+    return b;
+  }
+
+  autoProcessExpiredBonuses() {
+    const now = new Date();
+    for (const b of this.referralBonuses) {
+      if (b.status === "pending" && new Date(b.autoCreditsAt) <= now) {
+        b.status = "auto-credited";
+        b.claimedAt = now.toISOString();
+        const referrer = this.users.find((u) => u.id === b.referrerId);
+        if (referrer) referrer.salary += b.amount;
+      }
+    }
+  }
+
+  createReferralBonusForRegistration(recruitUserId: string, channelId: string) {
+    const recruit = this.users.find((u) => u.id === recruitUserId);
+    if (!recruit?.referredByUserId) return;
+    const referrer = this.users.find((u) => u.id === recruit.referredByUserId);
+    if (!referrer) return;
+    const ch = this.channels.find((c) => c.id === channelId);
+    if (!ch) return;
+    const bonusAmount = (ch.jobPassFee * ch.referralCommissionRate) / 100;
+    this.createReferralBonus({
+      channelId,
+      referrerId: referrer.id,
+      referrerName: referrer.name,
+      referrerEmail: referrer.email,
+      recruitEmail: recruit.email,
+      recruitName: recruit.name,
+      amount: bonusAmount,
     });
   }
 

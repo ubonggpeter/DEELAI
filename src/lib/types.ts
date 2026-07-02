@@ -1,6 +1,7 @@
 export interface User {
   name: string;
   email?: string;
+  channelId?: string;
   level: string;
   isPermanent: boolean;
   salary: number;

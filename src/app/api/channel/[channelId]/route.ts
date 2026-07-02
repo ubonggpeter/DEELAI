@@ -15,5 +15,6 @@ export async function GET(_req: NextRequest, { params }: { params: { channelId: 
     referralCommissionRate:ch.referralCommissionRate,
     jobPassFee:            ch.jobPassFee,
     isActive:              ch.isActive,
+    lensPaystackLink:      ch.lensPaystackLink,
   });
 }

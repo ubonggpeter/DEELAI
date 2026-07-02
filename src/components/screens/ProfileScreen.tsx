@@ -1,13 +1,38 @@
 "use client";
-import { ArrowLeft, User, Globe, Calendar, Share2, CreditCard, Microscope, Flame } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft, User, Globe, Calendar, Share2, CreditCard, Microscope, Flame, Edit2, Check, X } from "lucide-react";
 import { User as UserType } from "@/lib/types";
 
 interface Props {
   user: UserType;
   onBack: () => void;
+  setUser?: (fn: (u: UserType) => UserType) => void;
 }
 
-export default function ProfileScreen({ user, onBack }: Props) {
+export default function ProfileScreen({ user, onBack, setUser }: Props) {
+  const [editing,  setEditing]  = useState(false);
+  const [editName, setEditName] = useState(user.name);
+  const [saving,   setSaving]   = useState(false);
+  const [saveErr,  setSaveErr]  = useState("");
+
+  async function saveName() {
+    if (!editName.trim()) return;
+    setSaving(true); setSaveErr("");
+    try {
+      const res = await fetch("/api/auth/profile", {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: editName.trim() }),
+      });
+      if (!res.ok) { const d = await res.json(); setSaveErr(d.error ?? "Save failed"); return; }
+      if (setUser) setUser((u) => ({ ...u, name: editName.trim() }));
+      setEditing(false);
+    } catch {
+      setSaveErr("Network error");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   const stats = [
     { label: "SALARY",   value: `$${user.salary.toLocaleString()}`,  color: "#00E5A0" },
     { label: "JOBS",     value: user.jobsDone.toLocaleString(),       color: "#00D4FF" },
@@ -17,7 +42,7 @@ export default function ProfileScreen({ user, onBack }: Props) {
 
   const infoRows = [
     { Icon: Globe,      label: "Location",     value: "Worldwide · Remote" },
-    { Icon: Globe,      label: "Platform",     value: "deelai.uk" },
+    { Icon: Globe,      label: "Platform",     value: "deelai.vercel.app" },
     { Icon: Calendar,   label: "Member Since", value: "January 2026" },
     { Icon: Share2,     label: "Recruit Code", value: user.refCode },
     { Icon: CreditCard, label: "Payout",       value: "Bank Transfer — GTBank" },
@@ -46,7 +71,38 @@ export default function ProfileScreen({ user, onBack }: Props) {
             <User size={38} className="sm:w-11 sm:h-11" />
           </div>
 
-          <div className="text-2xl sm:text-3xl font-bold text-white">{user.name}</div>
+          {/* Name with inline edit */}
+          {editing ? (
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:6, marginBottom:4 }}>
+              <input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                style={{
+                  background:"rgba(255,255,255,.08)", border:"1px solid rgba(0,212,255,.4)",
+                  borderRadius:8, padding:"6px 10px", color:"#fff", fontSize:18, fontWeight:700,
+                  textAlign:"center", outline:"none", maxWidth:200,
+                }}
+              />
+              <button onClick={saveName} disabled={saving} style={{ background:"none", border:"none", cursor:"pointer" }}>
+                <Check size={18} color="#00E5A0" />
+              </button>
+              <button onClick={() => { setEditing(false); setEditName(user.name); setSaveErr(""); }} style={{ background:"none", border:"none", cursor:"pointer" }}>
+                <X size={18} color="#FF4D6D" />
+              </button>
+            </div>
+          ) : (
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, marginBottom:4 }}>
+              <div className="text-2xl sm:text-3xl font-bold text-white">{user.name}</div>
+              <button
+                onClick={() => { setEditName(user.name); setEditing(true); }}
+                style={{ background:"none", border:"none", cursor:"pointer", padding:4 }}
+              >
+                <Edit2 size={14} color="var(--txt3)" />
+              </button>
+            </div>
+          )}
+          {saveErr && <div style={{ color:"#FF4D6D", fontSize:12, marginBottom:4 }}>{saveErr}</div>}
+
           <div className="text-xs font-mono tracking-widest mt-1" style={{ color: "var(--txt2)" }}>{user.level}</div>
 
           <div className="flex justify-center gap-2 mt-3 flex-wrap">
@@ -104,7 +160,7 @@ export default function ProfileScreen({ user, onBack }: Props) {
               <Microscope size={24} style={{ color: "var(--cyan)", flexShrink: 0 }} />
               <div>
                 <div className="font-semibold text-sm sm:text-base mb-1" style={{ color: "var(--cyan)" }}>Annotation Lens Active</div>
-                <div className="text-xs sm:text-sm" style={{ color: "var(--txt2)" }}>Permanent tool · Activated May 17, 2026</div>
+                <div className="text-xs sm:text-sm" style={{ color: "var(--txt2)" }}>Permanent tool · Lens activated</div>
               </div>
             </div>
           ) : (

@@ -22,10 +22,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Sub-admin only" }, { status: 403 });
   }
   const body = await req.json();
-  const { channelName, estTime, description, paystackPublicKey, paystackSecretKey, referralCommissionRate, jobPassFee, isActive } = body;
+  const { channelName, estTime, description, paystackPublicKey, paystackSecretKey, lensPaystackLink, referralCommissionRate, jobPassFee, isActive } = body;
   if (!channelName || !estTime) {
     return NextResponse.json({ error: "channelName and estTime are required" }, { status: 400 });
   }
+  const sa = adminStore.subAdmins.find((s) => s.email === email);
   try {
     const ch = adminStore.createChannel({
       ownerEmail: email,
@@ -34,9 +35,11 @@ export async function POST(req: NextRequest) {
       description:           description            ?? "",
       paystackPublicKey:     paystackPublicKey     ?? "",
       paystackSecretKey:     paystackSecretKey      ?? "",
+      lensPaystackLink:      lensPaystackLink       ?? "",
       referralCommissionRate: Number(referralCommissionRate ?? 10),
       jobPassFee:            Number(jobPassFee      ?? 0),
       isActive:              isActive               ?? true,
+      region:                sa?.region             ?? "",
     });
     return NextResponse.json({ channel: ch }, { status: 201 });
   } catch (e: unknown) {

@@ -1,11 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   BookOpen, Square, Tag, CheckCircle, Monitor, Trophy, Microscope,
   Target, Zap, Lock, BarChart2, AlertTriangle, ChevronRight, Check,
-  Frown, ArrowLeft,
+  Frown, ArrowLeft, FileText, ExternalLink, Loader2,
 } from "lucide-react";
-import { MODULES, QUIZ } from "@/lib/data";
+import { MODULES } from "@/lib/data";
 import { User } from "@/lib/types";
 import Bar from "@/components/atoms/Bar";
 import Chip from "@/components/atoms/Chip";
@@ -15,6 +15,9 @@ interface Props {
   user: User;
   setUser: (fn: (u: User) => User) => void;
 }
+
+interface QuizQuestion { id: string; q: string; opts: string[]; ans: number; }
+interface TrainingDoc { id: string; title: string; url: string; type: string; addedAt: string; }
 
 type View = "list" | "module" | "quiz" | "cert" | "lens";
 
@@ -27,38 +30,63 @@ const moduleIcons: Record<number, React.ReactNode> = {
 };
 
 export default function TrainingScreen({ user, setUser }: Props) {
-  const [view, setView] = useState<View>("list");
-  const [modId, setModId] = useState<number | null>(null);
-  const [qi, setQi] = useState(0);
-  const [sel, setSel] = useState<number | null>(null);
+  const [view, setView]       = useState<View>("list");
+  const [modId, setModId]     = useState<number | null>(null);
+  const [qi, setQi]           = useState(0);
+  const [sel, setSel]         = useState<number | null>(null);
   const [answers, setAnswers] = useState<{ q: number; sel: number; ans: number }[]>([]);
   const [quizDone, setQuizDone] = useState(false);
-  const [paying, setPaying] = useState(false);
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
+  const [docs, setDocs]       = useState<TrainingDoc[]>([]);
+  const [lensLink, setLensLink] = useState("");
+  const [loadingData, setLoadingData] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/admin/training").then((r) => r.json()),
+      user.channelId ? fetch(`/api/channel/${user.channelId}`).then((r) => r.json()) : Promise.resolve(null),
+    ]).then(([trainingData, channelData]) => {
+      setQuizQuestions(trainingData.quizQuestions ?? []);
+      setDocs(trainingData.trainingDocs ?? []);
+      if (channelData?.lensPaystackLink) setLensLink(channelData.lensPaystackLink);
+    }).finally(() => setLoadingData(false));
+  }, [user.channelId]);
 
   const done = user.completedModules || [];
   const pct = Math.round((done.length / MODULES.length) * 100);
   const allDone = done.length >= MODULES.length;
+  const activeQuiz = quizQuestions.length > 0 ? quizQuestions : [];
+
+  async function persistTraining(data: Partial<{ quizPassed: boolean; lensActivated: boolean; trainingDone: boolean; completedModules: number[] }>) {
+    await fetch("/api/auth/training", {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  }
 
   function completeModule(id: number) {
     if (done.includes(id)) return;
-    setUser(u => ({ ...u, completedModules: [...(u.completedModules || []), id] }));
+    const newModules = [...(done), id];
+    setUser(u => ({ ...u, completedModules: newModules }));
+    persistTraining({ completedModules: newModules });
     setView("list");
   }
 
   function handleAnswer(i: number) {
-    if (sel !== null) return;
+    if (sel !== null || activeQuiz.length === 0) return;
     setSel(i);
     setTimeout(() => {
-      const newA = [...answers, { q: qi, sel: i, ans: QUIZ[qi].ans }];
+      const newA = [...answers, { q: qi, sel: i, ans: activeQuiz[qi].ans }];
       setAnswers(newA);
-      if (qi < QUIZ.length - 1) {
+      if (qi < activeQuiz.length - 1) {
         setQi(qi + 1);
         setSel(null);
       } else {
         const score = newA.filter(a => a.sel === a.ans).length;
         setQuizDone(true);
-        if (score >= 5) {
+        if (score >= Math.ceil(activeQuiz.length * 0.8)) {
           setUser(u => ({ ...u, quizPassed: true }));
+          persistTraining({ quizPassed: true });
           setView("cert");
         }
       }
@@ -66,12 +94,27 @@ export default function TrainingScreen({ user, setUser }: Props) {
   }
 
   function activateLens() {
-    setPaying(true);
-    setTimeout(() => {
-      setPaying(false);
-      setUser(u => ({ ...u, lensActivated: true, trainingDone: true, salary: Math.max(0, u.salary - 3.8) }));
+    if (lensLink) {
+      window.open(lensLink, "_blank");
+      // Optimistically mark as activated; in production, verify via payment webhook
+      setUser(u => ({ ...u, lensActivated: true, trainingDone: true }));
+      persistTraining({ lensActivated: true, trainingDone: true });
       setView("list");
-    }, 2200);
+    } else {
+      // Fallback simulation (no lens link configured)
+      setUser(u => ({ ...u, lensActivated: true, trainingDone: true }));
+      persistTraining({ lensActivated: true, trainingDone: true });
+      setView("list");
+    }
+  }
+
+  if (loadingData) {
+    return (
+      <div style={{ display:"flex", justifyContent:"center", alignItems:"center", minHeight:"100vh", background:"var(--bg)" }}>
+        <Loader2 size={28} color="var(--cyan)" style={{ animation:"spin 0.8s linear infinite" }} />
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      </div>
+    );
   }
 
   if (view === "cert") return (
@@ -130,7 +173,7 @@ export default function TrainingScreen({ user, setUser }: Props) {
               <div className="font-black text-base sm:text-lg text-white" style={{ fontFamily: "system-ui,sans-serif" }}>
                 Activate Your Annotation Lens
               </div>
-              <div className="text-xs mt-0.5" style={{ color: "var(--txt2)" }}>One-time $3.80 · Required to go live</div>
+              <div className="text-xs mt-0.5" style={{ color: "var(--txt2)" }}>One-time $3 · Required to go live</div>
             </div>
           </div>
           <div className="text-sm leading-relaxed mb-5" style={{ color: "var(--txt2)" }}>
@@ -147,7 +190,7 @@ export default function TrainingScreen({ user, setUser }: Props) {
             }}
           >
             <Microscope size={18} />
-            Activate Annotation Lens — $3.80
+            Activate Annotation Lens — $3
             <ChevronRight size={16} />
           </button>
           <div className="text-center font-mono text-[10px] mt-2" style={{ color: "var(--txt3)" }}>
@@ -187,7 +230,7 @@ export default function TrainingScreen({ user, setUser }: Props) {
             Virtual Annotation Lens
           </div>
           <div className="font-black mt-3 text-5xl sm:text-6xl" style={{ color: "var(--cyan)", fontFamily: "system-ui,sans-serif" }}>
-            $3.80
+            $3
           </div>
           <div className="font-mono text-[10px] tracking-[2px]" style={{ color: "var(--txt3)" }}>ONE-TIME ACTIVATION FEE</div>
         </div>
@@ -209,28 +252,23 @@ export default function TrainingScreen({ user, setUser }: Props) {
           ))}
         </div>
 
-        <div
-          className="flex justify-between items-center mb-4 rounded-xl p-3 sm:p-4"
-          style={{ background: "var(--s1)", border: "1px solid var(--b2)" }}
-        >
-          <span className="text-sm" style={{ color: "var(--txt2)" }}>Deducted from wallet balance</span>
-          <span className="font-mono font-semibold text-sm" style={{ color: "#00E5A0" }}>${user.salary.toFixed(2)} available</span>
-        </div>
-
         <button
           onClick={activateLens}
-          disabled={paying}
           className="w-full flex items-center justify-center gap-2.5 font-bold text-white min-h-[52px] rounded-xl text-base"
           style={{
-            border: "none",
-            cursor: paying ? "not-allowed" : "pointer",
-            background: paying ? "var(--s3)" : "linear-gradient(135deg,#00D4FF,#0055DD)",
+            border: "none", cursor: "pointer",
+            background: "linear-gradient(135deg,#00D4FF,#0055DD)",
             fontFamily: "system-ui,sans-serif",
-            boxShadow: paying ? "none" : "0 8px 32px rgba(0,212,255,.3)",
+            boxShadow: "0 8px 32px rgba(0,212,255,.3)",
           }}
         >
-          {paying ? <><Spinner /> Activating…</> : <><Microscope size={18} /> Pay $3.80 & Activate <ChevronRight size={16} /></>}
+          <Microscope size={18} /> Pay $3 &amp; Activate <ChevronRight size={16} />
         </button>
+        {lensLink && (
+          <p className="text-center text-[11px] mt-2" style={{ color: "var(--txt3)" }}>
+            You will be redirected to your channel&apos;s secure payment page.
+          </p>
+        )}
       </div>
     </div>
   );
@@ -238,23 +276,24 @@ export default function TrainingScreen({ user, setUser }: Props) {
   if (view === "quiz") {
     if (quizDone) {
       const score = answers.filter(a => a.sel === a.ans).length;
+      const passScore = Math.ceil(activeQuiz.length * 0.8);
       return (
         <div className="animate-fadeUp min-h-screen" style={{ background: "var(--bg)" }}>
           <div className="max-w-2xl mx-auto px-4 sm:px-6 py-10 sm:py-14 text-center">
-            {score >= 5
+            {score >= passScore
               ? <Trophy size={64} color="#FFB800" className="mx-auto" />
               : <Frown size={64} color="#FF4D6D" className="mx-auto" />
             }
             <div
               className="font-black mt-4 text-2xl sm:text-3xl"
-              style={{ color: score >= 5 ? "#00E5A0" : "#FF4D6D", fontFamily: "system-ui,sans-serif" }}
+              style={{ color: score >= passScore ? "#00E5A0" : "#FF4D6D", fontFamily: "system-ui,sans-serif" }}
             >
-              {score >= 5 ? "You're Certified!" : "Not Quite"}
+              {score >= passScore ? "You're Certified!" : "Not Quite"}
             </div>
             <div className="text-sm mt-2" style={{ color: "var(--txt2)" }}>
-              Score: <strong className="text-white">{score}/{QUIZ.length}</strong> · Pass: 5/6
+              Score: <strong className="text-white">{score}/{activeQuiz.length}</strong> · Pass: {passScore}/{activeQuiz.length}
             </div>
-            {score < 5 && (
+            {score < passScore && (
               <button
                 onClick={() => { setQi(0); setSel(null); setAnswers([]); setQuizDone(false); }}
                 className="mt-6 font-bold text-black min-h-[52px] px-10 rounded-xl"
@@ -267,7 +306,14 @@ export default function TrainingScreen({ user, setUser }: Props) {
         </div>
       );
     }
-    const q = QUIZ[qi];
+    if (activeQuiz.length === 0) {
+      return (
+        <div className="animate-fadeUp min-h-screen" style={{ background: "var(--bg)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <div style={{ textAlign:"center", color:"var(--txt2)" }}>No quiz questions available yet. Check back soon.</div>
+        </div>
+      );
+    }
+    const q = activeQuiz[qi];
     return (
       <div className="animate-fadeUp min-h-screen" style={{ background: "var(--bg)" }}>
         <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
@@ -279,9 +325,9 @@ export default function TrainingScreen({ user, setUser }: Props) {
             <ArrowLeft size={14} /> Back
           </button>
           <div className="font-mono text-[10px] tracking-[1px] mb-2" style={{ color: "var(--cyan)" }}>
-            CERTIFICATION QUIZ · {qi + 1}/{QUIZ.length}
+            CERTIFICATION QUIZ · {qi + 1}/{activeQuiz.length}
           </div>
-          <Bar pct={(qi / QUIZ.length) * 100} color="var(--cyan)" h={3} />
+          <Bar pct={(qi / activeQuiz.length) * 100} color="var(--cyan)" h={3} />
           <div className="font-bold text-lg sm:text-xl leading-snug my-5 sm:my-6 text-white" style={{ fontFamily: "system-ui,sans-serif" }}>
             {q.q}
           </div>
@@ -411,21 +457,22 @@ export default function TrainingScreen({ user, setUser }: Props) {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-10 pb-8">
-        {/* Warning banner */}
-        <div
-          className="flex gap-2.5 items-start mb-5 rounded-xl px-4 py-3"
-          style={{ background: "rgba(255,184,0,.08)", border: "1px solid rgba(255,184,0,.2)" }}
-        >
-          <AlertTriangle size={18} color="#FFB800" className="shrink-0 mt-0.5" />
-          <div>
-            <div className="font-semibold text-sm mb-0.5" style={{ color: "#FFB800" }}>Mandatory Before You Earn</div>
-            <div className="text-xs leading-relaxed" style={{ color: "var(--txt2)" }}>
-              Training is 100% free. Complete all modules, pass the quiz, then activate your Annotation Lens ($3.80) to go live.
+        {!user.lensActivated && (
+          <div
+            className="flex gap-2.5 items-start mb-5 rounded-xl px-4 py-3"
+            style={{ background: "rgba(255,184,0,.08)", border: "1px solid rgba(255,184,0,.2)" }}
+          >
+            <AlertTriangle size={18} color="#FFB800" className="shrink-0 mt-0.5" />
+            <div>
+              <div className="font-semibold text-sm mb-0.5" style={{ color: "#FFB800" }}>Mandatory Before You Earn</div>
+              <div className="text-xs leading-relaxed" style={{ color: "var(--txt2)" }}>
+                Training is 100% free. Complete all modules, pass the quiz, then activate your Annotation Lens ($3) to go live.
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Module list — single col on mobile, 2-col on lg */}
+        {/* Module list */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-6">
           {MODULES.map((m, i) => {
             const isDone = done.includes(m.id);
@@ -473,7 +520,7 @@ export default function TrainingScreen({ user, setUser }: Props) {
         </div>
 
         {/* Certification quiz */}
-        <div>
+        <div className="mb-6">
           <div className="font-bold text-base text-white mb-3" style={{ fontFamily: "system-ui,sans-serif" }}>
             Certification Quiz
           </div>
@@ -488,7 +535,9 @@ export default function TrainingScreen({ user, setUser }: Props) {
               {user.quizPassed ? <Trophy size={28} color="#FFB800" /> : <CheckCircle size={28} color="#8B5CF6" />}
               <div>
                 <div className="font-semibold text-sm text-white">DEELAi Annotator Certification</div>
-                <div className="text-xs mt-0.5" style={{ color: "var(--txt2)" }}>6 questions · Pass: 5/6 · Free retakes</div>
+                <div className="text-xs mt-0.5" style={{ color: "var(--txt2)" }}>
+                  {activeQuiz.length} questions · Pass: {Math.ceil(activeQuiz.length * 0.8)}/{activeQuiz.length} · Free retakes
+                </div>
               </div>
             </div>
             {user.quizPassed ? (
@@ -506,28 +555,58 @@ export default function TrainingScreen({ user, setUser }: Props) {
                       fontFamily: "system-ui,sans-serif",
                     }}
                   >
-                    <Microscope size={16} /> View Certificate & Activate <ChevronRight size={14} />
+                    <Microscope size={16} /> View Certificate &amp; Activate <ChevronRight size={14} />
                   </button>
                 )}
               </>
             ) : (
               <button
-                disabled={!allDone}
+                disabled={!allDone || activeQuiz.length === 0}
                 onClick={() => { setQi(0); setSel(null); setAnswers([]); setQuizDone(false); setView("quiz"); }}
                 className="w-full font-bold text-white min-h-[48px] rounded-xl text-sm"
                 style={{
                   border: "none",
-                  background: allDone ? "linear-gradient(135deg,#8B5CF6,#6D28D9)" : "var(--s3)",
+                  background: (allDone && activeQuiz.length > 0) ? "linear-gradient(135deg,#8B5CF6,#6D28D9)" : "var(--s3)",
                   fontFamily: "system-ui,sans-serif",
-                  cursor: allDone ? "pointer" : "not-allowed",
-                  opacity: allDone ? 1 : 0.5,
+                  cursor: (allDone && activeQuiz.length > 0) ? "pointer" : "not-allowed",
+                  opacity: (allDone && activeQuiz.length > 0) ? 1 : 0.5,
                 }}
               >
-                {allDone ? "Take Certification Quiz →" : "Complete all modules first"}
+                {!allDone ? "Complete all modules first" : activeQuiz.length === 0 ? "Quiz not available yet" : "Take Certification Quiz →"}
               </button>
             )}
           </div>
         </div>
+
+        {/* Training documents */}
+        {docs.length > 0 && (
+          <div>
+            <div className="font-bold text-base text-white mb-3" style={{ fontFamily: "system-ui,sans-serif" }}>
+              Training Resources
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {docs.map((doc) => (
+                <a
+                  key={doc.id}
+                  href={doc.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    background:"var(--s1)", border:"1px solid var(--b1)", borderRadius:12,
+                    padding:"12px 14px", display:"flex", alignItems:"center", gap:12, textDecoration:"none",
+                  }}
+                >
+                  <FileText size={18} color="var(--gold)" style={{ flexShrink:0 }} />
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ color:"var(--txt)", fontSize:13, fontWeight:600 }}>{doc.title}</div>
+                    <div style={{ color:"var(--txt3)", fontSize:11, textTransform:"uppercase", marginTop:2 }}>{doc.type}</div>
+                  </div>
+                  <ExternalLink size={14} color="var(--txt3)" style={{ flexShrink:0 }} />
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

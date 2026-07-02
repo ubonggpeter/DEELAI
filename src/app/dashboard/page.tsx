@@ -28,15 +28,21 @@ const SupportScreen   = dynamic(() => import("@/components/screens/SupportScreen
 const MAIN_SCREENS: Screen[] = ["activity", "training", "workspace", "recruit", "wallet"];
 
 interface SessionData {
-  loggedIn:      boolean;
-  userId?:       string;
-  email?:        string;
-  name?:         string;
-  phone?:        string;
-  accountStatus?: string;
-  salary?:       number;
-  jobsDone?:     number;
-  level?:        string;
+  loggedIn:         boolean;
+  userId?:          string;
+  email?:           string;
+  name?:            string;
+  phone?:           string;
+  accountStatus?:   string;
+  salary?:          number;
+  jobsDone?:        number;
+  level?:           string;
+  refCode?:         string;
+  quizPassed?:      boolean;
+  lensActivated?:   boolean;
+  trainingDone?:    boolean;
+  completedModules?: number[];
+  channelId?:       string;
 }
 
 export default function Dashboard() {
@@ -67,12 +73,18 @@ export default function Dashboard() {
         // Hydrate user state from session
         setUser((u) => ({
           ...u,
-          name:        data.name    ?? u.name,
-          email:       data.email   ?? "",
-          level:       data.level   ?? u.level,
-          salary:      data.salary  ?? u.salary,
-          jobsDone:    data.jobsDone ?? u.jobsDone,
-          isPermanent: (data.level ?? "").includes("PERMANENT"),
+          name:             data.name    ?? u.name,
+          email:            data.email   ?? "",
+          level:            data.level   ?? u.level,
+          salary:           data.salary  ?? u.salary,
+          jobsDone:         data.jobsDone ?? u.jobsDone,
+          isPermanent:      (data.level ?? "").includes("PERMANENT"),
+          refCode:          data.refCode ?? u.refCode,
+          quizPassed:       data.quizPassed ?? u.quizPassed,
+          lensActivated:    data.lensActivated ?? u.lensActivated,
+          trainingDone:     data.trainingDone ?? u.trainingDone,
+          completedModules: data.completedModules ?? u.completedModules,
+          channelId:        data.channelId,
         }));
         setAuthReady(true);
       })
@@ -100,8 +112,6 @@ export default function Dashboard() {
     router.push("/login");
   }
 
-  const isSuperAdmin = session?.email === "mentormedia4sure@gmail.com";
-
   return (
     <div className="flex h-dvh overflow-hidden" style={{ background: "var(--bg)" }}>
       <Sidebar
@@ -112,29 +122,6 @@ export default function Dashboard() {
         onMenuOpen={() => setMenuOpen(true)}
       />
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        {/* Admin shortcut bar — super admin only */}
-        {isSuperAdmin && (
-          <div style={{
-            background: "#FFB80012", borderBottom: "1px solid #FFB80028",
-            padding: "6px 16px", display: "flex", alignItems: "center",
-            justifyContent: "space-between", gap: 10, flexShrink: 0,
-          }}>
-            <span style={{ color: "#FFB800", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>
-              ⚡ Super Admin
-            </span>
-            <button
-              onClick={() => router.push("/admin/dashboard")}
-              style={{
-                background: "linear-gradient(135deg,#FFB800,#CC9200)",
-                color: "#060A12", border: "none", borderRadius: 7,
-                padding: "5px 14px", fontSize: 12, fontWeight: 800,
-                cursor: "pointer", whiteSpace: "nowrap",
-              }}
-            >
-              Admin Panel →
-            </button>
-          </div>
-        )}
         <div className="flex-1 overflow-y-auto" style={{ paddingBottom: isMain ? undefined : 0 }}>
           <ScreenContent
             screen={screen} user={user} setUser={setUser}
@@ -171,7 +158,7 @@ function ScreenContent({ screen, user, setUser, notifs, setNotifs, notifCount, s
     case "recruit":        return <RecruitScreen      user={user} />;
     case "wallet":         return <WalletScreen       user={user} setUser={setUser} />;
     case "notifications":  return <NotificationsScreen notifs={notifs} setNotifs={setNotifs} onBack={goBack} />;
-    case "profile":        return <ProfileScreen      user={user} onBack={goBack} />;
+    case "profile":        return <ProfileScreen      user={user} onBack={goBack} setUser={setUser} />;
     case "leaderboard":    return <LeaderboardScreen  onBack={goBack} />;
     case "tier":           return <TierScreen         user={user} onBack={goBack} />;
     case "kyc":            return <KYCScreen          user={user} setUser={setUser} onBack={goBack} />;

@@ -19,6 +19,7 @@ function RegisterPageInner() {
   const router       = useRouter();
   const searchParams = useSearchParams();
   const channelId    = searchParams.get("channel") ?? "";
+  const refCode      = searchParams.get("ref") ?? "";
 
   const [channel, setChannel]   = useState<ChannelInfo | null>(null);
   const [chError, setChError]   = useState("");
@@ -49,11 +50,11 @@ function RegisterPageInner() {
     try {
       const res  = await fetch("/api/auth/register", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), email: email.trim().toLowerCase(), phone: phone.trim(), password, channelId }),
+        body: JSON.stringify({ name: name.trim(), email: email.trim().toLowerCase(), phone: phone.trim(), password, channelId, refCode: refCode || undefined }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Registration failed"); return; }
-      router.push(`/register/job-pass?channel=${channelId}`);
+      router.push(`/register/job-pass?channel=${channelId}${refCode ? `&ref=${refCode}` : ""}`);
     } catch {
       setError("Network error. Please try again.");
     } finally {

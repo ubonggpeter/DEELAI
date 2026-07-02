@@ -8,22 +8,30 @@ export async function GET(req: NextRequest) {
 
   try {
     const session = JSON.parse(raw) as { userId: string; email: string; name: string; accountStatus: string; channelId?: string };
-    // Re-fetch latest accountStatus from store (it may have changed since cookie was set)
     const user = adminStore.getUserById(session.userId);
     if (!user) return NextResponse.json({ loggedIn: false });
+
+    adminStore.autoProcessExpiredBonuses();
+
     return NextResponse.json({
-      loggedIn: true,
-      userId:  user.id,
-      email:   user.email,
-      name:    user.name,
-      phone:   user.phone,
-      accountStatus: user.accountStatus,
-      channelId:     user.channelId,
-      permitType:    user.permitType,
-      jobPassPaid:   user.jobPassPaid,
-      salary:        user.salary,
-      jobsDone:      user.jobsDone,
-      level:         user.level,
+      loggedIn:         true,
+      userId:           user.id,
+      email:            user.email,
+      name:             user.displayName ?? user.name,
+      fullName:         user.name,
+      phone:            user.phone,
+      accountStatus:    user.accountStatus,
+      channelId:        user.channelId,
+      permitType:       user.permitType,
+      jobPassPaid:      user.jobPassPaid,
+      salary:           user.salary,
+      jobsDone:         user.jobsDone,
+      level:            user.level,
+      refCode:          user.refCode,
+      quizPassed:       user.quizPassed,
+      lensActivated:    user.lensActivated,
+      trainingDone:     user.trainingDone,
+      completedModules: user.completedModules,
     });
   } catch {
     return NextResponse.json({ loggedIn: false });

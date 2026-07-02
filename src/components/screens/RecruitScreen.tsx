@@ -30,11 +30,14 @@ function statusStyle(status: string) {
 
 export default function RecruitScreen({ user }: Props) {
   const [copied, setCopied] = useState(false);
-  const link = `deelai.uk/recruit/${user.refCode}`;
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://deelai.vercel.app";
+  const refCode = user.refCode || "XXXXXX";
+  const link = `${origin}/recruit/${refCode}`;
+  const displayLink = link.replace(/^https?:\/\//, "");
   const working = recruits.filter(r => r.status === "Working").length;
 
   function copyLink() {
-    navigator.clipboard?.writeText(`https://${link}`).catch(() => {});
+    navigator.clipboard?.writeText(link).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -70,9 +73,12 @@ export default function RecruitScreen({ user }: Props) {
 
           {/* Recruit link */}
           <div className="rounded-xl p-3 sm:p-4" style={{ background: "rgba(0,212,255,.06)", border: "1px solid rgba(0,212,255,.2)" }}>
-            <div className="font-mono text-[9px] tracking-widest mb-2" style={{ color: "var(--txt2)" }}>YOUR RECRUIT LINK</div>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:6 }}>
+              <div className="font-mono text-[9px] tracking-widest" style={{ color: "var(--txt2)" }}>YOUR RECRUIT LINK</div>
+              <div className="font-mono text-[9px]" style={{ color: "var(--cyan)", letterSpacing:2 }}>CODE: {refCode}</div>
+            </div>
             <div className="flex gap-2 items-center">
-              <div className="flex-1 font-mono text-xs sm:text-sm truncate" style={{ color: "var(--cyan)" }}>{link}</div>
+              <div className="flex-1 font-mono text-xs sm:text-sm truncate" style={{ color: "var(--cyan)" }}>{displayLink}</div>
               <button
                 onClick={copyLink}
                 className="flex items-center gap-1.5 font-semibold font-mono text-xs transition-all min-h-[36px] px-3 sm:px-4 rounded-lg shrink-0 cursor-pointer"

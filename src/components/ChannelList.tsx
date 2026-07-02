@@ -178,7 +178,7 @@ export default function ChannelList() {
                             background: `${color}12`, border: `1px solid ${color}28`, color,
                             whiteSpace: "nowrap",
                           }}>
-                            ₦{ch.jobPassFee.toLocaleString()} fee
+                            ${ch.jobPassFee.toLocaleString()} fee
                           </span>
                         )}
                       </div>

@@ -28,9 +28,16 @@ interface Stats {
 }
 interface Channel {
   id: string; ownerEmail: string; channelName: string; estTime: string;
-  paystackPublicKey: string; paystackSecretKey: string;
+  paystackPublicKey: string; paystackSecretKey: string; lensPaystackLink: string;
   referralCommissionRate: number; jobPassFee: number;
-  isActive: boolean; balance: number; createdAt: string;
+  isActive: boolean; balance: number; region: string; createdAt: string;
+}
+interface QuizQuestion { id: string; q: string; opts: string[]; ans: number; }
+interface TrainingDoc { id: string; title: string; url: string; type: string; addedAt: string; }
+interface ReferralBonus {
+  id: string; channelId: string; referrerId: string; referrerName: string; referrerEmail: string;
+  recruitEmail: string; recruitName: string; amount: number;
+  status: "pending" | "claimed" | "auto-credited"; createdAt: string; claimedAt?: string; autoCreditsAt: string;
 }
 interface Registration {
   id: string; name: string; email: string;
@@ -76,14 +83,16 @@ const C = {
 };
 
 /* ─── Tabs ───────────────────────────────────────────────────────── */
-type TabId = "overview"|"users"|"jobs"|"payments"|"referrals"|"settings"|"subadmins"|"channels";
+type TabId = "overview"|"users"|"jobs"|"payments"|"referrals"|"refbonuses"|"channels"|"training"|"settings"|"subadmins";
 const ALL_TABS: { id: TabId; label: string; icon: React.ElementType; perm?: Permission; superOnly?: boolean }[] = [
   { id: "overview",   label: "Overview",         icon: LayoutDashboard },
   { id: "users",      label: "Users",            icon: Users,           perm: "manage_users" },
   { id: "jobs",       label: "Jobs",             icon: Briefcase,       perm: "manage_jobs" },
   { id: "payments",   label: "Payments",         icon: CreditCard,      perm: "manage_payments" },
   { id: "referrals",  label: "Referrals",        icon: Network,         perm: "manage_referrals" },
+  { id: "refbonuses", label: "Ref Bonuses",      icon: DollarSign },
   { id: "channels",   label: "Channel Settings", icon: Radio },
+  { id: "training",   label: "Training",         icon: CheckSquare,     superOnly: true },
   { id: "settings",   label: "Settings",         icon: Settings },
   { id: "subadmins",  label: "Sub-Admins",       icon: ShieldCheck,     superOnly: true },
 ];
@@ -277,14 +286,16 @@ export default function AdminDashboard() {
 
         {/* Tab content */}
         <div className="admin-tab-content" style={{ flex:1, padding:"20px", maxWidth:"1400px", width:"100%", margin:"0 auto" }}>
-          {tab === "overview"  && <OverviewTab />}
-          {tab === "users"     && <UsersTab />}
-          {tab === "jobs"      && <JobsTab />}
-          {tab === "payments"  && <PaymentsTab />}
-          {tab === "referrals" && <ReferralsTab />}
-          {tab === "channels"  && <ChannelSettingsTab adminInfo={adminInfo} />}
-          {tab === "settings"  && <SettingsTab isSuperAdmin={adminInfo.isSuperAdmin} />}
-          {tab === "subadmins" && adminInfo.isSuperAdmin && <SubAdminsTab />}
+          {tab === "overview"   && <OverviewTab />}
+          {tab === "users"      && <UsersTab />}
+          {tab === "jobs"       && <JobsTab />}
+          {tab === "payments"   && <PaymentsTab />}
+          {tab === "referrals"  && <ReferralsTab />}
+          {tab === "refbonuses" && <ReferralBonusesTab adminInfo={adminInfo} />}
+          {tab === "channels"   && <ChannelSettingsTab adminInfo={adminInfo} />}
+          {tab === "training"   && adminInfo.isSuperAdmin && <TrainingTab />}
+          {tab === "settings"   && <SettingsTab isSuperAdmin={adminInfo.isSuperAdmin} />}
+          {tab === "subadmins"  && adminInfo.isSuperAdmin && <SubAdminsTab />}
         </div>
       </main>
 
@@ -1378,7 +1389,7 @@ function ChannelSettingsTab({ adminInfo }: { adminInfo: AdminInfo }) {
           </div>
           {/* Job pass fee */}
           <div>
-            <label style={labelStyle}>Registration Fee (₦)</label>
+            <label style={labelStyle}>Registration Fee ($)</label>
             <input
               type="number" min="0" value={form.jobPassFee ?? ""} onChange={f("jobPassFee")}
               placeholder="0" style={fieldStyle}
@@ -1424,6 +1435,23 @@ function ChannelSettingsTab({ adminInfo }: { adminInfo: AdminInfo }) {
               />
             </div>
           </div>
+        </div>
+
+        {/* Lens Payment Link */}
+        <div style={{ marginTop:14 }}>
+          <h4 style={{ color:C.txt2, fontSize:"12px", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:10, display:"flex", alignItems:"center", gap:6 }}>
+            <Link size={12} color={C.purple} /> Lens Activation ($3 fee)
+          </h4>
+          <div>
+            <label style={labelStyle}>Paystack Payment Link for $3 Lens Fee</label>
+            <input
+              value={form.lensPaystackLink ?? ""} onChange={f("lensPaystackLink")}
+              placeholder="https://paystack.com/pay/your-lens-link" style={fieldStyle}
+            />
+          </div>
+          <p style={{ color:C.txt3, fontSize:"11px", marginTop:6 }}>
+            Users will be directed to this link to pay the $3 lens activation fee specific to your channel.
+          </p>
         </div>
 
         {/* Active toggle */}
@@ -1509,11 +1537,11 @@ function ChannelSettingsTab({ adminInfo }: { adminInfo: AdminInfo }) {
               Commission Earnings
             </div>
             <div style={{ color:C.gold, fontSize:"22px", fontWeight:700 }}>
-              ₦{channel.balance.toLocaleString(undefined, { minimumFractionDigits:2 })}
+              ${channel.balance.toLocaleString(undefined, { minimumFractionDigits:2 })}
             </div>
           </div>
           <div style={{ color:C.txt3, fontSize:"12px" }}>
-            {channel.referralCommissionRate}% of each ₦{Number(channel.jobPassFee ?? 0).toLocaleString()} fee
+            {channel.referralCommissionRate}% of each ${Number(channel.jobPassFee ?? 0).toLocaleString()} fee
           </div>
         </div>
       )}
@@ -1574,7 +1602,7 @@ function ChannelSettingsTab({ adminInfo }: { adminInfo: AdminInfo }) {
                       </td>
                       <td style={{ padding:"8px 8px" }}>
                         {r.jobPassPaid
-                          ? <span style={{ color:C.green, fontSize:"12px", fontWeight:600 }}>₦{r.jobPassAmount.toLocaleString()} ✓</span>
+                          ? <span style={{ color:C.green, fontSize:"12px", fontWeight:600 }}>${r.jobPassAmount.toLocaleString()} ✓</span>
                           : <span style={{ color:C.txt3, fontSize:"12px" }}>Not paid</span>
                         }
                       </td>
@@ -1619,6 +1647,322 @@ const labelStyle: React.CSSProperties = {
   display:"block", color:"#7D8BAA", fontSize:"10px", fontWeight:700,
   textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:5,
 };
+
+/* ═══════════════════════════════════════════════════════════════════ */
+/* TRAINING TAB (super admin only)                                     */
+/* ═══════════════════════════════════════════════════════════════════ */
+function TrainingTab() {
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
+  const [docs,          setDocs]          = useState<TrainingDoc[]>([]);
+  const [loading,       setLoading]       = useState(true);
+  const [saving,        setSaving]        = useState(false);
+  const [saved,         setSaved]         = useState(false);
+  const [docUrl,        setDocUrl]        = useState("");
+  const [docTitle,      setDocTitle]      = useState("");
+  const [docType,       setDocType]       = useState<"pdf"|"doc"|"link">("link");
+  const [addingDoc,     setAddingDoc]     = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const res = await fetch("/api/admin/training");
+    const data = await res.json();
+    setQuizQuestions(data.quizQuestions ?? []);
+    setDocs(data.trainingDocs ?? []);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function saveQuiz() {
+    setSaving(true);
+    await fetch("/api/admin/training", {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ quizQuestions }),
+    });
+    setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 2500);
+  }
+
+  async function addDoc() {
+    if (!docUrl || !docTitle) return;
+    setAddingDoc(true);
+    const res = await fetch("/api/admin/training", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: docTitle, url: docUrl, type: docType }),
+    });
+    const data = await res.json();
+    setAddingDoc(false);
+    if (res.ok) { setDocs((d) => [...d, data.doc]); setDocUrl(""); setDocTitle(""); }
+  }
+
+  async function removeDoc(id: string) {
+    await fetch("/api/admin/training", {
+      method: "DELETE", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    setDocs((d) => d.filter((x) => x.id !== id));
+  }
+
+  function updateQuestion(idx: number, field: keyof QuizQuestion, value: string | number | string[]) {
+    setQuizQuestions((prev) => prev.map((q, i) => i === idx ? { ...q, [field]: value } : q));
+  }
+
+  function updateOpt(qIdx: number, oIdx: number, value: string) {
+    setQuizQuestions((prev) => prev.map((q, i) => {
+      if (i !== qIdx) return q;
+      const opts = [...q.opts];
+      opts[oIdx] = value;
+      return { ...q, opts };
+    }));
+  }
+
+  function addQuestion() {
+    setQuizQuestions((prev) => [
+      ...prev,
+      { id: `q-${Date.now()}`, q: "", opts: ["", "", "", ""], ans: 0 },
+    ]);
+  }
+
+  function removeQuestion(idx: number) {
+    setQuizQuestions((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  const fieldStyle: React.CSSProperties = {
+    width:"100%", background:C.s2, border:`1px solid ${C.s3}`, borderRadius:7,
+    padding:"8px 10px", color:C.txt, fontSize:"13px", outline:"none",
+  };
+
+  if (loading) return <Spinner />;
+
+  return (
+    <div style={{ animation:"fadeUp 0.3s ease" }}>
+      <SectionTitle title="Training Management" sub="Edit quiz questions and manage learning documents" />
+
+      {/* Quiz editor */}
+      <div style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:12, padding:20, marginBottom:20 }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16, gap:10, flexWrap:"wrap" }}>
+          <h3 style={{ color:C.txt, fontSize:"14px", fontWeight:700, margin:0, display:"flex", alignItems:"center", gap:8 }}>
+            <CheckSquare size={14} color={C.cyan} /> Quiz Questions ({quizQuestions.length})
+          </h3>
+          <div style={{ display:"flex", gap:6 }}>
+            <button onClick={addQuestion} style={{ background:`${C.cyan}15`, border:`1px solid ${C.cyan}30`, color:C.cyan, borderRadius:7, padding:"5px 10px", fontSize:"12px", cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>
+              <Plus size={12} /> Add Question
+            </button>
+            <button onClick={saveQuiz} disabled={saving || saved} style={{ background: saved ? C.green : C.purple, color:"#fff", border:"none", borderRadius:7, padding:"5px 12px", fontSize:"12px", fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>
+              {saving ? <><Loader2 size={11} style={{ animation:"spin 1s linear infinite" }} /> Saving…</> : saved ? <><CheckCircle2 size={11} /> Saved!</> : <><Save size={11} /> Save Quiz</>}
+            </button>
+          </div>
+        </div>
+
+        {quizQuestions.length === 0 ? (
+          <EmptyState msg="No quiz questions yet. Add one to get started." />
+        ) : (
+          <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+            {quizQuestions.map((q, qi) => (
+              <div key={q.id} style={{ background:C.s2, border:`1px solid ${C.s3}`, borderRadius:10, padding:14 }}>
+                <div style={{ display:"flex", alignItems:"flex-start", gap:8, marginBottom:10 }}>
+                  <span style={{ color:C.txt3, fontSize:"11px", fontWeight:700, paddingTop:9, flexShrink:0 }}>Q{qi+1}</span>
+                  <input
+                    value={q.q} onChange={(e) => updateQuestion(qi, "q", e.target.value)}
+                    placeholder="Question text…" style={{ ...fieldStyle, flex:1 }}
+                  />
+                  <button onClick={() => removeQuestion(qi)} style={{ background:"none", border:"none", cursor:"pointer", padding:4, flexShrink:0 }}>
+                    <X size={14} color={C.red} />
+                  </button>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))", gap:8, marginBottom:10 }}>
+                  {q.opts.map((opt, oi) => (
+                    <div key={oi} style={{ display:"flex", alignItems:"center", gap:6 }}>
+                      <input
+                        type="radio" checked={q.ans === oi} onChange={() => updateQuestion(qi, "ans", oi)}
+                        style={{ accentColor:C.green, flexShrink:0, cursor:"pointer" }}
+                      />
+                      <input
+                        value={opt} onChange={(e) => updateOpt(qi, oi, e.target.value)}
+                        placeholder={`Option ${oi+1}`}
+                        style={{ ...fieldStyle, border:`1px solid ${q.ans === oi ? C.green+"50" : C.s3}` }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <p style={{ color:C.txt3, fontSize:"11px", margin:0 }}>Select the radio button next to the correct answer.</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Document manager */}
+      <div style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:12, padding:20 }}>
+        <h3 style={{ color:C.txt, fontSize:"14px", fontWeight:700, marginBottom:14, display:"flex", alignItems:"center", gap:8 }}>
+          <Link size={14} color={C.gold} /> Training Documents ({docs.length})
+        </h3>
+
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))", gap:8, marginBottom:12 }}>
+          <div>
+            <label style={labelStyle}>Document Title</label>
+            <input value={docTitle} onChange={(e) => setDocTitle(e.target.value)} placeholder="Module 3 PDF…" style={{ ...fieldStyle, width:"100%" }} />
+          </div>
+          <div>
+            <label style={labelStyle}>URL / Link</label>
+            <input value={docUrl} onChange={(e) => setDocUrl(e.target.value)} placeholder="https://drive.google.com/…" style={{ ...fieldStyle, width:"100%" }} />
+          </div>
+          <div>
+            <label style={labelStyle}>Type</label>
+            <select value={docType} onChange={(e) => setDocType(e.target.value as "pdf"|"doc"|"link")} style={{ ...fieldStyle, width:"100%", cursor:"pointer" }}>
+              <option value="pdf">PDF</option>
+              <option value="doc">Document</option>
+              <option value="link">Link</option>
+            </select>
+          </div>
+        </div>
+
+        <button onClick={addDoc} disabled={addingDoc || !docUrl || !docTitle} style={{ background:C.cyan, color:"#060A12", border:"none", borderRadius:7, padding:"7px 14px", fontWeight:700, fontSize:"12px", cursor:"pointer", display:"flex", alignItems:"center", gap:6, marginBottom:16 }}>
+          {addingDoc ? <><Loader2 size={12} style={{ animation:"spin 1s linear infinite" }} /> Adding…</> : <><Plus size={12} /> Add Document</>}
+        </button>
+
+        {docs.length === 0 ? (
+          <EmptyState msg="No documents yet. Add training materials above." />
+        ) : (
+          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+            {docs.map((doc) => (
+              <div key={doc.id} style={{ background:C.s2, border:`1px solid ${C.s3}`, borderRadius:8, padding:"10px 12px", display:"flex", alignItems:"center", gap:10 }}>
+                <span style={{ fontSize:"10px", fontWeight:700, padding:"2px 6px", borderRadius:4, background:`${C.gold}15`, color:C.gold, textTransform:"uppercase", flexShrink:0 }}>
+                  {doc.type}
+                </span>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ color:C.txt, fontSize:"13px", fontWeight:600, marginBottom:2 }}>{doc.title}</div>
+                  <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ color:C.txt3, fontSize:"11px", wordBreak:"break-all" }}>{doc.url}</a>
+                </div>
+                <button onClick={() => removeDoc(doc.id)} style={{ background:"none", border:"none", cursor:"pointer", flexShrink:0 }}>
+                  <Trash2 size={13} color={C.red} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════ */
+/* REFERRAL BONUSES TAB                                                */
+/* ═══════════════════════════════════════════════════════════════════ */
+function ReferralBonusesTab({ adminInfo }: { adminInfo: AdminInfo }) {
+  const [bonuses, setBonuses] = useState<ReferralBonus[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [claiming, setClaiming] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const res = await fetch("/api/admin/referrals/bonuses");
+    const data = await res.json();
+    setBonuses(data.bonuses ?? []);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function claim(bonusId: string) {
+    setClaiming(bonusId);
+    await fetch("/api/admin/referrals/bonuses", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bonusId }),
+    });
+    await load();
+    setClaiming(null);
+  }
+
+  const pending = bonuses.filter((b) => b.status === "pending");
+  const processed = bonuses.filter((b) => b.status !== "pending");
+  const pendingTotal = pending.reduce((s, b) => s + b.amount, 0);
+
+  void adminInfo;
+
+  return (
+    <div style={{ animation:"fadeUp 0.3s ease" }}>
+      <SectionTitle title="Referral Bonuses" sub="Pending bonus claims for recruits who joined via referral links" />
+
+      {pendingTotal > 0 && (
+        <div style={{ background:`${C.gold}08`, border:`1px solid ${C.gold}25`, borderRadius:12, padding:"12px 16px", marginBottom:16, display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+          <Coins size={18} color={C.gold} />
+          <div>
+            <div style={{ color:C.txt3, fontSize:"11px", fontWeight:600, textTransform:"uppercase" }}>Pending Bonus Pool</div>
+            <div style={{ color:C.gold, fontSize:"20px", fontWeight:700 }}>${pendingTotal.toFixed(2)}</div>
+          </div>
+          <div style={{ color:C.txt3, fontSize:"12px" }}>Claim within 24 hrs or it auto-credits to the referrer.</div>
+        </div>
+      )}
+
+      {loading ? <Spinner /> : bonuses.length === 0 ? (
+        <EmptyState msg="No referral bonuses yet. Bonuses appear when referred users complete their job pass payment." />
+      ) : (
+        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+          {pending.length > 0 && (
+            <div style={{ color:C.txt3, fontSize:"11px", fontWeight:700, textTransform:"uppercase", padding:"4px 0", letterSpacing:"0.06em" }}>
+              Pending ({pending.length})
+            </div>
+          )}
+          {pending.map((b) => {
+            const expiresAt = new Date(b.autoCreditsAt);
+            const now = new Date();
+            const hoursLeft = Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60)));
+            return (
+              <div key={b.id} style={{ background:C.s1, border:`1px solid ${C.gold}30`, borderRadius:10, padding:"12px 14px", display:"flex", alignItems:"center", gap:12, flexWrap:"wrap" }}>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ color:C.txt, fontWeight:600, fontSize:"13px", marginBottom:3 }}>
+                    {b.referrerName} referred {b.recruitName}
+                  </div>
+                  <div style={{ color:C.txt3, fontSize:"11px" }}>{b.referrerEmail} · recruit paid ${b.amount.toFixed(2)} bonus</div>
+                  <div style={{ color: hoursLeft < 3 ? C.red : C.gold, fontSize:"11px", marginTop:3, fontWeight:600 }}>
+                    {hoursLeft > 0 ? `Auto-credits in ${hoursLeft}h` : "Auto-crediting…"}
+                  </div>
+                </div>
+                <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
+                  <span style={{ color:C.gold, fontWeight:800, fontSize:"15px" }}>${b.amount.toFixed(2)}</span>
+                  <button
+                    onClick={() => claim(b.id)} disabled={claiming === b.id}
+                    style={{ background:C.gold, color:"#060A12", border:"none", borderRadius:7, padding:"6px 12px", fontWeight:700, fontSize:"12px", cursor:"pointer" }}
+                  >
+                    {claiming === b.id ? "Claiming…" : "Claim"}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+
+          {processed.length > 0 && (
+            <>
+              <div style={{ color:C.txt3, fontSize:"11px", fontWeight:700, textTransform:"uppercase", padding:"8px 0 4px", letterSpacing:"0.06em" }}>
+                Processed ({processed.length})
+              </div>
+              {processed.map((b) => (
+                <div key={b.id} style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:10, padding:"10px 14px", display:"flex", alignItems:"center", gap:12, flexWrap:"wrap" }}>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ color:C.txt2, fontWeight:500, fontSize:"13px" }}>
+                      {b.referrerName} → {b.recruitName}
+                    </div>
+                    <div style={{ color:C.txt3, fontSize:"11px" }}>{b.status === "claimed" ? "Claimed manually" : "Auto-credited"} · {b.claimedAt ? new Date(b.claimedAt).toLocaleDateString() : "—"}</div>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
+                    <span style={{ color:C.txt2, fontWeight:700 }}>${b.amount.toFixed(2)}</span>
+                    <span style={{
+                      fontSize:"10px", fontWeight:700, padding:"2px 7px", borderRadius:4,
+                      background: b.status === "claimed" ? `${C.green}15` : `${C.cyan}15`,
+                      color: b.status === "claimed" ? C.green : C.cyan,
+                    }}>
+                      {b.status.toUpperCase().replace("-", " ")}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function RegStatusPill({ status }: { status: string }) {
   const map = {

@@ -102,7 +102,7 @@ function JobPassPageInner() {
       key:      channel.paystackPublicKey,
       email:    session.email ?? "user@deelai.uk",
       amount:   channel.jobPassFee * 100,
-      currency: "NGN",
+      currency: "USD",
       ref:      `DEELAI-JP-${Date.now()}`,
       metadata: { permit_type: permit, channel_id: channelId },
       callback: async (resp: { reference: string }) => {
@@ -182,7 +182,7 @@ function JobPassPageInner() {
                   <span style={{ color: permit===opt.type ? opt.color : C.txt, fontWeight:700, fontSize:14 }}>{opt.title}</span>
                   {hasFee && (
                     <span style={{ color: permit===opt.type ? opt.color : C.txt2, fontWeight:800, fontSize:15, flexShrink:0 }}>
-                      ₦{channel.jobPassFee.toLocaleString()}
+                      ${channel.jobPassFee.toLocaleString()}
                     </span>
                   )}
                 </div>
@@ -198,7 +198,7 @@ function JobPassPageInner() {
         <div style={{ background:`${C.gold}08`, border:`1px solid ${C.gold}25`, borderRadius:9, padding:"10px 13px", marginBottom:16, display:"flex", gap:8, alignItems:"flex-start" }}>
           <Clock size={13} color={C.gold} style={{ flexShrink:0, marginTop:2 }} />
           <p style={{ color:C.txt3, fontSize:12, margin:0, lineHeight:1.6 }}>
-            One-time registration fee of <strong style={{ color:C.gold }}>₦{channel.jobPassFee.toLocaleString()}</strong> paid via Paystack.
+            One-time registration fee of <strong style={{ color:C.gold }}>${channel.jobPassFee.toLocaleString()}</strong> paid via Paystack.
           </p>
         </div>
       ) : (

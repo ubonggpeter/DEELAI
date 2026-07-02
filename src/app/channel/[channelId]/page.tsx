@@ -277,7 +277,7 @@ export default function ChannelRegistrationPage() {
           <InfoChip icon={<Clock size={12} color={C.gold} />} label={`Est. ${channel.estTime} review`} color={C.gold} />
           <InfoChip icon={<Briefcase size={12} color={C.green} />} label="Accepting Applications" color={C.green} />
           {channel.jobPassFee > 0 && (
-            <InfoChip icon={<span style={{ fontSize:12, color:C.cyan }}>₦</span>} label={`₦${channel.jobPassFee.toLocaleString()} registration fee`} color={C.cyan} />
+            <InfoChip icon={<span style={{ fontSize:12, color:C.cyan }}>$</span>} label={`$${channel.jobPassFee.toLocaleString()} registration fee`} color={C.cyan} />
           )}
         </div>
       </div>
@@ -419,7 +419,7 @@ export default function ChannelRegistrationPage() {
           {submitting ? (
             <><Loader2 size={16} style={{ animation:"spin 1s linear infinite" }} /> Submitting…</>
           ) : channel.jobPassFee > 0 ? (
-            <>Pay ₦{channel.jobPassFee.toLocaleString()} &amp; Register</>
+            <>Pay ${channel.jobPassFee.toLocaleString()} &amp; Register</>
           ) : (
             "Submit Registration"
           )}

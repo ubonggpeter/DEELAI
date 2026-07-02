@@ -4,7 +4,7 @@ import { USER_COOKIE } from "@/lib/adminConfig";
 
 export async function POST(req: NextRequest) {
   const body = await req.json() as {
-    name: string; email: string; phone: string; password: string; channelId: string;
+    name: string; email: string; phone: string; password: string; channelId: string; refCode?: string;
   };
 
   if (!body.name || !body.email || !body.password || !body.channelId) {
@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
     phone:     body.phone ?? "",
     password:  body.password,
     channelId: body.channelId,
+    refCode:   body.refCode,
   });
 
   const session = { userId: user.id, email, name: user.name, accountStatus: user.accountStatus, channelId: user.channelId };
