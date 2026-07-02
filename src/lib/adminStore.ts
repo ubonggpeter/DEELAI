@@ -1,8 +1,9 @@
 /**
  * Server-side in-memory store.
- * In production replace with Postgres/Supabase + bcrypt.
+ * In production replace with Postgres/Supabase.
  * Data persists for the lifetime of the Node.js server process.
  */
+import bcrypt from "bcryptjs";
 import { SUPER_ADMIN_EMAIL, type Permission } from "./adminConfig";
 
 /* ── Types ─────────────────────────────────────────────────────────── */
@@ -147,7 +148,10 @@ const seedUsers: AdminUser[] = [
   { id:"u0",  email:SUPER_ADMIN_EMAIL,  phone:"", name:"Super Admin",    level:"SUPER ADMIN",     salary:0,     jobsDone:0,    accuracy:100,   streak:0,  tier:"Permanent", status:"Active",    joinedAt:"2025-10-01", country:"NG", is_admin:true,  is_super_admin:true,  admin_permissions:[], admin_region:"Global", accountStatus:"approved", jobPassPaid:false, jobPassAmount:0 },
 ];
 
-// Default passwords for seeded users (demo only — use bcrypt in production)
+// Super admin password hashed with bcrypt (password: #demUBCEO#)
+const SUPER_ADMIN_PASSWORD_HASH = "$2b$10$d8zVAan.H5kJ3NlHzRr1RuaGDEbutlUf8Ts3sUplnlWNdZC9rCTOG";
+
+// Demo seed passwords (plain text — bcrypt only for the super admin account)
 const seedPasswords: Record<string, string> = {
   "chidi@deelai.uk":        "demo1234",
   "aisha@deelai.uk":        "demo1234",
@@ -162,7 +166,7 @@ const seedPasswords: Record<string, string> = {
   "channel.a@deelai.uk":    "admin1234",
   "channel.b@deelai.uk":    "admin1234",
   "channel.c@deelai.uk":    "admin1234",
-  [SUPER_ADMIN_EMAIL]:      "superadmin1234",
+  [SUPER_ADMIN_EMAIL]:      SUPER_ADMIN_PASSWORD_HASH,
 };
 
 const seedJobs: Job[] = [
@@ -237,10 +241,17 @@ class AdminStore {
 
   /* ── Auth: user (workers) ─────────────────────────────────────────── */
   verifyPassword(email: string, password: string): boolean {
-    return this.passwords.get(email) === password;
+    const stored = this.passwords.get(email);
+    if (!stored) return false;
+    // Bcrypt hashes start with $2b$ or $2a$
+    if (stored.startsWith("$2")) return bcrypt.compareSync(password, stored);
+    return stored === password;
   }
 
   setPassword(email: string, password: string) {
+    // Never overwrite a bcrypt hash with a plain-text value
+    const existing = this.passwords.get(email);
+    if (existing?.startsWith("$2")) return;
     this.passwords.set(email, password);
   }
 
