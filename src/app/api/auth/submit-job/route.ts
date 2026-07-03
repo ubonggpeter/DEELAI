@@ -7,11 +7,10 @@ export async function POST(req: NextRequest) {
   if (!raw) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
   const session = JSON.parse(raw) as { userId: string };
-
-  const { type, batchId, earnings, accuracy } = await req.json() as {
-    type: string; batchId: string; earnings: number; accuracy: number;
+  const { type, batchId, accuracy } = await req.json() as {
+    type: string; batchId: string; accuracy: number;
   };
 
-  const result = await adminStore.submitUserJob(session.userId, { type, batchId, earnings, accuracy });
+  const result = await adminStore.submitUserJob(session.userId, { type, batchId, accuracy });
   return NextResponse.json(result);
 }

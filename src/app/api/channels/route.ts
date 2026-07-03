@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminStore } from "@/lib/adminStore";
 
-// Must be dynamic — admin writes change channel list; static caching would serve stale data
 export const dynamic = "force-dynamic";
 
 export async function GET() {
@@ -21,5 +20,9 @@ export async function GET() {
       region:      owner?.region ?? "Global",
     };
   });
-  return NextResponse.json({ channels: result });
+  // Cache at CDN edge for 30s, serve stale for 60s while revalidating — safe because
+  // channel mutations (admin panel) are infrequent and a 30–60s lag is acceptable
+  return NextResponse.json({ channels: result }, {
+    headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60" },
+  });
 }

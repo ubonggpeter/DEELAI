@@ -8,8 +8,8 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const session = JSON.parse(raw) as { userId: string };
-    const body = await req.json() as { name?: string; displayName?: string };
-    if (!body.name && !body.displayName) {
+    const body = await req.json() as { name?: string; displayName?: string; avatarUrl?: string };
+    if (!body.name && !body.displayName && !body.avatarUrl) {
       return NextResponse.json({ error: "No fields to update" }, { status: 400 });
     }
     const updated = await adminStore.updateUserProfile(session.userId, body);

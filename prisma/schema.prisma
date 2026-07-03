@@ -41,7 +41,14 @@ model User {
   trainingDone      Boolean   @default(false)
   completedModules  Int[]     @default([])
   passwordHash      String    @default("")
-  approvedBy        String?   // email of admin (super or sub) who approved this registration
+  approvedBy        String?
+  avatarUrl         String?
+  bankCode          String?
+  bankName          String?
+  bankAccountNumber String?
+  bankAccountName   String?
+  jobsToday         Int       @default(0)
+  lastJobDate       String    @default("")
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 

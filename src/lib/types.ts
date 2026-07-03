@@ -17,6 +17,11 @@ export interface User {
   trainingDone: boolean;
   lensActivated: boolean;
   kycDone: boolean;
+  avatarUrl?: string;
+  bankCode?: string;
+  bankName?: string;
+  bankAccountNumber?: string;
+  bankAccountName?: string;
 }
 
 export interface Notification {

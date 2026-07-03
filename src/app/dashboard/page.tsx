@@ -28,21 +28,26 @@ const SupportScreen   = dynamic(() => import("@/components/screens/SupportScreen
 const MAIN_SCREENS: Screen[] = ["activity", "training", "workspace", "recruit", "wallet"];
 
 interface SessionData {
-  loggedIn:         boolean;
-  userId?:          string;
-  email?:           string;
-  name?:            string;
-  phone?:           string;
-  accountStatus?:   string;
-  salary?:          number;
-  jobsDone?:        number;
-  level?:           string;
-  refCode?:         string;
-  quizPassed?:      boolean;
-  lensActivated?:   boolean;
-  trainingDone?:    boolean;
+  loggedIn:          boolean;
+  userId?:           string;
+  email?:            string;
+  name?:             string;
+  phone?:            string;
+  accountStatus?:    string;
+  salary?:           number;
+  jobsDone?:         number;
+  jobsToday?:        number;
+  level?:            string;
+  refCode?:          string;
+  quizPassed?:       boolean;
+  lensActivated?:    boolean;
+  trainingDone?:     boolean;
   completedModules?: number[];
-  channelId?:       string;
+  channelId?:        string;
+  avatarUrl?:        string | null;
+  bankAccountNumber?: string | null;
+  bankAccountName?:  string | null;
+  bankName?:         string | null;
 }
 
 export default function Dashboard() {
@@ -73,18 +78,23 @@ export default function Dashboard() {
         // Hydrate user state from session
         setUser((u) => ({
           ...u,
-          name:             data.name    ?? u.name,
-          email:            data.email   ?? "",
-          level:            data.level   ?? u.level,
-          salary:           data.salary  ?? u.salary,
-          jobsDone:         data.jobsDone ?? u.jobsDone,
-          isPermanent:      (data.level ?? "").includes("PERMANENT"),
-          refCode:          data.refCode ?? u.refCode,
-          quizPassed:       data.quizPassed ?? u.quizPassed,
-          lensActivated:    data.lensActivated ?? u.lensActivated,
-          trainingDone:     data.trainingDone ?? u.trainingDone,
-          completedModules: data.completedModules ?? u.completedModules,
-          channelId:        data.channelId,
+          name:              data.name    ?? u.name,
+          email:             data.email   ?? "",
+          level:             data.level   ?? u.level,
+          salary:            data.salary  ?? u.salary,
+          jobsDone:          data.jobsDone ?? u.jobsDone,
+          jobsToday:         data.jobsToday ?? u.jobsToday,
+          isPermanent:       (data.level ?? "").includes("PERMANENT"),
+          refCode:           data.refCode ?? u.refCode,
+          quizPassed:        data.quizPassed ?? u.quizPassed,
+          lensActivated:     data.lensActivated ?? u.lensActivated,
+          trainingDone:      data.trainingDone ?? u.trainingDone,
+          completedModules:  data.completedModules ?? u.completedModules,
+          channelId:         data.channelId,
+          avatarUrl:         data.avatarUrl ?? undefined,
+          bankAccountNumber: data.bankAccountNumber ?? undefined,
+          bankAccountName:   data.bankAccountName ?? undefined,
+          bankName:          data.bankName ?? undefined,
         }));
         setAuthReady(true);
       })
@@ -162,8 +172,8 @@ function ScreenContent({ screen, user, setUser, notifs, setNotifs, notifCount, s
     case "leaderboard":    return <LeaderboardScreen  onBack={goBack} />;
     case "tier":           return <TierScreen         user={user} onBack={goBack} />;
     case "kyc":            return <KYCScreen          user={user} setUser={setUser} onBack={goBack} />;
-    case "payout":         return <PayoutScreen       onBack={goBack} />;
-    case "settings":       return <SettingsScreen     onBack={goBack} />;
+    case "payout":         return <PayoutScreen       user={user} setUser={setUser} onBack={goBack} />;
+    case "settings":       return <SettingsScreen     user={user} setUser={setUser} onBack={goBack} />;
     case "terms":          return <TermsScreen        onBack={goBack} />;
     case "support":        return <SupportScreen      onBack={goBack} />;
     default:               return null;

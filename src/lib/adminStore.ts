@@ -44,6 +44,9 @@ export interface AdminUser {
   jobPassPaid: boolean; jobPassAmount: number; registeredAt?: string;
   refCode: string; referredByUserId?: string;
   quizPassed: boolean; lensActivated: boolean; trainingDone: boolean; completedModules: number[];
+  avatarUrl?: string;
+  bankCode?: string; bankName?: string; bankAccountNumber?: string; bankAccountName?: string;
+  jobsToday: number; lastJobDate: string;
 }
 export interface Job {
   id: string; userId: string; userName: string;
@@ -85,6 +88,10 @@ function mapUser(u: any): AdminUser {
     refCode: u.refCode, referredByUserId: u.referredByUserId ?? undefined,
     quizPassed: u.quizPassed, lensActivated: u.lensActivated,
     trainingDone: u.trainingDone, completedModules: u.completedModules ?? [],
+    avatarUrl: u.avatarUrl ?? undefined,
+    bankCode: u.bankCode ?? undefined, bankName: u.bankName ?? undefined,
+    bankAccountNumber: u.bankAccountNumber ?? undefined, bankAccountName: u.bankAccountName ?? undefined,
+    jobsToday: u.jobsToday ?? 0, lastJobDate: u.lastJobDate ?? "",
   };
 }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -526,7 +533,26 @@ export const adminStore = {
   },
 
   /* ── Profile ────────────────────────────────────────────────────────── */
-  async updateUserProfile(userId: string, data: { name?: string; displayName?: string }): Promise<AdminUser | null> {
+  async updateUserProfile(userId: string, data: { name?: string; displayName?: string; avatarUrl?: string }): Promise<AdminUser | null> {
+    try {
+      const u = await prisma.user.update({ where: { id: userId }, data });
+      return mapUser(u);
+    } catch { return null; }
+  },
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<{ ok: boolean; error?: string }> {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { passwordHash: true } });
+    if (!user) return { ok: false, error: "User not found" };
+    const valid = user.passwordHash.startsWith("$2")
+      ? await bcrypt.compare(currentPassword, user.passwordHash)
+      : user.passwordHash === currentPassword;
+    if (!valid) return { ok: false, error: "Current password is incorrect" };
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+    return { ok: true };
+  },
+
+  async saveUserBank(userId: string, data: { bankCode: string; bankName: string; bankAccountNumber: string; bankAccountName: string }): Promise<AdminUser | null> {
     try {
       const u = await prisma.user.update({ where: { id: userId }, data });
       return mapUser(u);
@@ -534,26 +560,69 @@ export const adminStore = {
   },
 
   /* ── Jobs / Payments / Referrals ────────────────────────────────────── */
-  /* Called from WorkspaceScreen on each job submit — persists earnings to DB */
   async submitUserJob(userId: string, data: {
-    type: string; batchId: string; earnings: number; accuracy: number;
-  }): Promise<{ newSalary: number; newJobsDone: number }> {
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+    type: string; batchId: string; accuracy: number;
+  }): Promise<{
+    status: "approved" | "rejected"; earnings: number; reason: string;
+    newSalary: number; newJobsDone: number; newJobsToday: number;
+  }> {
+    const today = new Date().toISOString().split("T")[0];
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, salary: true, jobsDone: true, jobsToday: true, lastJobDate: true },
+    });
+    if (!user) throw new Error("User not found");
+
+    const isNewDay = user.lastJobDate !== today;
+    const currentJobsToday = isNewDay ? 0 : user.jobsToday;
+
+    // Daily limit check
+    if (currentJobsToday >= 15) {
+      return {
+        status: "rejected", earnings: 0,
+        reason: "Daily work limit reached (15/15). Come back tomorrow.",
+        newSalary: user.salary, newJobsDone: user.jobsDone, newJobsToday: currentJobsToday,
+      };
+    }
+
+    const acc = Math.max(0, Math.min(100, data.accuracy));
+    let jobStatus: "Approved" | "Rejected";
+    let earnings: number;
+    let reason: string;
+
+    if (acc < 60) {
+      jobStatus = "Rejected"; earnings = 0;
+      reason = `Accuracy too low (${acc.toFixed(1)}%) — minimum 60%. No payout for this job.`;
+    } else {
+      // Linear scale: 60% → $1.20, 100% → $2.50
+      earnings = Math.round((1.20 + ((acc - 60) / 40) * 1.30) * 100) / 100;
+      if (acc >= 99) { earnings = 2.50; reason = `Accuracy: ${acc.toFixed(1)}% — Full payout ($2.50)`; }
+      else reason = `Accuracy: ${acc.toFixed(1)}% — Partial payout ($${earnings.toFixed(2)})`;
+      jobStatus = "Approved";
+    }
+
+    const newJobsToday = currentJobsToday + 1;
     const [updated] = await Promise.all([
       prisma.user.update({
         where: { id: userId },
-        data: { salary: { increment: data.earnings }, jobsDone: { increment: 1 } },
+        data: {
+          ...(jobStatus === "Approved" ? { salary: { increment: earnings }, jobsDone: { increment: 1 } } : {}),
+          jobsToday: newJobsToday, lastJobDate: today,
+        },
       }),
       prisma.job.create({
         data: {
           id: `j-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-          userId, userName: user?.name ?? "",
+          userId, userName: user.name,
           type: data.type, batchId: data.batchId,
-          status: "Approved", earnings: data.earnings, accuracy: data.accuracy,
+          status: jobStatus, earnings, accuracy: acc,
         },
       }),
     ]);
-    return { newSalary: updated.salary, newJobsDone: updated.jobsDone };
+    return {
+      status: jobStatus === "Approved" ? "approved" : "rejected", earnings, reason,
+      newSalary: updated.salary, newJobsDone: updated.jobsDone, newJobsToday,
+    };
   },
 
   async getJobById(id: string): Promise<Job | null> {
