@@ -356,9 +356,12 @@ export const adminStore = {
     } catch { return null; }
   },
 
-  async approveRegistration(userId: string): Promise<AdminUser | null> {
+  async approveRegistration(userId: string, approvedByEmail?: string): Promise<AdminUser | null> {
     try {
-      const u = await prisma.user.update({ where: { id: userId }, data: { accountStatus: "approved" } });
+      const u = await prisma.user.update({
+        where: { id: userId },
+        data: { accountStatus: "approved", approvedBy: approvedByEmail ?? null },
+      });
       return mapUser(u);
     } catch { return null; }
   },
@@ -409,18 +412,42 @@ export const adminStore = {
     return code;
   },
 
-  /* ── Training ───────────────────────────────────────────────────────── */
+  /* ── Training / Quiz ────────────────────────────────────────────────── */
+
+  // Global super-admin questions (ownerEmail IS NULL)
   async getQuizQuestions(): Promise<QuizQuestion[]> {
-    const qs = await prisma.quizQuestion.findMany({ orderBy: { sortOrder: "asc" } });
+    const qs = await prisma.quizQuestion.findMany({ where: { ownerEmail: null }, orderBy: { sortOrder: "asc" } });
     return qs.map((q) => ({ id: q.id, q: q.q, opts: q.opts, ans: q.ans }));
   },
-
   async setQuizQuestions(questions: QuizQuestion[]): Promise<void> {
-    await prisma.quizQuestion.deleteMany({});
+    await prisma.quizQuestion.deleteMany({ where: { ownerEmail: null } });
     if (questions.length === 0) return;
     await prisma.quizQuestion.createMany({
-      data: questions.map((q, i) => ({ id: q.id || `q-${Date.now()}-${i}`, q: q.q, opts: q.opts, ans: q.ans, sortOrder: i })),
+      data: questions.map((q, i) => ({ id: q.id || `q-${Date.now()}-${i}`, ownerEmail: null, q: q.q, opts: q.opts, ans: q.ans, sortOrder: i })),
     });
+  },
+
+  // Per-owner quiz (ownerEmail = sub-admin email, or null = super admin)
+  async getQuizQuestionsForOwner(ownerEmail: string | null): Promise<QuizQuestion[]> {
+    const qs = await prisma.quizQuestion.findMany({ where: { ownerEmail }, orderBy: { sortOrder: "asc" } });
+    return qs.map((q) => ({ id: q.id, q: q.q, opts: q.opts, ans: q.ans }));
+  },
+  async setQuizQuestionsForOwner(ownerEmail: string | null, questions: QuizQuestion[]): Promise<void> {
+    await prisma.quizQuestion.deleteMany({ where: { ownerEmail } });
+    if (questions.length === 0) return;
+    await prisma.quizQuestion.createMany({
+      data: questions.map((q, i) => ({
+        id: q.id || `q-${Date.now()}-${i}`,
+        ownerEmail, q: q.q, opts: q.opts, ans: q.ans, sortOrder: i,
+      })),
+    });
+  },
+
+  // Used by training-content endpoint: returns approver's questions, falls back to global
+  async getQuizQuestionsForApprover(approvedBy: string | null): Promise<QuizQuestion[]> {
+    if (!approvedBy || approvedBy === SUPER_ADMIN_EMAIL) return this.getQuizQuestions();
+    const qs = await this.getQuizQuestionsForOwner(approvedBy);
+    return qs.length > 0 ? qs : this.getQuizQuestions(); // fall back to global if sub-admin hasn't set any
   },
 
   async getTrainingDocs(): Promise<TrainingDoc[]> {
@@ -444,6 +471,49 @@ export const adminStore = {
       await prisma.trainingDoc.delete({ where: { id } });
       return true;
     } catch { return false; }
+  },
+
+  /* ── Password Reset Requests ─────────────────────────────────────────── */
+  async createPasswordResetRequest(userId: string, channelId: string): Promise<{ id: string }> {
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    const req = await prisma.passwordResetRequest.create({
+      data: { id: `pr-${Date.now()}-${Math.random().toString(36).slice(2,6)}`, userId, channelId, expiresAt },
+    });
+    return { id: req.id };
+  },
+
+  async getPendingPasswordResets(channelId?: string): Promise<{
+    id: string; userId: string; userName: string; userEmail: string;
+    channelId: string; requestedAt: string; expiresAt: string; status: string;
+  }[]> {
+    const now = new Date();
+    // Auto-expire overdue requests
+    await prisma.passwordResetRequest.updateMany({
+      where: { status: "pending", expiresAt: { lt: now } },
+      data: { status: "expired" },
+    });
+    const reqs = await prisma.passwordResetRequest.findMany({
+      where: { status: "pending", ...(channelId ? { channelId } : {}) },
+      include: { user: { select: { name: true, email: true } } },
+      orderBy: { requestedAt: "desc" },
+    });
+    return reqs.map((r) => ({
+      id: r.id, userId: r.userId, channelId: r.channelId,
+      userName: r.user.name, userEmail: r.user.email,
+      requestedAt: r.requestedAt.toISOString(), expiresAt: r.expiresAt.toISOString(),
+      status: r.status,
+    }));
+  },
+
+  async fulfillPasswordResetRequest(requestId: string, newPassword: string): Promise<boolean> {
+    const req = await prisma.passwordResetRequest.findUnique({ where: { id: requestId } });
+    if (!req || req.status !== "pending" || req.expiresAt < new Date()) return false;
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await Promise.all([
+      prisma.user.update({ where: { id: req.userId }, data: { passwordHash } }),
+      prisma.passwordResetRequest.update({ where: { id: requestId }, data: { status: "fulfilled" } }),
+    ]);
+    return true;
   },
 
   async updateUserTraining(userId: string, data: {

@@ -41,15 +41,17 @@ model User {
   trainingDone      Boolean   @default(false)
   completedModules  Int[]     @default([])
   passwordHash      String    @default("")
+  approvedBy        String?   // email of admin (super or sub) who approved this registration
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  channel            Channel?            @relation(fields: [channelId], references: [id])
-  jobs               Job[]
-  payments           Payment[]
-  referralsGiven     Referral[]          @relation("ReferrerRel")
-  referralBonuses    ReferralBonus[]     @relation("BonusReferrer")
-  channelCommissions ChannelCommission[]
+  channel              Channel?              @relation(fields: [channelId], references: [id])
+  jobs                 Job[]
+  payments             Payment[]
+  referralsGiven       Referral[]            @relation("ReferrerRel")
+  referralBonuses      ReferralBonus[]       @relation("BonusReferrer")
+  channelCommissions   ChannelCommission[]
+  passwordResetRequests PasswordResetRequest[]
 }
 
 model SubAdmin {
@@ -154,11 +156,22 @@ model ChannelCommission {
 }
 
 model QuizQuestion {
-  id        String @id
-  q         String
-  opts      String[]
-  ans       Int
-  sortOrder Int    @default(0)
+  id         String  @id
+  ownerEmail String? // null = super admin's global set; set = that sub-admin's question set
+  q          String
+  opts       String[]
+  ans        Int
+  sortOrder  Int     @default(0)
+}
+
+model PasswordResetRequest {
+  id          String   @id
+  userId      String
+  channelId   String
+  status      String   @default("pending") // pending | fulfilled | expired
+  requestedAt DateTime @default(now())
+  expiresAt   DateTime
+  user        User     @relation(fields: [userId], references: [id])
 }
 
 model TrainingDoc {

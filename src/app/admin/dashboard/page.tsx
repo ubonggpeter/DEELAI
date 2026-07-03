@@ -8,7 +8,7 @@ import {
   Trash2, Edit2, Plus, X, Save, RefreshCw, Menu, UserCheck,
   TrendingUp, DollarSign, CheckSquare, BarChart3,
   Radio, Key, Link, Copy, ExternalLink, ToggleLeft, ToggleRight,
-  CircleDot, Coins, ClipboardList,
+  CircleDot, Coins, ClipboardList, KeyRound,
 } from "lucide-react";
 import { ALL_PERMISSIONS, PERMISSION_LABELS, ADMIN_REGIONS, type Permission } from "@/lib/adminConfig";
 
@@ -83,19 +83,20 @@ const C = {
 };
 
 /* ─── Tabs ───────────────────────────────────────────────────────── */
-type TabId = "overview"|"users"|"jobs"|"payments"|"referrals"|"refbonuses"|"channels"|"registrations"|"training"|"settings"|"subadmins";
+type TabId = "overview"|"registrations"|"password-resets"|"users"|"jobs"|"payments"|"referrals"|"refbonuses"|"channels"|"training"|"settings"|"subadmins";
 const ALL_TABS: { id: TabId; label: string; icon: React.ElementType; perm?: Permission; superOnly?: boolean }[] = [
-  { id: "overview",       label: "Overview",         icon: LayoutDashboard },
-  { id: "registrations",  label: "Registrations",    icon: ClipboardList },
-  { id: "users",          label: "Users",            icon: Users,           perm: "manage_users" },
-  { id: "jobs",           label: "Jobs",             icon: Briefcase,       perm: "manage_jobs" },
-  { id: "payments",       label: "Payments",         icon: CreditCard,      perm: "manage_payments" },
-  { id: "referrals",      label: "Referrals",        icon: Network,         perm: "manage_referrals" },
-  { id: "refbonuses",     label: "Ref Bonuses",      icon: DollarSign },
-  { id: "channels",       label: "Channel Settings", icon: Radio },
-  { id: "training",       label: "Training",         icon: CheckSquare,     superOnly: true },
-  { id: "settings",       label: "Settings",         icon: Settings },
-  { id: "subadmins",      label: "Sub-Admins",       icon: ShieldCheck,     superOnly: true },
+  { id: "overview",        label: "Overview",         icon: LayoutDashboard },
+  { id: "registrations",   label: "Registrations",    icon: ClipboardList },
+  { id: "password-resets", label: "Password Resets",  icon: KeyRound },
+  { id: "users",           label: "Users",            icon: Users,           perm: "manage_users" },
+  { id: "jobs",            label: "Jobs",             icon: Briefcase,       perm: "manage_jobs" },
+  { id: "payments",        label: "Payments",         icon: CreditCard,      perm: "manage_payments" },
+  { id: "referrals",       label: "Referrals",        icon: Network,         perm: "manage_referrals" },
+  { id: "refbonuses",      label: "Ref Bonuses",      icon: DollarSign },
+  { id: "channels",        label: "Channel Settings", icon: Radio },
+  { id: "training",        label: "Training",         icon: CheckSquare,     superOnly: true },
+  { id: "settings",        label: "Settings",         icon: Settings },
+  { id: "subadmins",       label: "Sub-Admins",       icon: ShieldCheck,     superOnly: true },
 ];
 
 /* ═══════════════════════════════════════════════════════════════════ */
@@ -287,8 +288,9 @@ export default function AdminDashboard() {
 
         {/* Tab content */}
         <div className="admin-tab-content" style={{ flex:1, padding:"20px", maxWidth:"1400px", width:"100%", margin:"0 auto" }}>
-          {tab === "overview"       && <OverviewTab />}
+          {tab === "overview"        && <OverviewTab />}
           {tab === "registrations"  && <RegistrationsTab adminInfo={adminInfo} />}
+          {tab === "password-resets" && <PasswordResetsTab adminInfo={adminInfo} />}
           {tab === "users"          && <UsersTab />}
           {tab === "jobs"           && <JobsTab />}
           {tab === "payments"       && <PaymentsTab />}
@@ -1448,6 +1450,139 @@ function RegistrationsTab({ adminInfo }: { adminInfo: AdminInfo }) {
   );
 }
 
+/* ═══════════════════════════════════════════════════════════════════ */
+/* PASSWORD RESETS TAB                                                 */
+/* ═══════════════════════════════════════════════════════════════════ */
+interface PasswordResetRequest {
+  id: string; userId: string; userName: string; userEmail: string;
+  channelId: string; requestedAt: string; expiresAt: string; status: string;
+}
+
+function PasswordResetsTab({ adminInfo }: { adminInfo: AdminInfo }) {
+  const [reqs,       setReqs]       = useState<PasswordResetRequest[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [actioning,  setActioning]  = useState<string | null>(null);
+  const [newPw,      setNewPw]      = useState<Record<string, string>>({});
+  const [pwError,    setPwError]    = useState<string | null>(null);
+  const [pwSuccess,  setPwSuccess]  = useState<string | null>(null);
+
+  const loadReqs = useCallback(() => {
+    setLoading(true);
+    fetch("/api/admin/password-resets")
+      .then((r) => r.json())
+      .then((d) => setReqs(d.requests ?? []))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { loadReqs(); }, [loadReqs]);
+
+  async function fulfill(id: string) {
+    const pw = newPw[id] ?? "";
+    if (pw.length < 6) { setPwError("Password must be at least 6 characters."); return; }
+    setActioning(id); setPwError(null);
+    const res = await fetch("/api/admin/password-resets", {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ requestId: id, newPassword: pw }),
+    });
+    if (res.ok) {
+      setPwSuccess("Password updated successfully.");
+      setNewPw((p) => { const n = { ...p }; delete n[id]; return n; });
+      await loadReqs();
+      setTimeout(() => setPwSuccess(null), 3000);
+    } else {
+      const d = await res.json();
+      setPwError(d.error ?? "Failed to update password");
+    }
+    setActioning(null);
+  }
+
+  const hoursLeft = (iso: string) => {
+    const diff = new Date(iso).getTime() - Date.now();
+    return Math.max(0, Math.floor(diff / 3600000));
+  };
+
+  return (
+    <div style={{ animation: "fadeUp 0.3s ease" }}>
+      <SectionTitle
+        title="Password Reset Requests"
+        sub={
+          adminInfo.isSuperAdmin
+            ? `All channels · ${reqs.length} pending`
+            : `Your channel · ${reqs.length} pending`
+        }
+      />
+
+      {pwError && (
+        <div style={{ display:"flex", gap:6, alignItems:"center", background:`${C.red}11`, border:`1px solid ${C.red}33`, borderRadius:8, padding:"9px 12px", marginBottom:14, fontSize:12, color:C.red }}>
+          <AlertCircle size={13}/> {pwError}
+        </div>
+      )}
+      {pwSuccess && (
+        <div style={{ display:"flex", gap:6, alignItems:"center", background:`${C.green}11`, border:`1px solid ${C.green}33`, borderRadius:8, padding:"9px 12px", marginBottom:14, fontSize:12, color:C.green }}>
+          <CheckCircle2 size={13}/> {pwSuccess}
+        </div>
+      )}
+
+      <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:12 }}>
+        <RefreshBtn onClick={loadReqs} />
+      </div>
+
+      {loading ? <Spinner /> : reqs.length === 0 ? (
+        <EmptyState msg="No pending password reset requests." />
+      ) : (
+        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+          {reqs.map((r) => {
+            const hrs = hoursLeft(r.expiresAt);
+            return (
+              <div key={r.id} style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:12, padding:"16px 18px" }}>
+                <div style={{ display:"flex", flexWrap:"wrap", alignItems:"flex-start", justifyContent:"space-between", gap:10, marginBottom:12 }}>
+                  <div>
+                    <div style={{ color:C.txt, fontWeight:600, fontSize:14 }}>{r.userName}</div>
+                    <div style={{ color:C.txt2, fontSize:12, marginTop:2 }}>{r.userEmail}</div>
+                    <div style={{ display:"flex", gap:10, marginTop:6, flexWrap:"wrap" }}>
+                      <span style={{ fontSize:11, color:C.txt3 }}>
+                        Requested {new Date(r.requestedAt).toLocaleString()}
+                      </span>
+                      <span style={{ fontSize:11, fontWeight:700, color: hrs < 3 ? C.red : C.gold }}>
+                        Expires in {hrs}h
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
+                  <div style={{ position:"relative", flex:1, minWidth:160 }}>
+                    <input
+                      type="text"
+                      placeholder="Set new password (min 6 chars)"
+                      value={newPw[r.id] ?? ""}
+                      onChange={(e) => setNewPw((p) => ({ ...p, [r.id]: e.target.value }))}
+                      style={{
+                        width:"100%", background:C.s2, border:`1px solid ${C.s3}`, borderRadius:8,
+                        padding:"9px 11px", color:C.txt, fontSize:13, outline:"none",
+                      }}
+                    />
+                  </div>
+                  <button
+                    onClick={() => fulfill(r.id)}
+                    disabled={actioning === r.id}
+                    style={{
+                      background:C.green, color:"#060A12", border:"none", borderRadius:8,
+                      padding:"9px 16px", fontWeight:700, fontSize:13, cursor:"pointer",
+                      whiteSpace:"nowrap", flexShrink:0,
+                    }}
+                  >
+                    {actioning === r.id ? "Saving…" : "Set Password"}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ChannelSettingsTab({ adminInfo }: { adminInfo: AdminInfo }) {
   const [channel, setChannel]   = useState<Channel | null>(null);
   const [loading, setLoading]   = useState(true);
@@ -1821,6 +1956,103 @@ function ChannelSettingsTab({ adminInfo }: { adminInfo: AdminInfo }) {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Quiz Questions (sub-admin only — manage their own question set) ── */}
+      {!adminInfo.isSuperAdmin && (
+        <SubAdminQuizSection adminEmail={adminInfo.email} />
+      )}
+    </div>
+  );
+}
+
+/* ─── Sub-admin quiz editor ─────────────────────────────────────────── */
+interface QQ { id: string; q: string; opts: string[]; ans: number; }
+
+function SubAdminQuizSection({ adminEmail }: { adminEmail: string }) {
+  const [questions, setQuestions] = useState<QQ[]>([]);
+  const [loading,   setLoading]   = useState(true);
+  const [saving,    setSaving]    = useState(false);
+  const [saved,     setSaved]     = useState(false);
+
+  useEffect(() => {
+    fetch("/api/admin/training").then((r) => r.json()).then((d) => {
+      setQuestions(d.quizQuestions ?? []);
+    }).finally(() => setLoading(false));
+  }, [adminEmail]);
+
+  async function save() {
+    setSaving(true);
+    await fetch("/api/admin/training", {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ quizQuestions: questions }),
+    });
+    setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 2500);
+  }
+
+  function addQuestion() {
+    setQuestions((p) => [...p, { id: `q-${Date.now()}`, q: "", opts: ["", "", "", ""], ans: 0 }]);
+  }
+  function removeQuestion(idx: number) { setQuestions((p) => p.filter((_, i) => i !== idx)); }
+  function updateQ(idx: number, field: keyof QQ, val: string | number | string[]) {
+    setQuestions((p) => p.map((q, i) => i === idx ? { ...q, [field]: val } : q));
+  }
+  function updateOpt(qi: number, oi: number, val: string) {
+    setQuestions((p) => p.map((q, i) => {
+      if (i !== qi) return q;
+      const opts = [...q.opts]; opts[oi] = val; return { ...q, opts };
+    }));
+  }
+
+  const fs: React.CSSProperties = {
+    width:"100%", background:C.s2, border:`1px solid ${C.s3}`, borderRadius:7,
+    padding:"8px 10px", color:C.txt, fontSize:"13px", outline:"none",
+  };
+
+  return (
+    <div style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:12, padding:20, marginTop:20 }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16, gap:10, flexWrap:"wrap" }}>
+        <h3 style={{ color:C.txt, fontSize:"14px", fontWeight:700, margin:0, display:"flex", alignItems:"center", gap:8 }}>
+          <CheckSquare size={14} color={C.cyan} /> Your Channel&apos;s Certification Quiz
+        </h3>
+        <div style={{ display:"flex", gap:6 }}>
+          <button onClick={addQuestion} style={{ background:`${C.cyan}15`, border:`1px solid ${C.cyan}30`, color:C.cyan, borderRadius:7, padding:"5px 10px", fontSize:"12px", cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>
+            <Plus size={12} /> Add Question
+          </button>
+          <button onClick={save} disabled={saving || saved} style={{ background: saved ? C.green : C.purple, color:"#fff", border:"none", borderRadius:7, padding:"5px 12px", fontSize:"12px", fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>
+            {saving ? <><Loader2 size={11} style={{ animation:"spin 1s linear infinite" }} /> Saving…</> : saved ? <><CheckCircle2 size={11} /> Saved!</> : <><Save size={11} /> Save Quiz</>}
+          </button>
+        </div>
+      </div>
+      <p style={{ color:C.txt3, fontSize:"12px", marginBottom:14 }}>
+        Users you approve will receive these questions for their certification quiz. If you haven&apos;t set any, they&apos;ll fall back to the global quiz instead.
+      </p>
+      {loading ? <Spinner /> : questions.length === 0 ? (
+        <EmptyState msg="No questions yet. Add one to get started." />
+      ) : (
+        <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+          {questions.map((q, qi) => (
+            <div key={q.id} style={{ background:C.s2, border:`1px solid ${C.s3}`, borderRadius:10, padding:14 }}>
+              <div style={{ display:"flex", gap:8, marginBottom:10 }}>
+                <span style={{ color:C.txt3, fontSize:"11px", fontWeight:700, paddingTop:9, flexShrink:0 }}>Q{qi+1}</span>
+                <input value={q.q} onChange={(e) => updateQ(qi, "q", e.target.value)} placeholder="Question text…" style={{ ...fs, flex:1 }} />
+                <button onClick={() => removeQuestion(qi)} style={{ background:`${C.red}15`, border:`1px solid ${C.red}30`, color:C.red, borderRadius:6, padding:"5px 8px", cursor:"pointer", flexShrink:0 }}><Trash2 size={12} /></button>
+              </div>
+              <div className="admin-perm-grid" style={{ marginBottom:8 }}>
+                {q.opts.map((o, oi) => (
+                  <div key={oi} style={{ display:"flex", alignItems:"center", gap:6 }}>
+                    <button
+                      onClick={() => updateQ(qi, "ans", oi)}
+                      style={{ width:18, height:18, borderRadius:"50%", border:`2px solid ${q.ans===oi ? C.green : C.s3}`, background: q.ans===oi ? C.green : "transparent", cursor:"pointer", flexShrink:0 }}
+                    />
+                    <input value={o} onChange={(e) => updateOpt(qi, oi, e.target.value)} placeholder={`Option ${oi+1}`} style={{ ...fs, fontSize:"12px" }} />
+                  </div>
+                ))}
+              </div>
+              <div style={{ color:C.txt3, fontSize:"11px" }}>Click the circle to mark the correct answer</div>
+            </div>
+          ))}
         </div>
       )}
     </div>

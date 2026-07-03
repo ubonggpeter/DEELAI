@@ -8,23 +8,26 @@ export async function GET(req: NextRequest) {
   if (!email || !(await adminStore.isAdmin(email))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  // Super admin gets global questions; sub-admin gets their own question set
+  const ownerEmail = adminStore.isSuperAdmin(email) ? null : email;
   return NextResponse.json({
-    quizQuestions: await adminStore.getQuizQuestions(),
+    quizQuestions: await adminStore.getQuizQuestionsForOwner(ownerEmail),
     trainingDocs:  await adminStore.getTrainingDocs(),
   });
 }
 
 export async function PUT(req: NextRequest) {
   const email = req.cookies.get(ADMIN_COOKIE)?.value;
-  if (!email || !adminStore.isSuperAdmin(email)) {
-    return NextResponse.json({ error: "Super admin only" }, { status: 403 });
+  if (!email || !(await adminStore.isAdmin(email))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const body = await req.json() as { quizQuestions: QuizQuestion[] };
   if (!Array.isArray(body.quizQuestions)) {
     return NextResponse.json({ error: "quizQuestions must be an array" }, { status: 400 });
   }
-  await adminStore.setQuizQuestions(body.quizQuestions);
-  return NextResponse.json({ success: true, quizQuestions: await adminStore.getQuizQuestions() });
+  const ownerEmail = adminStore.isSuperAdmin(email) ? null : email;
+  await adminStore.setQuizQuestionsForOwner(ownerEmail, body.quizQuestions);
+  return NextResponse.json({ success: true, quizQuestions: await adminStore.getQuizQuestionsForOwner(ownerEmail) });
 }
 
 export async function POST(req: NextRequest) {

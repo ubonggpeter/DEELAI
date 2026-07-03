@@ -53,8 +53,8 @@ export async function PATCH(req: NextRequest) {
   }
 
   const updated =
-    action === "approve" ? await adminStore.approveRegistration(userId) :
-    action === "reject"  ? await adminStore.rejectRegistration(userId)  : null;
+    action === "approve" ? await adminStore.approveRegistration(userId, email) :
+    action === "reject"  ? await adminStore.rejectRegistration(userId)         : null;
 
   if (!updated) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
