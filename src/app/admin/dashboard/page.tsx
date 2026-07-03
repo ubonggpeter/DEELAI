@@ -8,7 +8,7 @@ import {
   Trash2, Edit2, Plus, X, Save, RefreshCw, Menu, UserCheck,
   TrendingUp, DollarSign, CheckSquare, BarChart3,
   Radio, Key, Link, Copy, ExternalLink, ToggleLeft, ToggleRight,
-  CircleDot, Coins,
+  CircleDot, Coins, ClipboardList,
 } from "lucide-react";
 import { ALL_PERMISSIONS, PERMISSION_LABELS, ADMIN_REGIONS, type Permission } from "@/lib/adminConfig";
 
@@ -44,7 +44,7 @@ interface Registration {
   permitType: "full-time" | "part-time";
   accountStatus: "pending" | "approved" | "rejected";
   cvUrl?: string; jobPassPaid: boolean; jobPassAmount: number;
-  channelId: string; registeredAt?: string;
+  channelId: string; channelName?: string; registeredAt?: string;
 }
 interface AdminUser {
   id: string; email: string; name: string; level: string; salary: number;
@@ -83,18 +83,19 @@ const C = {
 };
 
 /* ─── Tabs ───────────────────────────────────────────────────────── */
-type TabId = "overview"|"users"|"jobs"|"payments"|"referrals"|"refbonuses"|"channels"|"training"|"settings"|"subadmins";
+type TabId = "overview"|"users"|"jobs"|"payments"|"referrals"|"refbonuses"|"channels"|"registrations"|"training"|"settings"|"subadmins";
 const ALL_TABS: { id: TabId; label: string; icon: React.ElementType; perm?: Permission; superOnly?: boolean }[] = [
-  { id: "overview",   label: "Overview",         icon: LayoutDashboard },
-  { id: "users",      label: "Users",            icon: Users,           perm: "manage_users" },
-  { id: "jobs",       label: "Jobs",             icon: Briefcase,       perm: "manage_jobs" },
-  { id: "payments",   label: "Payments",         icon: CreditCard,      perm: "manage_payments" },
-  { id: "referrals",  label: "Referrals",        icon: Network,         perm: "manage_referrals" },
-  { id: "refbonuses", label: "Ref Bonuses",      icon: DollarSign },
-  { id: "channels",   label: "Channel Settings", icon: Radio },
-  { id: "training",   label: "Training",         icon: CheckSquare,     superOnly: true },
-  { id: "settings",   label: "Settings",         icon: Settings },
-  { id: "subadmins",  label: "Sub-Admins",       icon: ShieldCheck,     superOnly: true },
+  { id: "overview",       label: "Overview",         icon: LayoutDashboard },
+  { id: "registrations",  label: "Registrations",    icon: ClipboardList },
+  { id: "users",          label: "Users",            icon: Users,           perm: "manage_users" },
+  { id: "jobs",           label: "Jobs",             icon: Briefcase,       perm: "manage_jobs" },
+  { id: "payments",       label: "Payments",         icon: CreditCard,      perm: "manage_payments" },
+  { id: "referrals",      label: "Referrals",        icon: Network,         perm: "manage_referrals" },
+  { id: "refbonuses",     label: "Ref Bonuses",      icon: DollarSign },
+  { id: "channels",       label: "Channel Settings", icon: Radio },
+  { id: "training",       label: "Training",         icon: CheckSquare,     superOnly: true },
+  { id: "settings",       label: "Settings",         icon: Settings },
+  { id: "subadmins",      label: "Sub-Admins",       icon: ShieldCheck,     superOnly: true },
 ];
 
 /* ═══════════════════════════════════════════════════════════════════ */
@@ -286,16 +287,17 @@ export default function AdminDashboard() {
 
         {/* Tab content */}
         <div className="admin-tab-content" style={{ flex:1, padding:"20px", maxWidth:"1400px", width:"100%", margin:"0 auto" }}>
-          {tab === "overview"   && <OverviewTab />}
-          {tab === "users"      && <UsersTab />}
-          {tab === "jobs"       && <JobsTab />}
-          {tab === "payments"   && <PaymentsTab />}
-          {tab === "referrals"  && <ReferralsTab />}
-          {tab === "refbonuses" && <ReferralBonusesTab adminInfo={adminInfo} />}
-          {tab === "channels"   && <ChannelSettingsTab adminInfo={adminInfo} />}
-          {tab === "training"   && adminInfo.isSuperAdmin && <TrainingTab />}
-          {tab === "settings"   && <SettingsTab isSuperAdmin={adminInfo.isSuperAdmin} />}
-          {tab === "subadmins"  && adminInfo.isSuperAdmin && <SubAdminsTab />}
+          {tab === "overview"       && <OverviewTab />}
+          {tab === "registrations"  && <RegistrationsTab adminInfo={adminInfo} />}
+          {tab === "users"          && <UsersTab />}
+          {tab === "jobs"           && <JobsTab />}
+          {tab === "payments"       && <PaymentsTab />}
+          {tab === "referrals"      && <ReferralsTab />}
+          {tab === "refbonuses"     && <ReferralBonusesTab adminInfo={adminInfo} />}
+          {tab === "channels"       && <ChannelSettingsTab adminInfo={adminInfo} />}
+          {tab === "training"       && adminInfo.isSuperAdmin && <TrainingTab />}
+          {tab === "settings"       && <SettingsTab isSuperAdmin={adminInfo.isSuperAdmin} />}
+          {tab === "subadmins"      && adminInfo.isSuperAdmin && <SubAdminsTab />}
         </div>
       </main>
 
@@ -1264,6 +1266,188 @@ function PayStatusPill({ status }: { status: string }) {
 /* ═══════════════════════════════════════════════════════════════════ */
 /* CHANNEL SETTINGS TAB                                                */
 /* ═══════════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════ */
+/* REGISTRATIONS TAB                                                   */
+/* Super admin: all channels, searchable. Sub-admin: own channel only. */
+/* ═══════════════════════════════════════════════════════════════════ */
+function RegistrationsTab({ adminInfo }: { adminInfo: AdminInfo }) {
+  const [regs,          setRegs]          = useState<Registration[]>([]);
+  const [loading,       setLoading]       = useState(true);
+  const [statusFilter,  setStatusFilter]  = useState<"" | "pending" | "approved" | "rejected">("");
+  const [search,        setSearch]        = useState("");
+  const [actioning,     setActioning]     = useState<string | null>(null);
+  const [actionError,   setActionError]   = useState<string | null>(null);
+
+  const loadRegs = useCallback(async () => {
+    setLoading(true);
+    setActionError(null);
+    const p = statusFilter ? `?status=${statusFilter}` : "";
+    const res  = await fetch(`/api/admin/channels/registrations${p}`);
+    const data = await res.json();
+    setRegs(data.registrations ?? []);
+    setLoading(false);
+  }, [statusFilter]);
+
+  useEffect(() => { loadRegs(); }, [loadRegs]);
+
+  async function reviewReg(userId: string, action: "approve" | "reject") {
+    setActioning(userId);
+    setActionError(null);
+    const res = await fetch("/api/admin/channels/registrations", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, action }),
+    });
+    if (!res.ok) {
+      const d = await res.json();
+      setActionError(d.error ?? "Action failed");
+    } else {
+      await loadRegs();
+    }
+    setActioning(null);
+  }
+
+  // Client-side search filters name, email, and (for super admin) channel name
+  const filtered = regs.filter((r) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      r.name.toLowerCase().includes(q) ||
+      r.email.toLowerCase().includes(q) ||
+      (r.channelName ?? r.channelId).toLowerCase().includes(q)
+    );
+  });
+
+  const pendingCount = regs.filter((r) => r.accountStatus === "pending").length;
+
+  return (
+    <div style={{ animation: "fadeUp 0.3s ease" }}>
+      <SectionTitle
+        title="Registrations"
+        sub={
+          adminInfo.isSuperAdmin
+            ? `All channels · ${regs.length} total · ${pendingCount} pending`
+            : `Your channel · ${regs.length} total · ${pendingCount} pending`
+        }
+      />
+
+      {actionError && (
+        <div style={{
+          display: "flex", gap: 6, alignItems: "center",
+          background: `${C.red}11`, border: `1px solid ${C.red}33`,
+          borderRadius: 8, padding: "8px 12px", marginBottom: 14, fontSize: "12px", color: C.red,
+        }}>
+          <AlertCircle size={13} /> {actionError}
+        </div>
+      )}
+
+      {/* Filters */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+        <SearchBox
+          value={search}
+          onChange={setSearch}
+          placeholder={adminInfo.isSuperAdmin ? "Search name, email, or channel…" : "Search name or email…"}
+        />
+        <Select
+          value={statusFilter}
+          onChange={(v) => setStatusFilter(v as "" | "pending" | "approved" | "rejected")}
+          options={[
+            { v: "",          l: "All Status" },
+            { v: "pending",   l: "Pending"    },
+            { v: "approved",  l: "Approved"   },
+            { v: "rejected",  l: "Rejected"   },
+          ]}
+        />
+        <RefreshBtn onClick={loadRegs} />
+      </div>
+
+      {loading ? <Spinner /> : filtered.length === 0 ? (
+        <EmptyState msg={
+          search         ? "No registrations match your search." :
+          statusFilter   ? `No ${statusFilter} registrations.`   :
+                           "No registrations yet."
+        } />
+      ) : (
+        <div className="table-scroll">
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+            <thead>
+              <tr style={{ borderBottom: `1px solid ${C.s3}` }}>
+                {[
+                  "Name", "Email",
+                  ...(adminInfo.isSuperAdmin ? ["Channel"] : []),
+                  "Permit", "Fee Paid", "Status", "Registered", "Actions",
+                ].map((h) => (
+                  <th key={h} style={{ color: C.txt3, fontWeight: 600, fontSize: "11px", textAlign: "left", padding: "6px 8px", whiteSpace: "nowrap" }}>
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((r) => (
+                <tr key={r.id} style={{ borderBottom: `1px solid ${C.s3}22` }}>
+                  <td style={{ padding: "8px 8px", color: C.txt, fontWeight: 500, whiteSpace: "nowrap" }}>{r.name}</td>
+                  <td style={{ padding: "8px 8px", color: C.txt2 }}>{r.email}</td>
+                  {adminInfo.isSuperAdmin && (
+                    <td style={{ padding: "8px 8px" }}>
+                      <span style={{
+                        fontSize: "11px", fontWeight: 600, padding: "2px 7px", borderRadius: 4,
+                        background: `${C.cyan}15`, color: C.cyan, whiteSpace: "nowrap",
+                      }}>
+                        {r.channelName ?? r.channelId}
+                      </span>
+                    </td>
+                  )}
+                  <td style={{ padding: "8px 8px" }}>
+                    <span style={{
+                      fontSize: "10px", fontWeight: 700, padding: "2px 6px", borderRadius: 4,
+                      background: r.permitType === "full-time" ? `${C.cyan}15` : `${C.purple}15`,
+                      color: r.permitType === "full-time" ? C.cyan : C.purple,
+                      textTransform: "capitalize",
+                    }}>
+                      {r.permitType}
+                    </span>
+                  </td>
+                  <td style={{ padding: "8px 8px" }}>
+                    {r.jobPassPaid
+                      ? <span style={{ color: C.green, fontSize: "12px", fontWeight: 600 }}>${r.jobPassAmount.toLocaleString()} ✓</span>
+                      : <span style={{ color: C.txt3, fontSize: "12px" }}>Not paid</span>
+                    }
+                  </td>
+                  <td style={{ padding: "8px 8px" }}>
+                    <RegStatusPill status={r.accountStatus} />
+                  </td>
+                  <td style={{ padding: "8px 8px", color: C.txt3, fontSize: "11px", whiteSpace: "nowrap" }}>
+                    {r.registeredAt ? new Date(r.registeredAt).toLocaleDateString() : "—"}
+                  </td>
+                  <td style={{ padding: "8px 8px" }}>
+                    {r.accountStatus === "pending" ? (
+                      <div style={{ display: "flex", gap: 4 }}>
+                        <ActionBtn
+                          label="Approve" color={C.green}
+                          disabled={actioning === r.id}
+                          onClick={() => reviewReg(r.id, "approve")}
+                        />
+                        <ActionBtn
+                          label="Reject" color={C.red}
+                          disabled={actioning === r.id}
+                          onClick={() => reviewReg(r.id, "reject")}
+                        />
+                      </div>
+                    ) : (
+                      <span style={{ color: C.txt3, fontSize: "11px" }}>—</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ChannelSettingsTab({ adminInfo }: { adminInfo: AdminInfo }) {
   const [channel, setChannel]   = useState<Channel | null>(null);
   const [loading, setLoading]   = useState(true);

@@ -21,12 +21,18 @@ export async function GET(req: NextRequest) {
 
   if (statusFilter) users = users.filter((u) => u.accountStatus === statusFilter);
 
+  // Build channelId → channelName map so the frontend can display channel names
+  const channels = await adminStore.getAllChannels();
+  const channelNameMap = Object.fromEntries(channels.map((c) => [c.id, c.channelName]));
+
   return NextResponse.json({
     registrations: users.map((u) => ({
       id: u.id, name: u.name, email: u.email, permitType: u.permitType,
       accountStatus: u.accountStatus, cvUrl: u.cvUrl,
       jobPassPaid: u.jobPassPaid, jobPassAmount: u.jobPassAmount,
-      channelId: u.channelId, registeredAt: u.registeredAt,
+      channelId: u.channelId,
+      channelName: u.channelId ? (channelNameMap[u.channelId] ?? u.channelId) : undefined,
+      registeredAt: u.registeredAt,
     })),
   });
 }
