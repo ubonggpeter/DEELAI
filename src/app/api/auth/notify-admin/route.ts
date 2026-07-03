@@ -3,8 +3,6 @@ import { adminStore } from "@/lib/adminStore";
 import { USER_COOKIE } from "@/lib/adminConfig";
 import { sendEmail, tplAdminNewRegistration } from "@/lib/emailService";
 
-// Called after user completes Step 3 (verify/CV upload)
-// Sends notification email to the channel's sub-admin
 export async function POST(req: NextRequest) {
   const raw = req.cookies.get(USER_COOKIE)?.value;
   if (!raw) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
@@ -14,17 +12,15 @@ export async function POST(req: NextRequest) {
 
   const { cvUrl } = (await req.json().catch(() => ({}))) as { cvUrl?: string };
 
-  // Update CV URL if provided
   if (cvUrl) {
-    const user = adminStore.getUserById(session.userId);
-    if (user) user.cvUrl = cvUrl;
+    await adminStore.updateUserProfile(session.userId, {});
   }
 
-  const channel = adminStore.getChannelById(session.channelId);
+  const channel = await adminStore.getChannelById(session.channelId);
   if (!channel) return NextResponse.json({ error: "Channel not found" }, { status: 404 });
 
-  // Find channel owner's name
-  const ownerSub = adminStore.subAdmins.find((s) => s.email === channel.ownerEmail);
+  const allSubAdmins = await adminStore.getAllSubAdmins();
+  const ownerSub = allSubAdmins.find((s) => s.email === channel.ownerEmail);
   const ownerName = ownerSub?.name ?? "Admin";
 
   await sendEmail({

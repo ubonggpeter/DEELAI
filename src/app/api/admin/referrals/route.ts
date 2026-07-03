@@ -4,8 +4,8 @@ import { ADMIN_COOKIE } from "@/lib/adminConfig";
 
 export async function GET(req: NextRequest) {
   const email = req.cookies.get(ADMIN_COOKIE)?.value;
-  if (!email || !adminStore.isAdmin(email)) {
+  if (!email || !(await adminStore.isAdmin(email))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  return NextResponse.json({ referrals: adminStore.referrals });
+  return NextResponse.json({ referrals: await adminStore.getAllReferrals() });
 }

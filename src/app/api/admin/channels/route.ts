@@ -2,23 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminStore } from "@/lib/adminStore";
 import { ADMIN_COOKIE } from "@/lib/adminConfig";
 
-// GET — return the calling admin's channel (or all channels for super admin)
 export async function GET(req: NextRequest) {
   const email = req.cookies.get(ADMIN_COOKIE)?.value;
-  if (!email || !adminStore.isAdmin(email)) {
+  if (!email || !(await adminStore.isAdmin(email))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   if (adminStore.isSuperAdmin(email)) {
-    return NextResponse.json({ channels: adminStore.channels });
+    return NextResponse.json({ channels: await adminStore.getAllChannels() });
   }
-  const channel = adminStore.getChannelByOwner(email);
+  const channel = await adminStore.getChannelByOwner(email);
   return NextResponse.json({ channel: channel ?? null });
 }
 
-// POST — create channel for calling sub-admin
 export async function POST(req: NextRequest) {
   const email = req.cookies.get(ADMIN_COOKIE)?.value;
-  if (!email || !adminStore.isAdmin(email) || adminStore.isSuperAdmin(email)) {
+  if (!email || !(await adminStore.isAdmin(email)) || adminStore.isSuperAdmin(email)) {
     return NextResponse.json({ error: "Sub-admin only" }, { status: 403 });
   }
   const body = await req.json();
@@ -26,20 +24,19 @@ export async function POST(req: NextRequest) {
   if (!channelName || !estTime) {
     return NextResponse.json({ error: "channelName and estTime are required" }, { status: 400 });
   }
-  const sa = adminStore.subAdmins.find((s) => s.email === email);
+  const allSubs = await adminStore.getAllSubAdmins();
+  const sa = allSubs.find((s) => s.email === email);
   try {
-    const ch = adminStore.createChannel({
-      ownerEmail: email,
-      channelName,
-      estTime,
-      description:           description            ?? "",
-      paystackPublicKey:     paystackPublicKey     ?? "",
-      paystackSecretKey:     paystackSecretKey      ?? "",
-      lensPaystackLink:      lensPaystackLink       ?? "",
+    const ch = await adminStore.createChannel({
+      ownerEmail: email, channelName, estTime,
+      description:            description            ?? "",
+      paystackPublicKey:      paystackPublicKey      ?? "",
+      paystackSecretKey:      paystackSecretKey      ?? "",
+      lensPaystackLink:       lensPaystackLink       ?? "",
       referralCommissionRate: Number(referralCommissionRate ?? 10),
-      jobPassFee:            Number(jobPassFee      ?? 0),
-      isActive:              isActive               ?? true,
-      region:                sa?.region             ?? "",
+      jobPassFee:             Number(jobPassFee      ?? 0),
+      isActive:               isActive               ?? true,
+      region:                 sa?.region             ?? "",
     });
     return NextResponse.json({ channel: ch }, { status: 201 });
   } catch (e: unknown) {
@@ -47,23 +44,21 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// PATCH — update existing channel
 export async function PATCH(req: NextRequest) {
   const email = req.cookies.get(ADMIN_COOKIE)?.value;
-  if (!email || !adminStore.isAdmin(email)) {
+  if (!email || !(await adminStore.isAdmin(email))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const body = await req.json();
   const { channelId, ...updates } = body;
 
-  // Sub-admin can only update their own channel
   if (!adminStore.isSuperAdmin(email)) {
-    const own = adminStore.getChannelByOwner(email);
+    const own = await adminStore.getChannelByOwner(email);
     if (!own || own.id !== channelId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
   }
-  const ch = adminStore.updateChannel(channelId, updates);
+  const ch = await adminStore.updateChannel(channelId, updates);
   if (!ch) return NextResponse.json({ error: "Channel not found" }, { status: 404 });
   return NextResponse.json({ channel: ch });
 }

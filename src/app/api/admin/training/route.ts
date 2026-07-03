@@ -5,12 +5,12 @@ import type { QuizQuestion } from "@/lib/adminStore";
 
 export async function GET(req: NextRequest) {
   const email = req.cookies.get(ADMIN_COOKIE)?.value;
-  if (!email || !adminStore.isAdmin(email)) {
+  if (!email || !(await adminStore.isAdmin(email))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   return NextResponse.json({
-    quizQuestions: adminStore.getQuizQuestions(),
-    trainingDocs: adminStore.getTrainingDocs(),
+    quizQuestions: await adminStore.getQuizQuestions(),
+    trainingDocs:  await adminStore.getTrainingDocs(),
   });
 }
 
@@ -23,8 +23,8 @@ export async function PUT(req: NextRequest) {
   if (!Array.isArray(body.quizQuestions)) {
     return NextResponse.json({ error: "quizQuestions must be an array" }, { status: 400 });
   }
-  adminStore.setQuizQuestions(body.quizQuestions);
-  return NextResponse.json({ success: true, quizQuestions: adminStore.getQuizQuestions() });
+  await adminStore.setQuizQuestions(body.quizQuestions);
+  return NextResponse.json({ success: true, quizQuestions: await adminStore.getQuizQuestions() });
 }
 
 export async function POST(req: NextRequest) {
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
   if (!body.title || !body.url) {
     return NextResponse.json({ error: "title and url are required" }, { status: 400 });
   }
-  const doc = adminStore.addTrainingDoc({ title: body.title, url: body.url, type: body.type ?? "link" });
+  const doc = await adminStore.addTrainingDoc({ title: body.title, url: body.url, type: body.type ?? "link" });
   return NextResponse.json({ doc }, { status: 201 });
 }
 
@@ -46,7 +46,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "Super admin only" }, { status: 403 });
   }
   const { id } = await req.json() as { id: string };
-  const removed = adminStore.removeTrainingDoc(id);
+  const removed = await adminStore.removeTrainingDoc(id);
   if (!removed) return NextResponse.json({ error: "Doc not found" }, { status: 404 });
   return NextResponse.json({ success: true });
 }

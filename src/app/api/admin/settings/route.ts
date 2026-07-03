@@ -4,10 +4,10 @@ import { ADMIN_COOKIE } from "@/lib/adminConfig";
 
 export async function GET(req: NextRequest) {
   const email = req.cookies.get(ADMIN_COOKIE)?.value;
-  if (!email || !adminStore.isAdmin(email)) {
+  if (!email || !(await adminStore.isAdmin(email))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  return NextResponse.json(adminStore.settings);
+  return NextResponse.json(await adminStore.getSettings());
 }
 
 export async function PATCH(req: NextRequest) {
@@ -16,6 +16,5 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Super admin only" }, { status: 403 });
   }
   const body = await req.json();
-  Object.assign(adminStore.settings, body);
-  return NextResponse.json(adminStore.settings);
+  return NextResponse.json(await adminStore.updateSettings(body));
 }

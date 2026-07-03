@@ -12,7 +12,7 @@ export async function PATCH(req: NextRequest) {
       quizPassed?: boolean; lensActivated?: boolean;
       trainingDone?: boolean; completedModules?: number[];
     };
-    const updated = adminStore.updateUserTraining(session.userId, body);
+    const updated = await adminStore.updateUserTraining(session.userId, body);
     if (!updated) return NextResponse.json({ error: "User not found" }, { status: 404 });
     return NextResponse.json({ success: true });
   } catch {

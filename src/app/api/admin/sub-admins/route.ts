@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   if (!email || !adminStore.isSuperAdmin(email)) {
     return NextResponse.json({ error: "Super admin only" }, { status: 403 });
   }
-  return NextResponse.json({ subAdmins: adminStore.subAdmins });
+  return NextResponse.json({ subAdmins: await adminStore.getAllSubAdmins() });
 }
 
 export async function POST(req: NextRequest) {
@@ -18,10 +18,7 @@ export async function POST(req: NextRequest) {
   }
   const body = await req.json();
   const { email: targetEmail, name, region, permissions } = body as {
-    email: string;
-    name: string;
-    region: string;
-    permissions: Permission[];
+    email: string; name: string; region: string; permissions: Permission[];
   };
   if (!targetEmail || !name || !region || !permissions) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -30,17 +27,10 @@ export async function POST(req: NextRequest) {
   if (adminStore.isSuperAdmin(targetLower)) {
     return NextResponse.json({ error: "Cannot modify super admin" }, { status: 400 });
   }
-  // Check not already a sub-admin
-  const existing = adminStore.subAdmins.find((s) => s.email === targetLower);
-  if (existing) {
+  const allSubs = await adminStore.getAllSubAdmins();
+  if (allSubs.some((s) => s.email === targetLower)) {
     return NextResponse.json({ error: "User is already a sub-admin" }, { status: 400 });
   }
-  const sa = adminStore.createSubAdmin({
-    email: targetLower,
-    name,
-    region,
-    permissions,
-    createdBy: email,
-  });
+  const sa = await adminStore.createSubAdmin({ email: targetLower, name, region, permissions, createdBy: email });
   return NextResponse.json({ subAdmin: sa }, { status: 201 });
 }

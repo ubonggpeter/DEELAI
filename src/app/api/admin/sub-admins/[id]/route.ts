@@ -9,7 +9,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: "Super admin only" }, { status: 403 });
   }
   const body = await req.json() as { region?: string; permissions?: Permission[] };
-  const updated = adminStore.updateSubAdmin(params.id, body);
+  const updated = await adminStore.updateSubAdmin(params.id, body);
   if (!updated) return NextResponse.json({ error: "Sub-admin not found" }, { status: 404 });
   return NextResponse.json({ subAdmin: updated });
 }
@@ -19,7 +19,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   if (!email || !adminStore.isSuperAdmin(email)) {
     return NextResponse.json({ error: "Super admin only" }, { status: 403 });
   }
-  const deleted = adminStore.deleteSubAdmin(params.id);
+  const deleted = await adminStore.deleteSubAdmin(params.id);
   if (!deleted) return NextResponse.json({ error: "Sub-admin not found" }, { status: 404 });
   return NextResponse.json({ success: true });
 }

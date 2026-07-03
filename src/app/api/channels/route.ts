@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { adminStore } from "@/lib/adminStore";
 
-// Public — list active channels with owner region for landing page grouping
 export async function GET() {
-  const channels = adminStore.getActiveChannels().map((c) => {
-    const owner = adminStore.subAdmins.find((s) => s.email === c.ownerEmail);
+  const [channels, subAdmins] = await Promise.all([
+    adminStore.getActiveChannels(),
+    adminStore.getAllSubAdmins(),
+  ]);
+  const result = channels.map((c) => {
+    const owner = subAdmins.find((s) => s.email === c.ownerEmail);
     return {
       id:          c.id,
       channelName: c.channelName,
@@ -15,5 +18,5 @@ export async function GET() {
       region:      owner?.region ?? "Global",
     };
   });
-  return NextResponse.json({ channels });
+  return NextResponse.json({ channels: result });
 }

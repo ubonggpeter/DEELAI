@@ -8,10 +8,11 @@ export async function GET(req: NextRequest) {
 
   try {
     const session = JSON.parse(raw) as { userId: string; email: string; name: string; accountStatus: string; channelId?: string };
-    const user = adminStore.getUserById(session.userId);
+    const user = await adminStore.getUserById(session.userId);
     if (!user) return NextResponse.json({ loggedIn: false });
 
-    adminStore.autoProcessExpiredBonuses();
+    // Auto-credit expired referral bonuses on session load
+    await adminStore.autoProcessExpiredBonuses();
 
     return NextResponse.json({
       loggedIn:         true,

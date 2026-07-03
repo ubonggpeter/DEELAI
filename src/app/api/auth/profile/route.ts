@@ -12,7 +12,7 @@ export async function PATCH(req: NextRequest) {
     if (!body.name && !body.displayName) {
       return NextResponse.json({ error: "No fields to update" }, { status: 400 });
     }
-    const updated = adminStore.updateUserProfile(session.userId, body);
+    const updated = await adminStore.updateUserProfile(session.userId, body);
     if (!updated) return NextResponse.json({ error: "User not found" }, { status: 404 });
     return NextResponse.json({ success: true, name: updated.displayName ?? updated.name });
   } catch {

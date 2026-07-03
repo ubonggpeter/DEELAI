@@ -1,0 +1,179 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                String    @id
+  email             String    @unique
+  name              String
+  displayName       String?
+  phone             String    @default("")
+  level             String    @default("ASSOCIATE STAFF")
+  salary            Float     @default(0)
+  jobsDone          Int       @default(0)
+  accuracy          Float     @default(0)
+  streak            Int       @default(0)
+  tier              String    @default("Associate")
+  status            String    @default("Active")
+  joinedAt          String    @default("")
+  country           String    @default("")
+  is_admin          Boolean   @default(false)
+  is_super_admin    Boolean   @default(false)
+  admin_permissions String[]  @default([])
+  admin_region      String?
+  channelId         String?
+  permitType        String?
+  accountStatus     String    @default("pending")
+  cvUrl             String?
+  jobPassPaid       Boolean   @default(false)
+  jobPassAmount     Float     @default(0)
+  registeredAt      DateTime?
+  refCode           String    @unique
+  referredByUserId  String?
+  quizPassed        Boolean   @default(false)
+  lensActivated     Boolean   @default(false)
+  trainingDone      Boolean   @default(false)
+  completedModules  Int[]     @default([])
+  passwordHash      String    @default("")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  channel            Channel?            @relation(fields: [channelId], references: [id])
+  jobs               Job[]
+  payments           Payment[]
+  referralsGiven     Referral[]          @relation("ReferrerRel")
+  referralBonuses    ReferralBonus[]     @relation("BonusReferrer")
+  channelCommissions ChannelCommission[]
+}
+
+model SubAdmin {
+  id          String   @id
+  email       String   @unique
+  name        String
+  region      String   @default("")
+  permissions String[] @default([])
+  createdAt   DateTime @default(now())
+  createdBy   String   @default("")
+}
+
+model Channel {
+  id                     String    @id
+  ownerEmail             String    @unique
+  channelName            String
+  description            String    @default("")
+  estTime                String    @default("5 min")
+  paystackPublicKey      String    @default("")
+  paystackSecretKey      String    @default("")
+  lensPaystackLink       String    @default("")
+  referralCommissionRate Float     @default(10)
+  jobPassFee             Float     @default(0)
+  isActive               Boolean   @default(true)
+  balance                Float     @default(0)
+  region                 String    @default("")
+  createdAt              DateTime  @default(now())
+
+  users              User[]
+  channelCommissions ChannelCommission[]
+  referralBonuses    ReferralBonus[]
+}
+
+model Job {
+  id          String   @id
+  userId      String
+  userName    String
+  type        String
+  batchId     String
+  status      String   @default("Pending")
+  earnings    Float    @default(0)
+  submittedAt DateTime @default(now())
+  accuracy    Float    @default(0)
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Payment {
+  id       String @id
+  userId   String
+  userName String
+  amount   Float
+  method   String
+  status   String @default("Pending")
+  date     String
+  ref      String
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Referral {
+  id           String @id
+  referrerId   String
+  referrerName String
+  recruitName  String
+  recruitEmail String
+  status       String @default("Training")
+  bonusEarned  Float  @default(0)
+  joinedAt     String
+
+  referrer User @relation("ReferrerRel", fields: [referrerId], references: [id])
+}
+
+model ReferralBonus {
+  id            String    @id
+  channelId     String
+  referrerId    String
+  referrerName  String
+  referrerEmail String
+  recruitEmail  String
+  recruitName   String
+  amount        Float
+  status        String    @default("pending")
+  createdAt     DateTime  @default(now())
+  claimedAt     DateTime?
+  autoCreditsAt DateTime
+
+  channel  Channel @relation(fields: [channelId], references: [id])
+  referrer User    @relation("BonusReferrer", fields: [referrerId], references: [id])
+}
+
+model ChannelCommission {
+  id        String   @id
+  channelId String
+  userId    String
+  userName  String
+  amount    Float
+  createdAt DateTime @default(now())
+
+  channel Channel @relation(fields: [channelId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+}
+
+model QuizQuestion {
+  id        String @id
+  q         String
+  opts      String[]
+  ans       Int
+  sortOrder Int    @default(0)
+}
+
+model TrainingDoc {
+  id      String   @id
+  title   String
+  url     String
+  type    String   @default("link")
+  addedAt DateTime @default(now())
+}
+
+model PlatformSettings {
+  id               String  @id @default("singleton")
+  registrationOpen Boolean @default(true)
+  maintenanceMode  Boolean @default(false)
+  payoutsEnabled   Boolean @default(true)
+  newJobsEnabled   Boolean @default(true)
+  announcement     String  @default("")
+}
