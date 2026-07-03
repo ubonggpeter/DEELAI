@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { adminStore } from "@/lib/adminStore";
 
+// Must be dynamic — admin writes change channel list; static caching would serve stale data
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const [channels, subAdmins] = await Promise.all([
     adminStore.getActiveChannels(),

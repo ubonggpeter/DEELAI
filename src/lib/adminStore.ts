@@ -454,6 +454,28 @@ export const adminStore = {
   },
 
   /* ── Jobs / Payments / Referrals ────────────────────────────────────── */
+  /* Called from WorkspaceScreen on each job submit — persists earnings to DB */
+  async submitUserJob(userId: string, data: {
+    type: string; batchId: string; earnings: number; accuracy: number;
+  }): Promise<{ newSalary: number; newJobsDone: number }> {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+    const [updated] = await Promise.all([
+      prisma.user.update({
+        where: { id: userId },
+        data: { salary: { increment: data.earnings }, jobsDone: { increment: 1 } },
+      }),
+      prisma.job.create({
+        data: {
+          id: `j-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          userId, userName: user?.name ?? "",
+          type: data.type, batchId: data.batchId,
+          status: "Approved", earnings: data.earnings, accuracy: data.accuracy,
+        },
+      }),
+    ]);
+    return { newSalary: updated.salary, newJobsDone: updated.jobsDone };
+  },
+
   async getJobById(id: string): Promise<Job | null> {
     const j = await prisma.job.findUnique({ where: { id } });
     if (!j) return null;

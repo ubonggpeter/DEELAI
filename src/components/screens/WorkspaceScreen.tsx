@@ -80,6 +80,21 @@ export default function WorkspaceScreen({ user, setUser }: Props) {
   function submit() {
     if (!boxes.length) return;
     setSubmitted(true);
+    const batchId = `A-${2291 + imgIdx}`;
+    // Persist to DB — fire-and-forget; update local state immediately for responsive UX
+    fetch("/api/auth/submit-job", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "Image Annotation", batchId, earnings: 12.5, accuracy: 97 + Math.random() * 2 }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.newSalary !== undefined) {
+          setUser(u => ({ ...u, salary: d.newSalary, jobsDone: d.newJobsDone }));
+        }
+      })
+      .catch(() => {});
+    // Optimistic local update (shown immediately while API call runs)
     setUser(u => ({ ...u, salary: u.salary + 12.5, jobsDone: u.jobsDone + 1, jobsToday: (u.jobsToday || 0) + 1 }));
     setTimeout(() => {
       setSubmitted(false);
