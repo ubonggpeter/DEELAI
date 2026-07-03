@@ -20,5 +20,6 @@ export async function POST(req: NextRequest) {
 
   const blob = await put(`avatars/${session.userId}.${ext}`, file, { access: "public", allowOverwrite: true });
   await adminStore.updateUserProfile(session.userId, { avatarUrl: blob.url });
+  await adminStore.logActivity(session.userId, { type: "avatar_uploaded", title: "Profile picture updated" });
   return NextResponse.json({ url: blob.url });
 }

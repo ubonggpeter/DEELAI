@@ -24,6 +24,7 @@ const PayoutScreen    = dynamic(() => import("@/components/screens/PayoutScreen"
 const SettingsScreen  = dynamic(() => import("@/components/screens/SettingsScreen"),   { ssr: false });
 const TermsScreen     = dynamic(() => import("@/components/screens/TermsScreen"),      { ssr: false });
 const SupportScreen   = dynamic(() => import("@/components/screens/SupportScreen"),    { ssr: false });
+const HistoryScreen   = dynamic(() => import("@/components/screens/HistoryScreen"),    { ssr: false });
 
 const MAIN_SCREENS: Screen[] = ["activity", "training", "workspace", "recruit", "wallet"];
 
@@ -48,6 +49,8 @@ interface SessionData {
   bankAccountNumber?: string | null;
   bankAccountName?:  string | null;
   bankName?:         string | null;
+  country?:          string | null;
+  isAdmin?:          boolean;
 }
 
 export default function Dashboard() {
@@ -95,6 +98,8 @@ export default function Dashboard() {
           bankAccountNumber: data.bankAccountNumber ?? undefined,
           bankAccountName:   data.bankAccountName ?? undefined,
           bankName:          data.bankName ?? undefined,
+          country:           data.country ?? "",
+          isAdmin:           data.isAdmin ?? false,
         }));
         setAuthReady(true);
       })
@@ -176,6 +181,7 @@ function ScreenContent({ screen, user, setUser, notifs, setNotifs, notifCount, s
     case "settings":       return <SettingsScreen     user={user} setUser={setUser} onBack={goBack} />;
     case "terms":          return <TermsScreen        onBack={goBack} />;
     case "support":        return <SupportScreen      onBack={goBack} />;
+    case "history":        return <HistoryScreen      onBack={goBack} />;
     default:               return null;
   }
 }

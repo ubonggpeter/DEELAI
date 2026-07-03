@@ -22,6 +22,8 @@ export interface User {
   bankName?: string;
   bankAccountNumber?: string;
   bankAccountName?: string;
+  country?: string;
+  isAdmin?: boolean;
 }
 
 export interface Notification {
@@ -61,7 +63,8 @@ export type Screen =
   | "payout"
   | "settings"
   | "terms"
-  | "support";
+  | "support"
+  | "history";
 
 export interface BoundingBox {
   x: number;

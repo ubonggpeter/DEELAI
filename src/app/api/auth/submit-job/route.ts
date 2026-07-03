@@ -12,5 +12,13 @@ export async function POST(req: NextRequest) {
   };
 
   const result = await adminStore.submitUserJob(session.userId, { type, batchId, accuracy });
+
+  await adminStore.logActivity(session.userId, {
+    type: result.status === "approved" ? "job_submitted" : "job_rejected",
+    title: result.status === "approved" ? `Job submitted — ${accuracy}% accuracy` : `Job rejected — ${accuracy}% accuracy`,
+    detail: result.reason,
+    amount: result.earnings > 0 ? result.earnings : undefined,
+  });
+
   return NextResponse.json(result);
 }

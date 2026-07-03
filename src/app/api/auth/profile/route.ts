@@ -8,12 +8,19 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const session = JSON.parse(raw) as { userId: string };
-    const body = await req.json() as { name?: string; displayName?: string; avatarUrl?: string };
-    if (!body.name && !body.displayName && !body.avatarUrl) {
+    const body = await req.json() as { name?: string; displayName?: string; avatarUrl?: string; country?: string };
+    if (!body.name && !body.displayName && !body.avatarUrl && !body.country) {
       return NextResponse.json({ error: "No fields to update" }, { status: 400 });
     }
     const updated = await adminStore.updateUserProfile(session.userId, body);
     if (!updated) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+    if (body.country) {
+      await adminStore.logActivity(session.userId, { type: "profile_changed", title: "Region updated", detail: body.country });
+    } else {
+      await adminStore.logActivity(session.userId, { type: "profile_changed", title: "Profile updated" });
+    }
+
     return NextResponse.json({ success: true, name: updated.displayName ?? updated.name });
   } catch {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });

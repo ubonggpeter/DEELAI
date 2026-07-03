@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminStore } from "@/lib/adminStore";
 import { USER_COOKIE } from "@/lib/adminConfig";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   const raw = req.cookies.get(USER_COOKIE)?.value;
@@ -15,6 +16,7 @@ export async function GET(req: NextRequest) {
     await adminStore.autoProcessExpiredBonuses();
 
     const today = new Date().toISOString().split("T")[0];
+    const isSubAdmin = await prisma.subAdmin.findUnique({ where: { email: user.email }, select: { id: true } });
     return NextResponse.json({
       loggedIn:          true,
       userId:            user.id,
@@ -39,6 +41,8 @@ export async function GET(req: NextRequest) {
       bankAccountName:   user.bankAccountName ?? null,
       bankName:          user.bankName ?? null,
       jobsToday:         user.lastJobDate === today ? user.jobsToday : 0,
+      country:           user.country ?? "",
+      isAdmin:           !!(isSubAdmin || user.is_admin),
     });
   } catch {
     return NextResponse.json({ loggedIn: false });

@@ -16,5 +16,12 @@ export async function POST(req: NextRequest) {
 
   const updated = await adminStore.saveUserBank(session.userId, { bankCode, bankName, bankAccountNumber, bankAccountName });
   if (!updated) return NextResponse.json({ error: "Failed to save" }, { status: 500 });
+
+  await adminStore.logActivity(session.userId, {
+    type: "bank_saved",
+    title: "Bank account linked",
+    detail: `${bankName} ···${bankAccountNumber.slice(-4)}`,
+  });
+
   return NextResponse.json({ success: true });
 }

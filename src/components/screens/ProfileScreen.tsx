@@ -1,8 +1,17 @@
 "use client";
 import { useState, useRef } from "react";
 import Image from "next/image";
-import { ArrowLeft, User, Globe, Calendar, Share2, CreditCard, Microscope, Flame, Edit2, Check, X, Camera, Loader2 } from "lucide-react";
+import { ArrowLeft, User, Globe, Calendar, Share2, CreditCard, Microscope, Flame, Edit2, Check, X, Camera, Loader2, ChevronDown } from "lucide-react";
 import { User as UserType } from "@/lib/types";
+
+const COUNTRIES = [
+  "Nigeria","Ghana","Kenya","South Africa","Ethiopia","Tanzania","Uganda","Cameroon","Côte d'Ivoire","Senegal",
+  "Egypt","Morocco","Algeria","Tunisia","Rwanda","Zambia","Zimbabwe","Mozambique","Angola","Mali",
+  "United States","United Kingdom","Canada","Australia","India","Pakistan","Bangladesh","Indonesia","Philippines","Vietnam",
+  "Brazil","Mexico","Colombia","Argentina","Germany","France","Spain","Italy","Netherlands","Sweden",
+  "Turkey","Saudi Arabia","UAE","Qatar","Jordan","Lebanon","Iran","Iraq","Malaysia","Singapore",
+  "Other",
+];
 
 interface Props {
   user: UserType;
@@ -15,6 +24,8 @@ export default function ProfileScreen({ user, onBack, setUser }: Props) {
   const [editName, setEditName] = useState(user.name);
   const [saving,   setSaving]   = useState(false);
   const [saveErr,  setSaveErr]  = useState("");
+  const [editCountry, setEditCountry] = useState(user.country ?? "");
+  const [savingCountry, setSavingCountry] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -56,9 +67,19 @@ export default function ProfileScreen({ user, onBack, setUser }: Props) {
     ? `${user.bankName} ···${user.bankAccountNumber.slice(-4)}`
     : "Not set";
 
+  async function saveCountry(country: string) {
+    if (country === (user.country ?? "")) return;
+    setSavingCountry(true);
+    try {
+      const res = await fetch("/api/auth/profile", {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ country }),
+      });
+      if (res.ok && setUser) setUser((u) => ({ ...u, country }));
+    } catch { /* silent */ } finally { setSavingCountry(false); }
+  }
+
   const infoRows = [
-    { Icon: Globe,      label: "Location",     value: "Worldwide · Remote" },
-    { Icon: Globe,      label: "Platform",     value: "deelai.vercel.app" },
     { Icon: Calendar,   label: "Member Since", value: "January 2026" },
     { Icon: Share2,     label: "Recruit Code", value: user.refCode },
     { Icon: CreditCard, label: "Payout Bank",  value: bankDisplay },
@@ -150,6 +171,25 @@ export default function ProfileScreen({ user, onBack, setUser }: Props) {
         <div className="lg:grid lg:grid-cols-2 lg:gap-6">
           <div className="rounded-2xl overflow-hidden mb-5 lg:mb-0"
             style={{ background: "var(--s1)", border: "1px solid var(--b1)" }}>
+            {/* Country / region picker */}
+            <div className="flex items-center gap-3 p-4 sm:p-5" style={{ borderBottom: "1px solid var(--b1)" }}>
+              <Globe size={16} style={{ color: "var(--txt3)", flexShrink: 0 }} />
+              <span className="text-sm flex-1" style={{ color: "var(--txt2)" }}>Region</span>
+              <div className="relative flex items-center gap-1">
+                {savingCountry && <Loader2 size={12} style={{ color: "var(--txt3)", animation: "spin 1s linear infinite" }} />}
+                <div className="relative">
+                  <select
+                    value={editCountry}
+                    onChange={(e) => { setEditCountry(e.target.value); saveCountry(e.target.value); }}
+                    className="appearance-none text-sm font-medium pr-5 pl-0 bg-transparent outline-none border-none cursor-pointer"
+                    style={{ color: editCountry ? "#fff" : "var(--txt3)" }}>
+                    <option value="" disabled>Select region</option>
+                    {COUNTRIES.map(c => <option key={c} value={c} style={{ background: "#0C1422" }}>{c}</option>)}
+                  </select>
+                  <ChevronDown size={12} style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)", color: "var(--txt3)", pointerEvents: "none" }} />
+                </div>
+              </div>
+            </div>
             {infoRows.map(({ Icon, label, value }, i) => (
               <div key={label} className="flex items-center gap-3 p-4 sm:p-5"
                 style={{ borderBottom: i < infoRows.length - 1 ? "1px solid var(--b1)" : "none" }}>

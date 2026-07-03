@@ -13,5 +13,6 @@ export async function POST(req: NextRequest) {
 
   const result = await adminStore.changePassword(session.userId, currentPassword, newPassword);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
+  await adminStore.logActivity(session.userId, { type: "password_changed", title: "Password changed" });
   return NextResponse.json({ success: true });
 }

@@ -176,12 +176,10 @@ export default function SlideMenu({
           ))}
         </div>
 
-        {/* Admin Panel link — only for super admin */}
-        {user.email === SUPER_ADMIN_EMAIL && (
+        {/* Admin Panel link — for super admin AND sub-admins */}
+        {(user.email === SUPER_ADMIN_EMAIL || user.isAdmin) && (
           <a
-            href="/admin"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/admin/dashboard"
             className="flex items-center gap-3.5 px-5 py-3.5"
             style={{ borderBottom: "1px solid var(--b1)", textDecoration:"none", background:"rgba(139,92,246,.06)" }}
             onClick={onClose}

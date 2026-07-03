@@ -10,7 +10,7 @@ import { SUPER_ADMIN_EMAIL } from "@/lib/adminConfig";
 interface SidebarProps {
   screen: Screen;
   setScreen: (s: Screen) => void;
-  user: { name: string; level: string; salary: number; email?: string };
+  user: { name: string; level: string; salary: number; email?: string; isAdmin?: boolean };
   notifCount: number;
   onMenuOpen: () => void;
 }
@@ -115,14 +115,12 @@ export default function Sidebar({ screen, setScreen, user, notifCount, onMenuOpe
         })}
       </nav>
 
-      {/* Admin link — shown for admin email */}
-      {user.email === SUPER_ADMIN_EMAIL && (
+      {/* Admin link — shown for super admin AND sub-admins */}
+      {(user.email === SUPER_ADMIN_EMAIL || user.isAdmin) && (
         <nav className="flex flex-col gap-1 px-3 pt-5">
           <p className="text-[10px] font-mono tracking-[1px] px-3 pb-2" style={{ color: "var(--txt3)" }}>ADMIN</p>
           <a
-            href="/admin"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/admin/dashboard"
             className="flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-left border no-underline transition-all duration-150"
             style={{
               background: "rgba(139,92,246,.1)",

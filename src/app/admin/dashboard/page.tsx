@@ -234,7 +234,7 @@ export default function AdminDashboard() {
           {/* Footer */}
           <div style={{ padding:"12px 8px", borderTop:`1px solid ${C.s3}` }}>
             <button
-              onClick={() => router.push("/")}
+              onClick={() => router.push("/dashboard")}
               style={{
                 width:"100%", display:"flex", alignItems:"center", gap:10,
                 padding:"9px 10px", borderRadius:8, background:"transparent",
@@ -242,7 +242,7 @@ export default function AdminDashboard() {
               }}
             >
               <Globe2 size={16} color={C.txt3} />
-              <span style={{ color:C.txt3, fontSize:"13px" }}>Back to App</span>
+              <span style={{ color:C.txt3, fontSize:"13px" }}>User Dashboard</span>
             </button>
             <button
               onClick={logout}

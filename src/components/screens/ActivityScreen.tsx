@@ -1,9 +1,33 @@
 "use client";
-import { Bell, Flame, Star, Tag, Mic, Shield, DollarSign, ChevronRight, Users, Timer, Menu } from "lucide-react";
+import { Bell, Flame, Star, Tag, Mic, Shield, DollarSign, ChevronRight, Users, Timer, LogIn, Briefcase, User as UserIcon, Landmark, KeyRound, Image as ImageIcon, Loader2, AlertCircle } from "lucide-react";
+import { useEffect, useState } from "react";
 import { JOBS } from "@/lib/data";
 import { User } from "@/lib/types";
 import Bar from "@/components/atoms/Bar";
 import Stars from "@/components/atoms/Stars";
+
+interface ActivityLog {
+  id: string; type: string; title: string; detail: string; amount: number | null; createdAt: string;
+}
+const LOG_ICON: Record<string, React.ElementType> = {
+  login: LogIn, job_submitted: Briefcase, job_rejected: Briefcase,
+  profile_changed: UserIcon, bank_saved: Landmark,
+  password_changed: KeyRound, avatar_uploaded: ImageIcon,
+};
+const LOG_COLOR: Record<string, string> = {
+  login: "#00D4FF", job_submitted: "#00E5A0", job_rejected: "#FF4D6D",
+  profile_changed: "#8B5CF6", bank_saved: "#F59E0B",
+  password_changed: "#F97316", avatar_uploaded: "#EC4899",
+};
+function fmt(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
 
 interface Props {
   user: User;
@@ -18,20 +42,17 @@ const jobIconMap: Record<string, React.ReactNode> = {
   moderation:    <Shield size={24} color="#FFB800" />,
 };
 
-const feedIconMap: Record<string, React.ReactNode> = {
-  Tag:   <Tag   size={18} color="#7D8BAA" />,
-  Users: <Users size={18} color="#7D8BAA" />,
-};
-
-const feed = [
-  { icon: "Tag",   text: "Annotation job #A-2291 completed",      time: "2 mins ago",  amt: "+$12.50", c: "#00E5A0" },
-  { icon: "Tag",   text: "Annotation job #A-2290 completed",      time: "16 mins ago", amt: "+$12.50", c: "#00E5A0" },
-  { icon: "Users", text: "Recruit bonus — Chukwudi Eze active",   time: "1 hr ago",    amt: "+$40.00", c: "#00D4FF" },
-  { icon: "Tag",   text: "Annotation job #A-2289 completed",      time: "3 hrs ago",   amt: "+$12.50", c: "#00E5A0" },
-  { icon: "Tag",   text: "Annotation job #A-2287 completed",      time: "Yesterday",   amt: "+$12.50", c: "#00E5A0" },
-];
-
 export default function ActivityScreen({ user, setScreen, notifCount, setMenuOpen }: Props) {
+  const [feed, setFeed] = useState<ActivityLog[]>([]);
+  const [loadingFeed, setLoadingFeed] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/auth/activity?limit=6")
+      .then(r => r.json())
+      .then((d: { logs: ActivityLog[] }) => { setFeed(d.logs ?? []); setLoadingFeed(false); })
+      .catch(() => setLoadingFeed(false));
+  }, []);
+
   return (
     <div className="animate-fadeUp min-h-screen" style={{ background: "var(--bg)" }}>
 
@@ -262,30 +283,51 @@ export default function ActivityScreen({ user, setScreen, notifCount, setMenuOpe
 
       {/* ── RECENT ACTIVITY ──────────────────────────────────────────── */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-10 pt-6 pb-6">
-        <h2 className="font-bold text-white mb-4 text-base sm:text-lg" style={{ fontFamily: "system-ui,sans-serif" }}>
-          Recent Activity
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-          {feed.map((f, i) => (
-            <div
-              key={i}
-              className="flex items-center gap-3 rounded-xl p-3 sm:p-4"
-              style={{ background: "var(--s1)", border: "1px solid var(--b1)" }}
-            >
-              <div
-                className="flex items-center justify-center shrink-0 rounded-xl"
-                style={{ width: 42, height: 42, background: "var(--s2)", border: "1px solid var(--b1)" }}
-              >
-                {feedIconMap[f.icon]}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{f.text}</p>
-                <p className="text-xs mt-0.5" style={{ color: "var(--txt2)" }}>{f.time}</p>
-              </div>
-              <span className="font-mono font-bold text-sm shrink-0" style={{ color: f.c }}>{f.amt}</span>
-            </div>
-          ))}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-bold text-white text-base sm:text-lg" style={{ fontFamily: "system-ui,sans-serif" }}>
+            Recent Activity
+          </h2>
+          <button onClick={() => setScreen("history")}
+            className="flex items-center gap-1 text-xs font-semibold"
+            style={{ color: "#00D4FF", background: "rgba(0,212,255,.08)", border: "1px solid rgba(0,212,255,.2)", borderRadius: 8, padding: "5px 10px" }}>
+            View All <ChevronRight size={12} />
+          </button>
         </div>
+
+        {loadingFeed ? (
+          <div className="flex items-center justify-center py-10">
+            <Loader2 size={22} className="animate-spin" style={{ color: "var(--txt3)" }} />
+          </div>
+        ) : feed.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-10 gap-2">
+            <AlertCircle size={28} style={{ color: "var(--txt3)" }} />
+            <p className="text-sm" style={{ color: "var(--txt3)" }}>No activity yet — complete your first job to see logs here.</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {feed.map((log) => {
+              const Icon = LOG_ICON[log.type] ?? Briefcase;
+              const color = LOG_COLOR[log.type] ?? "#7D8BAA";
+              return (
+                <div key={log.id} className="flex items-center gap-3 rounded-xl p-3 sm:p-4"
+                  style={{ background: "var(--s1)", border: "1px solid var(--b1)" }}>
+                  <div className="flex items-center justify-center shrink-0 rounded-xl"
+                    style={{ width: 42, height: 42, background: `${color}14`, border: `1px solid ${color}30` }}>
+                    <Icon size={18} color={color} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-white truncate">{log.title}</p>
+                    {log.detail && <p className="text-xs mt-0.5 truncate" style={{ color: "var(--txt2)" }}>{log.detail}</p>}
+                    <p className="text-xs mt-0.5" style={{ color: "var(--txt3)" }}>{fmt(log.createdAt)}</p>
+                  </div>
+                  {log.amount != null && (
+                    <span className="font-mono font-bold text-sm shrink-0" style={{ color: "#00E5A0" }}>+${log.amount.toFixed(2)}</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
         <div className="h-6" />
       </div>
     </div>

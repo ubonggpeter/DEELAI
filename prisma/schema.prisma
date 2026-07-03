@@ -59,6 +59,7 @@ model User {
   referralBonuses      ReferralBonus[]       @relation("BonusReferrer")
   channelCommissions   ChannelCommission[]
   passwordResetRequests PasswordResetRequest[]
+  activityLogs          ActivityLog[]
 }
 
 model SubAdmin {
@@ -187,6 +188,18 @@ model TrainingDoc {
   url     String
   type    String   @default("link")
   addedAt DateTime @default(now())
+}
+
+model ActivityLog {
+  id        String   @id
+  userId    String
+  type      String
+  title     String
+  detail    String   @default("")
+  amount    Float?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model PlatformSettings {

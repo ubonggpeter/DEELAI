@@ -533,11 +533,49 @@ export const adminStore = {
   },
 
   /* ── Profile ────────────────────────────────────────────────────────── */
-  async updateUserProfile(userId: string, data: { name?: string; displayName?: string; avatarUrl?: string }): Promise<AdminUser | null> {
+  async updateUserProfile(userId: string, data: { name?: string; displayName?: string; avatarUrl?: string; country?: string }): Promise<AdminUser | null> {
     try {
       const u = await prisma.user.update({ where: { id: userId }, data });
       return mapUser(u);
     } catch { return null; }
+  },
+
+  /* ── Activity log ───────────────────────────────────────────────── */
+  async logActivity(userId: string, data: { type: string; title: string; detail?: string; amount?: number }): Promise<void> {
+    try {
+      await prisma.activityLog.create({
+        data: {
+          id: `al-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          userId, type: data.type, title: data.title,
+          detail: data.detail ?? "", amount: data.amount ?? null,
+        },
+      });
+    } catch { /* non-fatal — never throw on logging */ }
+  },
+
+  async getActivityLogs(userId: string, opts?: { search?: string; type?: string; limit?: number; offset?: number }) {
+    const where = {
+      userId,
+      ...(opts?.type ? { type: opts.type } : {}),
+      ...(opts?.search ? {
+        OR: [
+          { title: { contains: opts.search, mode: "insensitive" as const } },
+          { detail: { contains: opts.search, mode: "insensitive" as const } },
+        ],
+      } : {}),
+    };
+    const [logs, total] = await Promise.all([
+      prisma.activityLog.findMany({
+        where, orderBy: { createdAt: "desc" },
+        take: opts?.limit ?? 50, skip: opts?.offset ?? 0,
+      }),
+      prisma.activityLog.count({ where }),
+    ]);
+    return { logs, total };
+  },
+
+  async clearActivityLogs(userId: string): Promise<void> {
+    await prisma.activityLog.deleteMany({ where: { userId } });
   },
 
   async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<{ ok: boolean; error?: string }> {
