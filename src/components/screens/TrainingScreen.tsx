@@ -42,12 +42,14 @@ export default function TrainingScreen({ user, setUser }: Props) {
   const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
+    // /api/auth/training-content accepts USER or ADMIN cookie — safe for all logged-in users
     Promise.all([
-      fetch("/api/admin/training").then((r) => r.json()),
+      fetch("/api/auth/training-content").then((r) => r.json()),
       user.channelId ? fetch(`/api/channel/${user.channelId}`).then((r) => r.json()) : Promise.resolve(null),
     ]).then(([trainingData, channelData]) => {
       setQuizQuestions(trainingData.quizQuestions ?? []);
       setDocs(trainingData.trainingDocs ?? []);
+      // Channel may be inactive (e.g. sub-admin removed); only set link if present
       if (channelData?.lensPaystackLink) setLensLink(channelData.lensPaystackLink);
     }).finally(() => setLoadingData(false));
   }, [user.channelId]);

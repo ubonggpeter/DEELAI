@@ -59,8 +59,9 @@ export default function ChannelRegistrationPage() {
     fetch(`/api/channel/${channelId}`)
       .then((r) => r.json())
       .then((d) => {
-        if (d.error) setChannelError(d.error);
-        else setChannel(d);
+        if (d.error) { setChannelError(d.error); return; }
+        if (!d.isActive) { setChannelError("This channel is not currently accepting registrations."); return; }
+        setChannel(d);
       })
       .catch(() => setChannelError("Failed to load channel info."))
       .finally(() => setLoading(false));

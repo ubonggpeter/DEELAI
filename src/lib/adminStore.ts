@@ -192,7 +192,7 @@ export const adminStore = {
       where: { email: data.email },
       data: { is_admin: true, admin_permissions: data.permissions as string[], admin_region: data.region },
     });
-    // Auto-create channel
+    // Auto-create and activate channel — must be immediately visible on the landing page
     const existing = await prisma.channel.findUnique({ where: { ownerEmail: data.email } });
     if (!existing) {
       await prisma.channel.create({
@@ -201,9 +201,12 @@ export const adminStore = {
           channelName: data.name.split(" ")[0],
           description: `Channel managed by ${data.name} (${data.region})`,
           estTime: "5 min", referralCommissionRate: 10, jobPassFee: 25,
-          isActive: false, balance: 0, region: data.region,
+          isActive: true, balance: 0, region: data.region,
         },
       });
+    } else if (!existing.isActive) {
+      // Reactivate if previously deactivated (e.g. sub-admin was removed then re-promoted)
+      await prisma.channel.update({ where: { ownerEmail: data.email }, data: { isActive: true } });
     }
     return mapSubAdmin(sa);
   },
@@ -229,9 +232,16 @@ export const adminStore = {
     const sa = await prisma.subAdmin.findUnique({ where: { id } });
     if (!sa) return false;
     await prisma.subAdmin.delete({ where: { id } });
+    // Revoke admin flag on the user record
     await prisma.user.updateMany({
       where: { email: sa.email },
       data: { is_admin: false, admin_permissions: [], admin_region: null },
+    });
+    // Deactivate their channel so it disappears from the landing page immediately.
+    // We deactivate (not delete) to preserve registrations already under this channel.
+    await prisma.channel.updateMany({
+      where: { ownerEmail: sa.email },
+      data: { isActive: false },
     });
     return true;
   },
