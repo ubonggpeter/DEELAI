@@ -23,7 +23,11 @@ export interface Channel {
   isActive: boolean; balance: number; region: string; createdAt: string;
 }
 export interface QuizQuestion { id: string; q: string; opts: string[]; ans: number; }
-export interface TrainingDoc { id: string; title: string; url: string; type: "pdf" | "doc" | "link"; addedAt: string; }
+export interface TrainingDoc { id: string; title: string; url: string; type: "pdf" | "doc" | "link"; ownerEmail?: string | null; addedAt: string; }
+export interface AnnotationJob {
+  id: string; channelId: string | null; title: string; description: string;
+  imageUrls: string[]; labels: string[]; difficulty: string; createdBy: string; createdAt: string;
+}
 export interface ReferralBonus {
   id: string; channelId: string; referrerId: string; referrerName: string;
   referrerEmail: string; recruitEmail: string; recruitName: string; amount: number;
@@ -36,7 +40,7 @@ export interface ChannelCommission {
 }
 export interface AdminUser {
   id: string; email: string; name: string; displayName?: string; phone: string;
-  level: string; salary: number; jobsDone: number; accuracy: number; streak: number;
+  level: string; salary: number; recruitWallet: number; jobsDone: number; accuracy: number; streak: number;
   tier: "Permanent" | "Associate"; status: "Active" | "Suspended";
   joinedAt: string; country: string; is_admin: boolean; is_super_admin: boolean;
   admin_permissions: Permission[]; admin_region: string | null; channelId?: string;
@@ -74,7 +78,7 @@ export interface PlatformSettings {
 function mapUser(u: any): AdminUser {
   return {
     id: u.id, email: u.email, name: u.name, displayName: u.displayName ?? undefined,
-    phone: u.phone, level: u.level, salary: u.salary, jobsDone: u.jobsDone,
+    phone: u.phone, level: u.level, salary: u.salary, recruitWallet: u.recruitWallet ?? 0, jobsDone: u.jobsDone,
     accuracy: u.accuracy, streak: u.streak, tier: u.tier as "Permanent" | "Associate",
     status: u.status as "Active" | "Suspended", joinedAt: u.joinedAt, country: u.country,
     is_admin: u.is_admin, is_super_admin: u.is_super_admin,
@@ -205,7 +209,7 @@ export const adminStore = {
       await prisma.channel.create({
         data: {
           id: `ch-${Date.now()}`, ownerEmail: data.email,
-          channelName: data.name.split(" ")[0],
+          channelName: `${data.name.split(" ")[0]} Channel`,
           description: `Channel managed by ${data.name} (${data.region})`,
           estTime: "5 min", referralCommissionRate: 10, jobPassFee: 25,
           isActive: true, balance: 0, region: data.region,
@@ -458,19 +462,42 @@ export const adminStore = {
   },
 
   async getTrainingDocs(): Promise<TrainingDoc[]> {
-    const docs = await prisma.trainingDoc.findMany({ orderBy: { addedAt: "asc" } });
+    const docs = await prisma.trainingDoc.findMany({ where: { ownerEmail: null }, orderBy: { addedAt: "asc" } });
     return docs.map((d) => ({
       id: d.id, title: d.title, url: d.url, type: d.type as "pdf" | "doc" | "link",
+      ownerEmail: d.ownerEmail ?? null,
+      addedAt: d.addedAt instanceof Date ? d.addedAt.toISOString() : d.addedAt,
+    }));
+  },
+
+  async getTrainingDocsForChannel(channelOwnerEmail: string | null): Promise<TrainingDoc[]> {
+    // Returns global docs + channel-specific docs merged
+    const where = channelOwnerEmail
+      ? { OR: [{ ownerEmail: null }, { ownerEmail: channelOwnerEmail }] }
+      : { ownerEmail: null };
+    const docs = await prisma.trainingDoc.findMany({ where, orderBy: { addedAt: "asc" } });
+    return docs.map((d) => ({
+      id: d.id, title: d.title, url: d.url, type: d.type as "pdf" | "doc" | "link",
+      ownerEmail: d.ownerEmail ?? null,
+      addedAt: d.addedAt instanceof Date ? d.addedAt.toISOString() : d.addedAt,
+    }));
+  },
+
+  async getTrainingDocsForOwner(ownerEmail: string | null): Promise<TrainingDoc[]> {
+    const docs = await prisma.trainingDoc.findMany({ where: { ownerEmail }, orderBy: { addedAt: "asc" } });
+    return docs.map((d) => ({
+      id: d.id, title: d.title, url: d.url, type: d.type as "pdf" | "doc" | "link",
+      ownerEmail: d.ownerEmail ?? null,
       addedAt: d.addedAt instanceof Date ? d.addedAt.toISOString() : d.addedAt,
     }));
   },
 
   async addTrainingDoc(data: Omit<TrainingDoc, "id" | "addedAt">): Promise<TrainingDoc> {
     const doc = await prisma.trainingDoc.create({
-      data: { id: `doc-${Date.now()}`, title: data.title, url: data.url, type: data.type },
+      data: { id: `doc-${Date.now()}`, title: data.title, url: data.url, type: data.type, ownerEmail: data.ownerEmail ?? null },
     });
     return { id: doc.id, title: doc.title, url: doc.url, type: doc.type as "pdf" | "doc" | "link",
-             addedAt: doc.addedAt.toISOString() };
+             ownerEmail: doc.ownerEmail ?? null, addedAt: doc.addedAt.toISOString() };
   },
 
   async removeTrainingDoc(id: string): Promise<boolean> {
@@ -478,6 +505,71 @@ export const adminStore = {
       await prisma.trainingDoc.delete({ where: { id } });
       return true;
     } catch { return false; }
+  },
+
+  /* ── Annotation Jobs ────────────────────────────────────────────── */
+  async getAnnotationJobs(channelId: string | null): Promise<AnnotationJob[]> {
+    // Returns channel-specific jobs; if none, falls back to global (channelId = null)
+    if (channelId) {
+      const channelJobs = await prisma.annotationJob.findMany({ where: { channelId }, orderBy: { createdAt: "asc" } });
+      if (channelJobs.length > 0) {
+        return channelJobs.map(j => ({
+          id: j.id, channelId: j.channelId, title: j.title, description: j.description,
+          imageUrls: j.imageUrls, labels: j.labels, difficulty: j.difficulty,
+          createdBy: j.createdBy, createdAt: j.createdAt instanceof Date ? j.createdAt.toISOString() : j.createdAt,
+        }));
+      }
+    }
+    // Fall back to global
+    const globalJobs = await prisma.annotationJob.findMany({ where: { channelId: null }, orderBy: { createdAt: "asc" } });
+    return globalJobs.map(j => ({
+      id: j.id, channelId: j.channelId, title: j.title, description: j.description,
+      imageUrls: j.imageUrls, labels: j.labels, difficulty: j.difficulty,
+      createdBy: j.createdBy, createdAt: j.createdAt instanceof Date ? j.createdAt.toISOString() : j.createdAt,
+    }));
+  },
+
+  async addAnnotationJob(data: Omit<AnnotationJob, "id" | "createdAt">): Promise<AnnotationJob> {
+    const j = await prisma.annotationJob.create({
+      data: {
+        id: `aj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        channelId: data.channelId, title: data.title, description: data.description,
+        imageUrls: data.imageUrls, labels: data.labels, difficulty: data.difficulty, createdBy: data.createdBy,
+      },
+    });
+    return {
+      id: j.id, channelId: j.channelId, title: j.title, description: j.description,
+      imageUrls: j.imageUrls, labels: j.labels, difficulty: j.difficulty,
+      createdBy: j.createdBy, createdAt: j.createdAt.toISOString(),
+    };
+  },
+
+  async deleteAnnotationJob(id: string): Promise<boolean> {
+    try { await prisma.annotationJob.delete({ where: { id } }); return true; }
+    catch { return false; }
+  },
+
+  /* ── Wallet / Withdrawal ─────────────────────────────────────────── */
+  async withdrawFromWallet(userId: string, walletType: "work" | "recruit", amount: number, method: string): Promise<{ ok: boolean; error?: string; ref?: string; newWorkWallet?: number; newRecruitWallet?: number }> {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { salary: true, recruitWallet: true, name: true } });
+    if (!user) return { ok: false, error: "User not found" };
+    const balance = walletType === "work" ? user.salary : user.recruitWallet;
+    if (amount > balance) return { ok: false, error: "Insufficient balance" };
+    if (amount < 10) return { ok: false, error: "Minimum withdrawal is $10" };
+    const ref = `TXN-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+    const field = walletType === "work" ? { salary: { decrement: amount } } : { recruitWallet: { decrement: amount } };
+    const updated = await prisma.user.update({ where: { id: userId }, data: field });
+    await prisma.payment.create({
+      data: {
+        id: `p-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+        userId, userName: user.name, amount,
+        method: method as "Bank Transfer" | "USDT / Crypto" | "PayPal",
+        status: "Pending",
+        date: new Date().toISOString().split("T")[0],
+        ref,
+      },
+    });
+    return { ok: true, ref, newWorkWallet: updated.salary, newRecruitWallet: updated.recruitWallet };
   },
 
   /* ── Password Reset Requests ─────────────────────────────────────────── */
@@ -746,7 +838,7 @@ export const adminStore = {
       where: { id: bonusId },
       data: { status: "claimed", claimedAt: new Date() },
     });
-    await prisma.user.update({ where: { id: b.referrerId }, data: { salary: { increment: b.amount } } });
+    await prisma.user.update({ where: { id: b.referrerId }, data: { recruitWallet: { increment: b.amount } } });
     return mapReferralBonus(updated);
   },
 
@@ -760,7 +852,7 @@ export const adminStore = {
         where: { id: b.id },
         data: { status: "auto-credited", claimedAt: now },
       });
-      await prisma.user.update({ where: { id: b.referrerId }, data: { salary: { increment: b.amount } } });
+      await prisma.user.update({ where: { id: b.referrerId }, data: { recruitWallet: { increment: b.amount } } });
     }
   },
 

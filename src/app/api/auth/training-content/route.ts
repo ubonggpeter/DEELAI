@@ -16,17 +16,25 @@ export async function GET(req: NextRequest) {
   }
 
   let approvedBy: string | null = null;
+  let channelOwnerEmail: string | null = null;
   if (userRaw) {
     try {
       const session = JSON.parse(userRaw) as { userId: string };
-      const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { approvedBy: true } });
+      const user = await prisma.user.findUnique({
+        where: { id: session.userId },
+        select: { approvedBy: true, channelId: true },
+      });
       approvedBy = user?.approvedBy ?? null;
+      if (user?.channelId) {
+        const ch = await prisma.channel.findUnique({ where: { id: user.channelId }, select: { ownerEmail: true } });
+        channelOwnerEmail = ch?.ownerEmail ?? null;
+      }
     } catch { /* fall back to global */ }
   }
 
   const [quizQuestions, trainingDocs] = await Promise.all([
     adminStore.getQuizQuestionsForApprover(approvedBy),
-    adminStore.getTrainingDocs(),
+    adminStore.getTrainingDocsForChannel(channelOwnerEmail),
   ]);
 
   return NextResponse.json({ quizQuestions, trainingDocs });

@@ -5,6 +5,7 @@ export interface User {
   level: string;
   isPermanent: boolean;
   salary: number;
+  recruitWallet: number;
   accuracy: number;
   jobsDone: number;
   rank: number;

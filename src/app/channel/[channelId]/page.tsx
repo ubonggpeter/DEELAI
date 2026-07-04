@@ -214,7 +214,7 @@ export default function ChannelRegistrationPage() {
             Registration Submitted!
           </h2>
           <p style={{ color:C.txt2, fontSize:"14px", lineHeight:1.6, marginBottom:24 }}>
-            Your application to <strong style={{ color:C.cyan }}>Channel {channel.channelName}</strong> is
+            Your application to <strong style={{ color:C.cyan }}>{channel.channelName}</strong> is
             now under review. You'll be notified once the channel admin approves your account.
           </p>
           <div style={{
@@ -270,7 +270,7 @@ export default function ChannelRegistrationPage() {
               DEELAI Channel
             </div>
             <div style={{ color:C.txt, fontSize:"20px", fontWeight:800 }}>
-              Channel {channel.channelName}
+              {channel.channelName}
             </div>
           </div>
         </div>

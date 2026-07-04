@@ -8,12 +8,12 @@ export async function GET(req: NextRequest) {
   if (!email || !(await adminStore.isAdmin(email))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  // Super admin gets global questions; sub-admin gets their own question set
   const ownerEmail = adminStore.isSuperAdmin(email) ? null : email;
-  return NextResponse.json({
-    quizQuestions: await adminStore.getQuizQuestionsForOwner(ownerEmail),
-    trainingDocs:  await adminStore.getTrainingDocs(),
-  });
+  const [quizQuestions, trainingDocs] = await Promise.all([
+    adminStore.getQuizQuestionsForOwner(ownerEmail),
+    adminStore.getTrainingDocsForOwner(ownerEmail),
+  ]);
+  return NextResponse.json({ quizQuestions, trainingDocs });
 }
 
 export async function PUT(req: NextRequest) {
@@ -32,21 +32,22 @@ export async function PUT(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const email = req.cookies.get(ADMIN_COOKIE)?.value;
-  if (!email || !adminStore.isSuperAdmin(email)) {
-    return NextResponse.json({ error: "Super admin only" }, { status: 403 });
+  if (!email || !(await adminStore.isAdmin(email))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const body = await req.json() as { title: string; url: string; type: "pdf" | "doc" | "link" };
   if (!body.title || !body.url) {
     return NextResponse.json({ error: "title and url are required" }, { status: 400 });
   }
-  const doc = await adminStore.addTrainingDoc({ title: body.title, url: body.url, type: body.type ?? "link" });
+  const ownerEmail = adminStore.isSuperAdmin(email) ? null : email;
+  const doc = await adminStore.addTrainingDoc({ title: body.title, url: body.url, type: body.type ?? "link", ownerEmail });
   return NextResponse.json({ doc }, { status: 201 });
 }
 
 export async function DELETE(req: NextRequest) {
   const email = req.cookies.get(ADMIN_COOKIE)?.value;
-  if (!email || !adminStore.isSuperAdmin(email)) {
-    return NextResponse.json({ error: "Super admin only" }, { status: 403 });
+  if (!email || !(await adminStore.isAdmin(email))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { id } = await req.json() as { id: string };
   const removed = await adminStore.removeTrainingDoc(id);

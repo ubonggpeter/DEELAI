@@ -47,6 +47,7 @@ model User {
   bankName          String?
   bankAccountNumber String?
   bankAccountName   String?
+  recruitWallet     Float     @default(0)
   jobsToday         Int       @default(0)
   lastJobDate       String    @default("")
   createdAt         DateTime  @default(now())
@@ -183,11 +184,24 @@ model PasswordResetRequest {
 }
 
 model TrainingDoc {
-  id      String   @id
-  title   String
-  url     String
-  type    String   @default("link")
-  addedAt DateTime @default(now())
+  id         String   @id
+  title      String
+  url        String
+  type       String   @default("link")
+  ownerEmail String?  // null = global (super-admin); set = sub-admin's channel docs
+  addedAt    DateTime @default(now())
+}
+
+model AnnotationJob {
+  id          String   @id
+  channelId   String?  // null = global default; set = channel-specific
+  title       String
+  description String   @default("")
+  imageUrls   String[] @default([])
+  labels      String[] @default([])
+  difficulty  String   @default("medium")
+  createdBy   String   @default("")
+  createdAt   DateTime @default(now())
 }
 
 model ActivityLog {

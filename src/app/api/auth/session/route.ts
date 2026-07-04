@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
       permitType:        user.permitType,
       jobPassPaid:       user.jobPassPaid,
       salary:            user.salary,
+      recruitWallet:     user.recruitWallet,
       jobsDone:          user.jobsDone,
       level:             user.level,
       refCode:           user.refCode,

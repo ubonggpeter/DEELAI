@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Users, Briefcase, CreditCard, Network, Globe2, Settings,
@@ -94,7 +94,7 @@ const ALL_TABS: { id: TabId; label: string; icon: React.ElementType; perm?: Perm
   { id: "referrals",       label: "Referrals",        icon: Network,         perm: "manage_referrals" },
   { id: "refbonuses",      label: "Ref Bonuses",      icon: DollarSign },
   { id: "channels",        label: "Channel Settings", icon: Radio },
-  { id: "training",        label: "Training",         icon: CheckSquare,     superOnly: true },
+  { id: "training",        label: "Training",         icon: CheckSquare },
   { id: "settings",        label: "Settings",         icon: Settings },
   { id: "subadmins",       label: "Sub-Admins",       icon: ShieldCheck,     superOnly: true },
 ];
@@ -237,12 +237,12 @@ export default function AdminDashboard() {
               onClick={() => router.push("/dashboard")}
               style={{
                 width:"100%", display:"flex", alignItems:"center", gap:10,
-                padding:"9px 10px", borderRadius:8, background:"transparent",
-                border:"1px solid transparent", cursor:"pointer", marginBottom:4,
+                padding:"9px 10px", borderRadius:8, marginBottom:4,
+                background:"rgba(0,212,255,.08)", border:`1px solid rgba(0,212,255,.2)`, cursor:"pointer",
               }}
             >
-              <Globe2 size={16} color={C.txt3} />
-              <span style={{ color:C.txt3, fontSize:"13px" }}>User Dashboard</span>
+              <Globe2 size={16} color={C.cyan} />
+              <span style={{ color:C.cyan, fontSize:"13px", fontWeight:600 }}>Switch to Staff Dashboard</span>
             </button>
             <button
               onClick={logout}
@@ -297,7 +297,7 @@ export default function AdminDashboard() {
           {tab === "referrals"      && <ReferralsTab />}
           {tab === "refbonuses"     && <ReferralBonusesTab adminInfo={adminInfo} />}
           {tab === "channels"       && <ChannelSettingsTab adminInfo={adminInfo} />}
-          {tab === "training"       && adminInfo.isSuperAdmin && <TrainingTab />}
+          {tab === "training"       && <TrainingTab adminInfo={adminInfo} />}
           {tab === "settings"       && <SettingsTab isSuperAdmin={adminInfo.isSuperAdmin} />}
           {tab === "subadmins"      && adminInfo.isSuperAdmin && <SubAdminsTab />}
         </div>
@@ -2067,23 +2067,40 @@ const labelStyle: React.CSSProperties = {
 /* ═══════════════════════════════════════════════════════════════════ */
 /* TRAINING TAB (super admin only)                                     */
 /* ═══════════════════════════════════════════════════════════════════ */
-function TrainingTab() {
+interface AnnotationJobRow { id: string; channelId: string|null; title: string; description: string; imageUrls: string[]; labels: string[]; difficulty: string; createdBy: string; createdAt: string; }
+
+function TrainingTab({ adminInfo }: { adminInfo: AdminInfo }) {
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
   const [docs,          setDocs]          = useState<TrainingDoc[]>([]);
+  const [annJobs,       setAnnJobs]       = useState<AnnotationJobRow[]>([]);
   const [loading,       setLoading]       = useState(true);
   const [saving,        setSaving]        = useState(false);
   const [saved,         setSaved]         = useState(false);
   const [docUrl,        setDocUrl]        = useState("");
   const [docTitle,      setDocTitle]      = useState("");
-  const [docType,       setDocType]       = useState<"pdf"|"doc"|"link">("link");
+  const [docType,       setDocType]       = useState<"pdf"|"doc"|"link">("pdf");
   const [addingDoc,     setAddingDoc]     = useState(false);
+  const [uploadErr,     setUploadErr]     = useState("");
+  // Annotation job form
+  const [ajTitle,       setAjTitle]       = useState("");
+  const [ajDesc,        setAjDesc]        = useState("");
+  const [ajImages,      setAjImages]      = useState("");
+  const [ajLabels,      setAjLabels]      = useState("");
+  const [ajDiff,        setAjDiff]        = useState("medium");
+  const [addingAj,      setAddingAj]      = useState(false);
+  const fileRef = React.useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const res = await fetch("/api/admin/training");
-    const data = await res.json();
-    setQuizQuestions(data.quizQuestions ?? []);
-    setDocs(data.trainingDocs ?? []);
+    const [trRes, ajRes] = await Promise.all([
+      fetch("/api/admin/training"),
+      fetch("/api/admin/annotation-jobs"),
+    ]);
+    const trData = await trRes.json();
+    const ajData = await ajRes.json();
+    setQuizQuestions(trData.quizQuestions ?? []);
+    setDocs(trData.trainingDocs ?? []);
+    setAnnJobs(ajData.jobs ?? []);
     setLoading(false);
   }, []);
 
@@ -2098,9 +2115,27 @@ function TrainingTab() {
     setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 2500);
   }
 
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadErr("");
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/admin/training/upload", { method: "POST", body: fd });
+    const data = await res.json();
+    if (!res.ok) {
+      setUploadErr(data.error ?? "Upload failed");
+      return;
+    }
+    setDocUrl(data.url);
+    setDocType("pdf");
+    if (!docTitle) setDocTitle(file.name.replace(/\.pdf$/i, ""));
+  }
+
   async function addDoc() {
     if (!docUrl || !docTitle) return;
     setAddingDoc(true);
+    setUploadErr("");
     const res = await fetch("/api/admin/training", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title: docTitle, url: docUrl, type: docType }),
@@ -2108,6 +2143,7 @@ function TrainingTab() {
     const data = await res.json();
     setAddingDoc(false);
     if (res.ok) { setDocs((d) => [...d, data.doc]); setDocUrl(""); setDocTitle(""); }
+    else setUploadErr(data.error ?? "Failed to add document");
   }
 
   async function removeDoc(id: string) {
@@ -2116,6 +2152,31 @@ function TrainingTab() {
       body: JSON.stringify({ id }),
     });
     setDocs((d) => d.filter((x) => x.id !== id));
+  }
+
+  async function addAnnotationJob() {
+    const imgs = ajImages.split("\n").map(s => s.trim()).filter(Boolean);
+    const lbls = ajLabels.split(",").map(s => s.trim()).filter(Boolean);
+    if (!ajTitle || imgs.length === 0 || lbls.length === 0) return;
+    setAddingAj(true);
+    const res = await fetch("/api/admin/annotation-jobs", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: ajTitle, description: ajDesc, imageUrls: imgs, labels: lbls, difficulty: ajDiff }),
+    });
+    const data = await res.json();
+    setAddingAj(false);
+    if (res.ok) {
+      setAnnJobs(j => [...j, data.job]);
+      setAjTitle(""); setAjDesc(""); setAjImages(""); setAjLabels(""); setAjDiff("medium");
+    }
+  }
+
+  async function deleteAnnotationJob(id: string) {
+    await fetch("/api/admin/annotation-jobs", {
+      method: "DELETE", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    setAnnJobs(j => j.filter(x => x.id !== id));
   }
 
   function updateQuestion(idx: number, field: keyof QuizQuestion, value: string | number | string[]) {
@@ -2132,10 +2193,7 @@ function TrainingTab() {
   }
 
   function addQuestion() {
-    setQuizQuestions((prev) => [
-      ...prev,
-      { id: `q-${Date.now()}`, q: "", opts: ["", "", "", ""], ans: 0 },
-    ]);
+    setQuizQuestions((prev) => [...prev, { id: `q-${Date.now()}`, q: "", opts: ["", "", "", ""], ans: 0 }]);
   }
 
   function removeQuestion(idx: number) {
@@ -2149,11 +2207,16 @@ function TrainingTab() {
 
   if (loading) return <Spinner />;
 
+  const scope = adminInfo.isSuperAdmin ? "Global (all channels)" : "Your channel only";
+
   return (
     <div style={{ animation:"fadeUp 0.3s ease" }}>
-      <SectionTitle title="Training Management" sub="Edit quiz questions and manage learning documents" />
+      <SectionTitle
+        title="Training Management"
+        sub={`Manage quiz questions, training documents, and annotation jobs — ${scope}`}
+      />
 
-      {/* Quiz editor */}
+      {/* ── Quiz editor ── */}
       <div style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:12, padding:20, marginBottom:20 }}>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16, gap:10, flexWrap:"wrap" }}>
           <h3 style={{ color:C.txt, fontSize:"14px", fontWeight:700, margin:0, display:"flex", alignItems:"center", gap:8 }}>
@@ -2168,7 +2231,6 @@ function TrainingTab() {
             </button>
           </div>
         </div>
-
         {quizQuestions.length === 0 ? (
           <EmptyState msg="No quiz questions yet. Add one to get started." />
         ) : (
@@ -2177,26 +2239,14 @@ function TrainingTab() {
               <div key={q.id} style={{ background:C.s2, border:`1px solid ${C.s3}`, borderRadius:10, padding:14 }}>
                 <div style={{ display:"flex", alignItems:"flex-start", gap:8, marginBottom:10 }}>
                   <span style={{ color:C.txt3, fontSize:"11px", fontWeight:700, paddingTop:9, flexShrink:0 }}>Q{qi+1}</span>
-                  <input
-                    value={q.q} onChange={(e) => updateQuestion(qi, "q", e.target.value)}
-                    placeholder="Question text…" style={{ ...fieldStyle, flex:1 }}
-                  />
-                  <button onClick={() => removeQuestion(qi)} style={{ background:"none", border:"none", cursor:"pointer", padding:4, flexShrink:0 }}>
-                    <X size={14} color={C.red} />
-                  </button>
+                  <input value={q.q} onChange={(e) => updateQuestion(qi, "q", e.target.value)} placeholder="Question text…" style={{ ...fieldStyle, flex:1 }} />
+                  <button onClick={() => removeQuestion(qi)} style={{ background:"none", border:"none", cursor:"pointer", padding:4, flexShrink:0 }}><X size={14} color={C.red} /></button>
                 </div>
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))", gap:8, marginBottom:10 }}>
                   {q.opts.map((opt, oi) => (
                     <div key={oi} style={{ display:"flex", alignItems:"center", gap:6 }}>
-                      <input
-                        type="radio" checked={q.ans === oi} onChange={() => updateQuestion(qi, "ans", oi)}
-                        style={{ accentColor:C.green, flexShrink:0, cursor:"pointer" }}
-                      />
-                      <input
-                        value={opt} onChange={(e) => updateOpt(qi, oi, e.target.value)}
-                        placeholder={`Option ${oi+1}`}
-                        style={{ ...fieldStyle, border:`1px solid ${q.ans === oi ? C.green+"50" : C.s3}` }}
-                      />
+                      <input type="radio" checked={q.ans === oi} onChange={() => updateQuestion(qi, "ans", oi)} style={{ accentColor:C.green, flexShrink:0, cursor:"pointer" }} />
+                      <input value={opt} onChange={(e) => updateOpt(qi, oi, e.target.value)} placeholder={`Option ${oi+1}`} style={{ ...fieldStyle, border:`1px solid ${q.ans === oi ? C.green+"50" : C.s3}` }} />
                     </div>
                   ))}
                 </div>
@@ -2207,13 +2257,16 @@ function TrainingTab() {
         )}
       </div>
 
-      {/* Document manager */}
-      <div style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:12, padding:20 }}>
+      {/* ── Training Documents (PDF Upload) ── */}
+      <div style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:12, padding:20, marginBottom:20 }}>
         <h3 style={{ color:C.txt, fontSize:"14px", fontWeight:700, marginBottom:14, display:"flex", alignItems:"center", gap:8 }}>
           <Link size={14} color={C.gold} /> Training Documents ({docs.length})
+          <span style={{ fontSize:"11px", color:C.txt3, fontWeight:400, marginLeft:4 }}>
+            — {adminInfo.isSuperAdmin ? "visible to all workers" : "visible only to your channel workers"}
+          </span>
         </h3>
 
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))", gap:8, marginBottom:12 }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))", gap:8, marginBottom:8 }}>
           <div>
             <label style={labelStyle}>Document Title</label>
             <input value={docTitle} onChange={(e) => setDocTitle(e.target.value)} placeholder="Module 3 PDF…" style={{ ...fieldStyle, width:"100%" }} />
@@ -2232,26 +2285,115 @@ function TrainingTab() {
           </div>
         </div>
 
+        {/* PDF file upload */}
+        <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+          <button
+            onClick={() => fileRef.current?.click()}
+            style={{ background:`${C.gold}15`, border:`1px solid ${C.gold}30`, color:C.gold, borderRadius:7, padding:"5px 10px", fontSize:"12px", cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}
+          >
+            <Plus size={12} /> Upload PDF File
+          </button>
+          <span style={{ color:C.txt3, fontSize:"11px" }}>or paste a URL above · max 20MB</span>
+          <input ref={fileRef} type="file" accept=".pdf,application/pdf" onChange={handleFileUpload} style={{ display:"none" }} />
+        </div>
+
+        {uploadErr && (
+          <div style={{ display:"flex", gap:6, background:`${C.red}11`, border:`1px solid ${C.red}33`, borderRadius:7, padding:"7px 10px", marginBottom:10 }}>
+            <AlertCircle size={12} color={C.red} style={{ flexShrink:0, marginTop:1 }} />
+            <span style={{ color:C.red, fontSize:"12px" }}>{uploadErr}</span>
+          </div>
+        )}
+
         <button onClick={addDoc} disabled={addingDoc || !docUrl || !docTitle} style={{ background:C.cyan, color:"#060A12", border:"none", borderRadius:7, padding:"7px 14px", fontWeight:700, fontSize:"12px", cursor:"pointer", display:"flex", alignItems:"center", gap:6, marginBottom:16 }}>
           {addingDoc ? <><Loader2 size={12} style={{ animation:"spin 1s linear infinite" }} /> Adding…</> : <><Plus size={12} /> Add Document</>}
         </button>
 
         {docs.length === 0 ? (
-          <EmptyState msg="No documents yet. Add training materials above." />
+          <EmptyState msg="No documents yet. Upload a PDF or paste a URL above." />
         ) : (
           <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
             {docs.map((doc) => (
               <div key={doc.id} style={{ background:C.s2, border:`1px solid ${C.s3}`, borderRadius:8, padding:"10px 12px", display:"flex", alignItems:"center", gap:10 }}>
-                <span style={{ fontSize:"10px", fontWeight:700, padding:"2px 6px", borderRadius:4, background:`${C.gold}15`, color:C.gold, textTransform:"uppercase", flexShrink:0 }}>
-                  {doc.type}
-                </span>
+                <span style={{ fontSize:"10px", fontWeight:700, padding:"2px 6px", borderRadius:4, background:`${C.gold}15`, color:C.gold, textTransform:"uppercase", flexShrink:0 }}>{doc.type}</span>
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ color:C.txt, fontSize:"13px", fontWeight:600, marginBottom:2 }}>{doc.title}</div>
                   <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ color:C.txt3, fontSize:"11px", wordBreak:"break-all" }}>{doc.url}</a>
                 </div>
-                <button onClick={() => removeDoc(doc.id)} style={{ background:"none", border:"none", cursor:"pointer", flexShrink:0 }}>
-                  <Trash2 size={13} color={C.red} />
-                </button>
+                <button onClick={() => removeDoc(doc.id)} style={{ background:"none", border:"none", cursor:"pointer", flexShrink:0 }}><Trash2 size={13} color={C.red} /></button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Custom Annotation Jobs ── */}
+      <div style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:12, padding:20 }}>
+        <h3 style={{ color:C.txt, fontSize:"14px", fontWeight:700, marginBottom:6, display:"flex", alignItems:"center", gap:8 }}>
+          <Briefcase size={14} color={C.purple} /> Custom Annotation Jobs ({annJobs.length})
+        </h3>
+        <p style={{ color:C.txt3, fontSize:"12px", marginBottom:14 }}>
+          {adminInfo.isSuperAdmin
+            ? "Global default jobs shown to all workers unless their channel has custom jobs."
+            : "Jobs shown only to workers registered under your channel. If none are set, workers see the global defaults."}
+        </p>
+
+        <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:14 }}>
+          <div className="admin-2col">
+            <div>
+              <label style={labelStyle}>Job Title</label>
+              <input value={ajTitle} onChange={e => setAjTitle(e.target.value)} placeholder="Vehicle Detection Batch" style={fieldStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Difficulty</label>
+              <select value={ajDiff} onChange={e => setAjDiff(e.target.value)} style={{ ...fieldStyle, cursor:"pointer" }}>
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label style={labelStyle}>Description (optional)</label>
+            <input value={ajDesc} onChange={e => setAjDesc(e.target.value)} placeholder="Identify all vehicles in street images." style={fieldStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Image URLs (one per line)</label>
+            <textarea
+              value={ajImages}
+              onChange={e => setAjImages(e.target.value)}
+              placeholder={"https://example.com/img1.jpg\nhttps://example.com/img2.jpg"}
+              rows={4}
+              style={{ ...fieldStyle, resize:"vertical", fontFamily:"monospace", fontSize:"12px" }}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Labels (comma-separated)</label>
+            <input value={ajLabels} onChange={e => setAjLabels(e.target.value)} placeholder="car, truck, motorcycle, bus" style={fieldStyle} />
+          </div>
+          <button
+            onClick={addAnnotationJob}
+            disabled={addingAj || !ajTitle || !ajImages || !ajLabels}
+            style={{ background:C.purple, color:"#fff", border:"none", borderRadius:7, padding:"7px 14px", fontWeight:700, fontSize:"12px", cursor:"pointer", display:"flex", alignItems:"center", gap:6, alignSelf:"flex-start" }}
+          >
+            {addingAj ? <><Loader2 size={12} style={{ animation:"spin 1s linear infinite" }} /> Adding…</> : <><Plus size={12} /> Add Job</>}
+          </button>
+        </div>
+
+        {annJobs.length === 0 ? (
+          <EmptyState msg="No custom annotation jobs yet. Add one above." />
+        ) : (
+          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+            {annJobs.map((job) => (
+              <div key={job.id} style={{ background:C.s2, border:`1px solid ${C.s3}`, borderRadius:8, padding:"10px 12px", display:"flex", alignItems:"flex-start", gap:10 }}>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4, flexWrap:"wrap" }}>
+                    <span style={{ color:C.txt, fontSize:"13px", fontWeight:600 }}>{job.title}</span>
+                    <span style={{ fontSize:"10px", fontWeight:700, padding:"2px 6px", borderRadius:4, background:`${C.purple}15`, color:C.purple, textTransform:"uppercase" }}>{job.difficulty}</span>
+                    <span style={{ fontSize:"11px", color:C.txt3 }}>{job.imageUrls.length} images · {job.labels.join(", ")}</span>
+                  </div>
+                  {job.description && <div style={{ color:C.txt2, fontSize:"12px" }}>{job.description}</div>}
+                </div>
+                <button onClick={() => deleteAnnotationJob(job.id)} style={{ background:"none", border:"none", cursor:"pointer", flexShrink:0 }}><Trash2 size={13} color={C.red} /></button>
               </div>
             ))}
           </div>

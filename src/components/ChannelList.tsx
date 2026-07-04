@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, CheckCircle2, ChevronRight, Globe2, MapPin, Clock } from "lucide-react";
+import { Loader2, CheckCircle2, ChevronRight, Globe2, MapPin, Clock, Search, X } from "lucide-react";
 
 const C = {
   bg: "#060A12", s1: "#0C1220", s2: "#101829", s3: "#162035",
@@ -46,9 +46,10 @@ const CONTINENT_COLOR: Record<string, string> = {
 
 export default function ChannelList() {
   const router = useRouter();
-  const [channels, setChannels] = useState<Channel[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [channels,  setChannels]  = useState<Channel[]>([]);
+  const [loading,   setLoading]   = useState(true);
+  const [selected,  setSelected]  = useState<string | null>(null);
+  const [query,     setQuery]     = useState("");
 
   useEffect(() => {
     fetch("/api/channels")
@@ -62,8 +63,17 @@ export default function ChannelList() {
     router.push(`/register?channel=${id}`);
   }
 
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? channels.filter((ch) =>
+        ch.channelName.toLowerCase().includes(q) ||
+        ch.region.toLowerCase().includes(q) ||
+        (REGION_TO_CONTINENT[ch.region] ?? "").toLowerCase().includes(q)
+      )
+    : channels;
+
   const grouped: Record<string, Channel[]> = {};
-  for (const ch of channels) {
+  for (const ch of filtered) {
     const continent = REGION_TO_CONTINENT[ch.region] ?? ch.region ?? "Global";
     (grouped[continent] ??= []).push(ch);
   }
@@ -91,6 +101,33 @@ export default function ChannelList() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 36 }}>
+      {/* Search bar */}
+      <div style={{ position: "relative", maxWidth: 480, margin: "0 auto", width: "100%" }}>
+        <Search size={16} color={C.txt3} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search agents by name or region…"
+          style={{
+            width: "100%", background: C.s1, border: `1px solid ${query ? C.cyan + "50" : C.s3}`,
+            borderRadius: 12, padding: "11px 40px 11px 40px", color: C.txt, fontSize: 14, outline: "none",
+          }}
+        />
+        {query && (
+          <button
+            onClick={() => setQuery("")}
+            style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 2 }}
+          >
+            <X size={14} color={C.txt3} />
+          </button>
+        )}
+      </div>
+      {filtered.length === 0 && (
+        <div style={{ textAlign: "center", color: C.txt3, padding: "24px 0" }}>
+          No agents found matching &quot;{query}&quot;. Try a different name or region.
+        </div>
+      )}
       {visibleContinents.map((continent) => {
         const cColor = CONTINENT_COLOR[continent] ?? C.txt2;
         const agents = grouped[continent];
@@ -149,7 +186,7 @@ export default function ChannelList() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", marginBottom: 6 }}>
                         <span style={{ color: C.txt, fontWeight: 700, fontSize: 14, whiteSpace: "nowrap" }}>
-                          Channel {ch.channelName}
+                          {ch.channelName}
                         </span>
                         <span style={{
                           display: "inline-flex", alignItems: "center", gap: 4, flexShrink: 0,

@@ -1,9 +1,11 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { GraduationCap, Microscope, ClipboardList, X, Check, AlertCircle, Clock } from "lucide-react";
 import { ANNOTATION_IMGS, LABELS } from "@/lib/data";
 import { User, BoundingBox } from "@/lib/types";
 import LiveDot from "@/components/atoms/LiveDot";
+
+interface CustomJob { id: string; title: string; imageUrls: string[]; labels: string[]; difficulty: string; description: string; }
 
 const DAILY_LIMIT = 15;
 
@@ -25,15 +27,34 @@ export default function WorkspaceScreen({ user, setUser }: Props) {
   const startPtRef   = useRef<{ x: number; y: number } | null>(null);
   const curBoxRef    = useRef<BoundingBox | null>(null);
 
-  const [imgIdx,    setImgIdx]    = useState(0);
-  const [boxes,     setBoxes]     = useState<BoundingBox[]>([]);
-  const [curBox,    setCurBox]    = useState<BoundingBox | null>(null);
-  const [label,     setLabel]     = useState("car");
-  const [submitted, setSubmitted] = useState(false);
-  const [result,    setResult]    = useState<SubmitResult | null>(null);
-  const [wrapSize,  setWrapSize]  = useState({ w: 340, h: 230 });
+  const [imgIdx,      setImgIdx]      = useState(0);
+  const [boxes,       setBoxes]       = useState<BoundingBox[]>([]);
+  const [curBox,      setCurBox]      = useState<BoundingBox | null>(null);
+  const [label,       setLabel]       = useState("car");
+  const [submitted,   setSubmitted]   = useState(false);
+  const [result,      setResult]      = useState<SubmitResult | null>(null);
+  const [wrapSize,    setWrapSize]    = useState({ w: 340, h: 230 });
+  const [customJobs,  setCustomJobs]  = useState<CustomJob[] | null>(null);
+  const [jobSetIdx,   setJobSetIdx]   = useState(0);
 
-  const img          = ANNOTATION_IMGS[imgIdx];
+  const fetchCustomJobs = useCallback(async () => {
+    try {
+      const res = await fetch("/api/auth/annotation-jobs");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.jobs?.length > 0) setCustomJobs(data.jobs);
+      }
+    } catch { /* fall back to defaults */ }
+  }, []);
+
+  useEffect(() => { fetchCustomJobs(); }, [fetchCustomJobs]);
+
+  // Determine active image set + labels from custom jobs or defaults
+  const activeJob    = customJobs ? customJobs[jobSetIdx % customJobs.length] : null;
+  const activeImages = activeJob ? activeJob.imageUrls.map((url, i) => ({ url, label: `${activeJob.title} #${i+1}`, objects: activeJob.labels })) : ANNOTATION_IMGS;
+  const activeLabels = activeJob ? activeJob.labels : LABELS;
+
+  const img          = activeImages[imgIdx % activeImages.length];
   const locked       = !user.trainingDone || !user.lensActivated;
   const jobsToday    = user.jobsToday ?? 0;
   const dailyLimitHit = jobsToday >= DAILY_LIMIT;
@@ -113,7 +134,14 @@ export default function WorkspaceScreen({ user, setUser }: Props) {
       setSubmitted(false);
       setResult(null);
       setBoxes([]);
-      setImgIdx(i => (i + 1) % ANNOTATION_IMGS.length);
+      setImgIdx(i => {
+        const next = i + 1;
+        if (customJobs && next >= activeImages.length) {
+          setJobSetIdx(j => j + 1);
+          return 0;
+        }
+        return next % activeImages.length;
+      });
     }, 3000);
   }
 
@@ -293,7 +321,7 @@ export default function WorkspaceScreen({ user, setUser }: Props) {
               <div className="mb-4">
                 <div className="font-mono text-[10px] tracking-[1px] mb-2" style={{ color: "var(--txt2)" }}>SELECT LABEL</div>
                 <div className="flex flex-wrap gap-1.5">
-                  {LABELS.map(l => (
+                  {activeLabels.map(l => (
                     <button key={l} onClick={() => setLabel(l)}
                       className="transition-all font-mono min-h-[36px]"
                       style={{

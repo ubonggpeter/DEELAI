@@ -36,6 +36,7 @@ interface SessionData {
   phone?:            string;
   accountStatus?:    string;
   salary?:           number;
+  recruitWallet?:    number;
   jobsDone?:         number;
   jobsToday?:        number;
   level?:            string;
@@ -63,7 +64,7 @@ export default function Dashboard() {
   const [menuOpen,    setMenuOpen]    = useState(false);
   const [notifs,      setNotifs]      = useState<Notification[]>(NOTIFS);
   const [user,        setUser]        = useState<User>({
-    name:"", level:"ASSOCIATE STAFF", isPermanent:false, salary:0,
+    name:"", level:"ASSOCIATE STAFF", isPermanent:false, salary:0, recruitWallet:0,
     accuracy:0, jobsDone:0, rank:999, hoursLeft:3, streak:0, jobsToday:0,
     refCode:"NEW-0001", completedModules:[], quizPassed:false,
     trainingDone:false, lensActivated:false, kycDone:false,
@@ -85,6 +86,7 @@ export default function Dashboard() {
           email:             data.email   ?? "",
           level:             data.level   ?? u.level,
           salary:            data.salary  ?? u.salary,
+          recruitWallet:     data.recruitWallet ?? u.recruitWallet,
           jobsDone:          data.jobsDone ?? u.jobsDone,
           jobsToday:         data.jobsToday ?? u.jobsToday,
           isPermanent:       (data.level ?? "").includes("PERMANENT"),

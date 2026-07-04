@@ -115,7 +115,7 @@ export default function Sidebar({ screen, setScreen, user, notifCount, onMenuOpe
         })}
       </nav>
 
-      {/* Admin link — shown for super admin AND sub-admins */}
+      {/* Admin link — shown for super admin AND sub-admins only */}
       {(user.email === SUPER_ADMIN_EMAIL || user.isAdmin) && (
         <nav className="flex flex-col gap-1 px-3 pt-5">
           <p className="text-[10px] font-mono tracking-[1px] px-3 pb-2" style={{ color: "var(--txt3)" }}>ADMIN</p>
@@ -130,7 +130,7 @@ export default function Sidebar({ screen, setScreen, user, notifCount, onMenuOpe
             }}
           >
             <ShieldCheck size={18} strokeWidth={2} />
-            <span className="text-[13px] font-semibold">Admin Panel</span>
+            <span className="text-[13px] font-semibold">Switch to Admin Panel</span>
           </a>
         </nav>
       )}
