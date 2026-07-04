@@ -50,6 +50,15 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { id } = await req.json() as { id: string };
+
+  // Super admin can delete any doc; sub-admin can only delete their own
+  if (!adminStore.isSuperAdmin(email)) {
+    const docs = await adminStore.getTrainingDocsForOwner(email);
+    if (!docs.some((d) => d.id === id)) {
+      return NextResponse.json({ error: "Not found or not yours" }, { status: 403 });
+    }
+  }
+
   const removed = await adminStore.removeTrainingDoc(id);
   if (!removed) return NextResponse.json({ error: "Doc not found" }, { status: 404 });
   return NextResponse.json({ success: true });

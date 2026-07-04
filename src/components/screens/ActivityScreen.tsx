@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import { Bell, Flame, Star, Tag, Mic, Shield, DollarSign, ChevronRight, Users, Timer, LogIn, Briefcase, User as UserIcon, Landmark, KeyRound, Image as ImageIcon, Loader2, AlertCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { JOBS } from "@/lib/data";
@@ -126,12 +127,14 @@ export default function ActivityScreen({ user, setScreen, notifCount, setMenuOpe
             {/* User */}
             <div className="flex items-center gap-3 sm:gap-4 mb-5 lg:mb-0">
               <div
-                className="flex items-center justify-center shrink-0"
+                className="flex items-center justify-center shrink-0 overflow-hidden"
                 style={{ width: 56, height: 56, borderRadius: 16, background: "rgba(0,0,0,.28)", border: "2px solid rgba(255,255,255,.18)" }}
               >
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
-                </svg>
+                {user.avatarUrl
+                  ? <Image src={user.avatarUrl} alt={user.name} width={56} height={56} className="w-full h-full object-cover" unoptimized />
+                  : <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+                    </svg>}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm" style={{ color: "rgba(255,255,255,.58)", marginBottom: 2 }}>Welcome back,</p>

@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import {
   Zap, GraduationCap, Tag, Users, CreditCard,
   Bell, User, TrendingUp, Settings, LogOut, ShieldCheck,
@@ -11,7 +12,7 @@ import { SUPER_ADMIN_EMAIL } from "@/lib/adminConfig";
 interface SidebarProps {
   screen: Screen;
   setScreen: (s: Screen) => void;
-  user: { name: string; level: string; salary: number; email?: string; isAdmin?: boolean };
+  user: { name: string; level: string; salary: number; email?: string; isAdmin?: boolean; avatarUrl?: string };
   notifCount: number;
   onMenuOpen: () => void;
 }
@@ -143,10 +144,12 @@ export default function Sidebar({ screen, setScreen, user, notifCount, onMenuOpe
       <div className="mx-3 mb-4 rounded-xl p-3 border" style={{ background: "rgba(255,255,255,.03)", borderColor: "rgba(255,255,255,.06)" }}>
         <div className="flex items-center gap-3 mb-3">
           <div
-            className="flex items-center justify-center rounded-xl shrink-0"
+            className="flex items-center justify-center rounded-xl shrink-0 overflow-hidden"
             style={{ width: 36, height: 36, background: "rgba(0,212,255,.12)", border: "1px solid rgba(0,212,255,.25)" }}
           >
-            <User size={18} color="var(--cyan)" />
+            {user.avatarUrl
+              ? <Image src={user.avatarUrl} alt={user.name} width={36} height={36} className="w-full h-full object-cover" unoptimized />
+              : <User size={18} color="var(--cyan)" />}
           </div>
           <div className="min-w-0">
             <div className="text-[13px] font-semibold text-white truncate">{user.name}</div>

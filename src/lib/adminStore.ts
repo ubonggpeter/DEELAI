@@ -293,10 +293,20 @@ export const adminStore = {
 
   async updateChannel(id: string, data: Partial<Omit<Channel, "id" | "ownerEmail" | "createdAt">>): Promise<Channel | null> {
     try {
-      // Strip read-only / non-Prisma fields that must never appear in update data
+      // Strip read-only / non-updatable fields
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { id: _id, ownerEmail: _oe, createdAt: _ca, ...safe } = data as any;
-      void _id; void _oe; void _ca;
+      const { id: _id, ownerEmail: _oe, createdAt: _ca, balance: _bal, ...safe } = data as any;
+      void _id; void _oe; void _ca; void _bal;
+
+      // Coerce numeric fields — form inputs always send strings via e.target.value
+      if (safe.referralCommissionRate !== undefined) safe.referralCommissionRate = Number(safe.referralCommissionRate);
+      if (safe.jobPassFee             !== undefined) safe.jobPassFee             = Number(safe.jobPassFee);
+
+      // Coerce boolean fields — toggles are fine but guard for stale string "true"/"false"
+      if (safe.isActive             !== undefined) safe.isActive             = safe.isActive === true || safe.isActive === "true";
+      if (safe.workWalletEnabled    !== undefined) safe.workWalletEnabled    = safe.workWalletEnabled === true || safe.workWalletEnabled === "true";
+      if (safe.recruitWalletEnabled !== undefined) safe.recruitWalletEnabled = safe.recruitWalletEnabled === true || safe.recruitWalletEnabled === "true";
+
       const ch = await prisma.channel.update({ where: { id }, data: safe });
       return mapChannel(ch);
     } catch { return null; }

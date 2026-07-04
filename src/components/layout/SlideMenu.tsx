@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import {
   User,
   Trophy,
@@ -80,7 +81,7 @@ export default function SlideMenu({
         >
           <div className="flex items-center gap-3 mb-4">
             <div
-              className="flex items-center justify-center rounded-[16px]"
+              className="flex items-center justify-center rounded-[16px] overflow-hidden"
               style={{
                 width: 54,
                 height: 54,
@@ -88,7 +89,9 @@ export default function SlideMenu({
                 border: "2px solid rgba(0,212,255,.3)",
               }}
             >
-              <User size={26} color="#00D4FF" />
+              {user.avatarUrl
+                ? <Image src={user.avatarUrl} alt={user.name} width={54} height={54} className="w-full h-full object-cover" unoptimized />
+                : <User size={26} color="#00D4FF" />}
             </div>
             <div>
               <div
