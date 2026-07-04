@@ -291,25 +291,37 @@ export const adminStore = {
     return mapChannel(ch);
   },
 
-  async updateChannel(id: string, data: Partial<Omit<Channel, "id" | "ownerEmail" | "createdAt">>): Promise<Channel | null> {
-    try {
-      // Strip read-only / non-updatable fields
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { id: _id, ownerEmail: _oe, createdAt: _ca, balance: _bal, ...safe } = data as any;
-      void _id; void _oe; void _ca; void _bal;
+  async updateChannel(id: string, data: Partial<Omit<Channel, "id" | "ownerEmail" | "createdAt">>): Promise<Channel> {
+    // Strip read-only / non-updatable fields
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { id: _id, ownerEmail: _oe, createdAt: _ca, balance: _bal, ...safe } = data as any;
+    void _id; void _oe; void _ca; void _bal;
 
-      // Coerce numeric fields — form inputs always send strings via e.target.value
-      if (safe.referralCommissionRate !== undefined) safe.referralCommissionRate = Number(safe.referralCommissionRate);
-      if (safe.jobPassFee             !== undefined) safe.jobPassFee             = Number(safe.jobPassFee);
+    // Sanitize string fields — null/undefined values from old DB rows would fail Prisma's
+    // non-nullable String validation; replace with empty string to be safe
+    const STRING_FIELDS = ["channelName", "description", "estTime", "paystackPublicKey",
+                           "paystackSecretKey", "lensPaystackLink", "region"];
+    for (const f of STRING_FIELDS) {
+      if (f in safe && (safe[f] === null || safe[f] === undefined)) safe[f] = "";
+    }
 
-      // Coerce boolean fields — toggles are fine but guard for stale string "true"/"false"
-      if (safe.isActive             !== undefined) safe.isActive             = safe.isActive === true || safe.isActive === "true";
-      if (safe.workWalletEnabled    !== undefined) safe.workWalletEnabled    = safe.workWalletEnabled === true || safe.workWalletEnabled === "true";
-      if (safe.recruitWalletEnabled !== undefined) safe.recruitWalletEnabled = safe.recruitWalletEnabled === true || safe.recruitWalletEnabled === "true";
+    // Coerce numeric fields — form inputs always send strings via e.target.value
+    if (safe.referralCommissionRate !== undefined) {
+      const n = Number(safe.referralCommissionRate);
+      safe.referralCommissionRate = isNaN(n) ? 0 : n;
+    }
+    if (safe.jobPassFee !== undefined) {
+      const n = Number(safe.jobPassFee);
+      safe.jobPassFee = isNaN(n) ? 0 : n;
+    }
 
-      const ch = await prisma.channel.update({ where: { id }, data: safe });
-      return mapChannel(ch);
-    } catch { return null; }
+    // Coerce boolean fields — guard for stale string "true"/"false"
+    if (safe.isActive             !== undefined) safe.isActive             = safe.isActive             === true || safe.isActive             === "true";
+    if (safe.workWalletEnabled    !== undefined) safe.workWalletEnabled    = safe.workWalletEnabled    === true || safe.workWalletEnabled    === "true";
+    if (safe.recruitWalletEnabled !== undefined) safe.recruitWalletEnabled = safe.recruitWalletEnabled === true || safe.recruitWalletEnabled === "true";
+
+    const ch = await prisma.channel.update({ where: { id }, data: safe });
+    return mapChannel(ch);
   },
 
   /* ── Channel registrations ──────────────────────────────────────────── */

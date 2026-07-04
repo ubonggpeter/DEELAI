@@ -60,7 +60,13 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
   }
-  const ch = await adminStore.updateChannel(channelId, updates);
-  if (!ch) return NextResponse.json({ error: "Channel not found" }, { status: 404 });
-  return NextResponse.json({ channel: ch });
+  if (!channelId) return NextResponse.json({ error: "channelId is required" }, { status: 400 });
+  try {
+    const ch = await adminStore.updateChannel(channelId, updates);
+    return NextResponse.json({ channel: ch });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[PATCH /api/admin/channels]", msg);
+    return NextResponse.json({ error: msg }, { status: 400 });
+  }
 }

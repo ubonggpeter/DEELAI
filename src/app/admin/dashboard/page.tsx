@@ -1778,6 +1778,20 @@ function ChannelSettingsTab({ adminInfo }: { adminInfo: AdminInfo }) {
               type="number" min="0" value={form.jobPassFee ?? ""} onChange={f("jobPassFee")}
               placeholder="0" style={fieldStyle}
             />
+            <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginTop:6 }}>
+              {[0, 5, 10, 15, 20, 25, 30].map((v) => (
+                <button key={v} type="button"
+                  onClick={() => setForm((p) => ({ ...p, jobPassFee: v }))}
+                  style={{
+                    padding:"3px 8px", borderRadius:5, fontSize:"11px", fontWeight:600,
+                    cursor:"pointer", border:"1px solid",
+                    background: form.jobPassFee === v ? `${C.cyan}22` : "transparent",
+                    borderColor: form.jobPassFee === v ? C.cyan : C.s3,
+                    color: form.jobPassFee === v ? C.cyan : C.txt3,
+                  }}
+                >{v === 0 ? "Free" : `$${v}`}</button>
+              ))}
+            </div>
           </div>
           {/* Commission rate */}
           <div>
@@ -1786,6 +1800,20 @@ function ChannelSettingsTab({ adminInfo }: { adminInfo: AdminInfo }) {
               type="number" min="0" max="100" value={form.referralCommissionRate ?? ""} onChange={f("referralCommissionRate")}
               placeholder="10" style={fieldStyle}
             />
+            <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginTop:6 }}>
+              {[5, 10, 15, 20].map((v) => (
+                <button key={v} type="button"
+                  onClick={() => setForm((p) => ({ ...p, referralCommissionRate: v }))}
+                  style={{
+                    padding:"3px 8px", borderRadius:5, fontSize:"11px", fontWeight:600,
+                    cursor:"pointer", border:"1px solid",
+                    background: form.referralCommissionRate === v ? `${C.green}22` : "transparent",
+                    borderColor: form.referralCommissionRate === v ? C.green : C.s3,
+                    color: form.referralCommissionRate === v ? C.green : C.txt3,
+                  }}
+                >{v}%</button>
+              ))}
+            </div>
           </div>
         </div>
 

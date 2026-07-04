@@ -1,10 +1,10 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import {
   CheckCircle2, AlertCircle, Loader2, Upload, X,
-  Clock, Briefcase, Shield, User, Mail, ChevronDown,
+  Clock, Briefcase, Shield, User, Mail, Phone, Lock, Eye, EyeOff,
 } from "lucide-react";
 
 const C = {
@@ -37,25 +37,31 @@ declare global {
 
 export default function ChannelRegistrationPage() {
   const { channelId } = useParams() as { channelId: string };
+  const router = useRouter();
 
-  const [channel, setChannel]     = useState<ChannelInfo | null>(null);
-  const [loading, setLoading]     = useState(true);
+  const [channel, setChannel]         = useState<ChannelInfo | null>(null);
+  const [loading, setLoading]         = useState(true);
   const [channelError, setChannelError] = useState("");
 
-  const [step, setStep]           = useState<Step>("form");
-  const [submitting, setSubmitting] = useState(false);
+  const [step, setStep]               = useState<Step>("form");
+  const [submitting, setSubmitting]   = useState(false);
 
   // Form fields
-  const [name, setName]           = useState("");
-  const [email, setEmail]         = useState("");
-  const [permitType, setPermitType] = useState<PermitType>("full-time");
-  const [cvFile, setCvFile]       = useState<File | null>(null);
-  const [cvUrl, setCvUrl]         = useState("");
-  const [formError, setFormError] = useState("");
+  const [name, setName]               = useState("");
+  const [email, setEmail]             = useState("");
+  const [phone, setPhone]             = useState("");
+  const [password, setPassword]       = useState("");
+  const [confirm, setConfirm]         = useState("");
+  const [showPw, setShowPw]           = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [terms, setTerms]             = useState(false);
+  const [permitType, setPermitType]   = useState<PermitType>("full-time");
+  const [cvFile, setCvFile]           = useState<File | null>(null);
+  const [cvUrl, setCvUrl]             = useState("");
+  const [formError, setFormError]     = useState("");
 
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Load channel info
   useEffect(() => {
     if (!channelId) return;
     fetch(`/api/channel/${channelId}`)
@@ -69,7 +75,6 @@ export default function ChannelRegistrationPage() {
       .finally(() => setLoading(false));
   }, [channelId]);
 
-  // Load Paystack script
   useEffect(() => {
     if (!channel?.paystackPublicKey) return;
     const existing = document.querySelector('script[src*="paystack"]');
@@ -85,38 +90,42 @@ export default function ChannelRegistrationPage() {
     if (!f) return;
     if (f.size > 5 * 1024 * 1024) { setFormError("CV file must be under 5MB"); return; }
     setCvFile(f);
-    // In production, upload to storage and get real URL. Here we use a placeholder.
     setCvUrl(`cv://${f.name}`);
     setFormError("");
   }
 
-  function validateForm() {
-    if (!name.trim())  return "Full name is required";
-    if (!email.trim()) return "Email is required";
+  function validateForm(): string {
+    if (!name.trim())    return "Full name is required";
+    if (!phone.trim())   return "Phone number is required";
+    if (!email.trim())   return "Email is required";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "Enter a valid email address";
+    if (password.length < 6)  return "Password must be at least 6 characters";
+    if (password !== confirm)  return "Passwords do not match";
+    if (!terms)                return "You must accept the terms and conditions";
     return "";
   }
 
-  async function submitRegistration(paid: boolean, ref?: string) {
+  async function submitRegistration() {
     if (!channel) return;
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/channel/${channelId}/register`, {
+      const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: name.trim(),
-          email: email.trim().toLowerCase(),
+          name:      name.trim(),
+          email:     email.trim().toLowerCase(),
+          phone:     phone.trim(),
+          password,
+          channelId,
+          cvUrl:     cvUrl || undefined,
           permitType,
-          cvUrl: cvUrl || undefined,
-          jobPassPaid:   paid,
-          jobPassAmount: paid ? channel.jobPassFee : 0,
-          paystackRef:   ref,
         }),
       });
       const data = await res.json();
-      if (!res.ok) { setFormError(data.error ?? "Registration failed"); setStep("form"); }
-      else setStep("success");
+      if (!res.ok) { setFormError(data.error ?? "Registration failed"); setStep("form"); return; }
+      // Cookie is set server-side. Redirect to job-pass page (handles fee payment then pending screen).
+      router.push(`/register/job-pass?channel=${channelId}`);
     } catch {
       setFormError("Network error. Please try again.");
       setStep("form");
@@ -125,45 +134,11 @@ export default function ChannelRegistrationPage() {
     }
   }
 
-  function handlePayAndRegister() {
+  function handleSubmit() {
     const err = validateForm();
     if (err) { setFormError(err); return; }
     setFormError("");
-
-    if (!channel) return;
-
-    // If no Paystack key or no fee, skip payment
-    if (!channel.paystackPublicKey || channel.jobPassFee <= 0) {
-      submitRegistration(false);
-      return;
-    }
-
-    setStep("payment");
-
-    // Give the DOM a tick to render, then open Paystack
-    setTimeout(() => {
-      if (!window.PaystackPop) {
-        // Paystack not loaded yet, submit without payment
-        submitRegistration(false);
-        return;
-      }
-      const handler = window.PaystackPop.setup({
-        key:       channel.paystackPublicKey,
-        email,
-        amount:    channel.jobPassFee * 100, // Paystack uses kobo/cents
-        currency:  "NGN",
-        ref:       `DEELAI-${Date.now()}`,
-        metadata:  { name, channelId },
-        callback:  (response: { reference: string }) => {
-          submitRegistration(true, response.reference);
-        },
-        onClose: () => {
-          setStep("form");
-          setFormError("Payment was cancelled. You can try again or register without payment.");
-        },
-      });
-      handler.openIframe();
-    }, 100);
+    submitRegistration();
   }
 
   /* ── Loading / error states ──────────────────────────────────────── */
@@ -195,56 +170,13 @@ export default function ChannelRegistrationPage() {
     );
   }
 
-  /* ── Success ─────────────────────────────────────────────────────── */
-  if (step === "success") {
-    return (
-      <PageShell>
-        <div style={{
-          background:`${C.green}11`, border:`1px solid ${C.green}33`,
-          borderRadius:16, padding:"40px 32px", textAlign:"center", maxWidth:440, margin:"0 auto",
-          animation:"fadeUp 0.5s ease",
-        }}>
-          <div style={{
-            width:64, height:64, borderRadius:"50%",
-            background:`${C.green}20`, border:`2px solid ${C.green}50`,
-            display:"flex", alignItems:"center", justifyContent:"center",
-            margin:"0 auto 20px",
-          }}>
-            <CheckCircle2 size={32} color={C.green} />
-          </div>
-          <h2 style={{ color:C.txt, fontSize:"22px", fontWeight:700, marginBottom:8 }}>
-            Registration Submitted!
-          </h2>
-          <p style={{ color:C.txt2, fontSize:"14px", lineHeight:1.6, marginBottom:24 }}>
-            Your application to <strong style={{ color:C.cyan }}>{channel.channelName}</strong> is
-            now under review. You'll be notified once the channel admin approves your account.
-          </p>
-          <div style={{
-            background:C.s2, borderRadius:10, padding:"12px 16px",
-            border:`1px solid ${C.s3}`, display:"flex", alignItems:"center", gap:10,
-          }}>
-            <Clock size={16} color={C.gold} />
-            <span style={{ color:C.txt2, fontSize:"13px" }}>
-              Estimated review time: <strong style={{ color:C.gold }}>{channel.estTime}</strong>
-            </span>
-          </div>
-          <a href="/" style={{
-            display:"block", marginTop:20, color:C.txt2, fontSize:"13px", textDecoration:"none",
-          }}>
-            ← Back to DEELAI
-          </a>
-        </div>
-      </PageShell>
-    );
-  }
-
-  /* ── Payment loading overlay ─────────────────────────────────────── */
-  if (step === "payment") {
+  /* ── Submitting overlay ──────────────────────────────────────────── */
+  if (step === "payment" || submitting) {
     return (
       <PageShell>
         <div style={{ textAlign:"center", padding:"60px 24px" }}>
           <Loader2 size={36} color={C.cyan} style={{ animation:"spin 1s linear infinite" }} />
-          <p style={{ color:C.txt2, marginTop:16 }}>Opening payment…</p>
+          <p style={{ color:C.txt2, marginTop:16 }}>Creating your account…</p>
         </div>
       </PageShell>
     );
@@ -323,6 +255,49 @@ export default function ChannelRegistrationPage() {
             </InputIcon>
           </FormField>
 
+          {/* Phone */}
+          <FormField label="Phone Number" required>
+            <InputIcon icon={<Phone size={15} color={C.txt3} />}>
+              <input
+                type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
+                placeholder="+234 800 000 0000"
+                style={inputStyle}
+              />
+            </InputIcon>
+          </FormField>
+
+          {/* Password */}
+          <FormField label="Password" required>
+            <InputIcon icon={<Lock size={15} color={C.txt3} />}>
+              <input
+                type={showPw ? "text" : "password"} value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Min. 6 characters"
+                style={{ ...inputStyle, paddingRight:38 }}
+              />
+              <button type="button" onClick={() => setShowPw((v) => !v)}
+                style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", padding:2 }}>
+                {showPw ? <EyeOff size={15} color={C.txt3} /> : <Eye size={15} color={C.txt3} />}
+              </button>
+            </InputIcon>
+          </FormField>
+
+          {/* Confirm password */}
+          <FormField label="Confirm Password" required>
+            <InputIcon icon={<Lock size={15} color={C.txt3} />}>
+              <input
+                type={showConfirm ? "text" : "password"} value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                placeholder="Re-enter your password"
+                style={{ ...inputStyle, paddingRight:38 }}
+              />
+              <button type="button" onClick={() => setShowConfirm((v) => !v)}
+                style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", padding:2 }}>
+                {showConfirm ? <EyeOff size={15} color={C.txt3} /> : <Eye size={15} color={C.txt3} />}
+              </button>
+            </InputIcon>
+          </FormField>
+
           {/* Permit type */}
           <FormField label="Permit Type" required>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
@@ -356,6 +331,20 @@ export default function ChannelRegistrationPage() {
               ))}
             </div>
           </FormField>
+
+          {/* Terms */}
+          <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
+            <input
+              type="checkbox" id="terms" checked={terms} onChange={(e) => setTerms(e.target.checked)}
+              style={{ marginTop:3, accentColor:C.cyan, width:15, height:15, cursor:"pointer", flexShrink:0 }}
+            />
+            <label htmlFor="terms" style={{ color:C.txt2, fontSize:"13px", lineHeight:1.5, cursor:"pointer" }}>
+              I agree to the{" "}
+              <a href="/terms" target="_blank" style={{ color:C.cyan, textDecoration:"underline" }}>Terms of Service</a>
+              {" "}and{" "}
+              <a href="/privacy" target="_blank" style={{ color:C.cyan, textDecoration:"underline" }}>Privacy Policy</a>
+            </label>
+          </div>
 
           {/* CV Upload */}
           <FormField label="Upload CV / Resume" hint="PDF, DOC, DOCX — max 5MB (optional)">
@@ -410,7 +399,7 @@ export default function ChannelRegistrationPage() {
 
         {/* Submit */}
         <button
-          onClick={handlePayAndRegister}
+          onClick={handleSubmit}
           disabled={submitting}
           style={{
             width:"100%", marginTop:20,
@@ -423,17 +412,15 @@ export default function ChannelRegistrationPage() {
           }}
         >
           {submitting ? (
-            <><Loader2 size={16} style={{ animation:"spin 1s linear infinite" }} /> Submitting…</>
-          ) : channel.jobPassFee > 0 ? (
-            <>Pay ${channel.jobPassFee.toLocaleString()} &amp; Register</>
+            <><Loader2 size={16} style={{ animation:"spin 1s linear infinite" }} /> Creating Account…</>
           ) : (
-            "Submit Registration"
+            "Create Account & Apply"
           )}
         </button>
 
         {channel.jobPassFee > 0 && (
           <p style={{ textAlign:"center", color:C.txt3, fontSize:"11px", marginTop:10 }}>
-            Secure payment powered by Paystack
+            A registration fee of ${channel.jobPassFee.toLocaleString()} applies — you will be prompted to pay after account creation.
           </p>
         )}
       </div>
