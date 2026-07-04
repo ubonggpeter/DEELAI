@@ -587,25 +587,32 @@ export default function TrainingScreen({ user, setUser }: Props) {
               Training Resources
             </div>
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-              {docs.map((doc) => (
-                <a
-                  key={doc.id}
-                  href={doc.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    background:"var(--s1)", border:"1px solid var(--b1)", borderRadius:12,
-                    padding:"12px 14px", display:"flex", alignItems:"center", gap:12, textDecoration:"none",
-                  }}
-                >
-                  <FileText size={18} color="var(--gold)" style={{ flexShrink:0 }} />
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ color:"var(--txt)", fontSize:13, fontWeight:600 }}>{doc.title}</div>
-                    <div style={{ color:"var(--txt3)", fontSize:11, textTransform:"uppercase", marginTop:2 }}>{doc.type}</div>
-                  </div>
-                  <ExternalLink size={14} color="var(--txt3)" style={{ flexShrink:0 }} />
-                </a>
-              ))}
+              {docs.map((doc) => {
+                const isFile = doc.type === "pdf" || doc.type === "doc";
+                const href = isFile
+                  ? `/api/auth/download?url=${encodeURIComponent(doc.url)}`
+                  : doc.url;
+                return (
+                  <a
+                    key={doc.id}
+                    href={href}
+                    target={isFile ? "_self" : "_blank"}
+                    rel="noopener noreferrer"
+                    download={isFile ? true : undefined}
+                    style={{
+                      background:"var(--s1)", border:"1px solid var(--b1)", borderRadius:12,
+                      padding:"12px 14px", display:"flex", alignItems:"center", gap:12, textDecoration:"none",
+                    }}
+                  >
+                    <FileText size={18} color="var(--gold)" style={{ flexShrink:0 }} />
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ color:"var(--txt)", fontSize:13, fontWeight:600 }}>{doc.title}</div>
+                      <div style={{ color:"var(--txt3)", fontSize:11, textTransform:"uppercase", marginTop:2 }}>{doc.type}</div>
+                    </div>
+                    <ExternalLink size={14} color="var(--txt3)" style={{ flexShrink:0 }} />
+                  </a>
+                );
+              })}
             </div>
           </div>
         )}
