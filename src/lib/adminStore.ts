@@ -21,6 +21,7 @@ export interface Channel {
   estTime: string; paystackPublicKey: string; paystackSecretKey: string;
   lensPaystackLink: string; referralCommissionRate: number; jobPassFee: number;
   isActive: boolean; balance: number; region: string; createdAt: string;
+  workWalletEnabled: boolean; recruitWalletEnabled: boolean;
 }
 export interface QuizQuestion { id: string; q: string; opts: string[]; ans: number; }
 export interface TrainingDoc { id: string; title: string; url: string; type: "pdf" | "doc" | "link"; ownerEmail?: string | null; addedAt: string; }
@@ -71,6 +72,7 @@ export interface Referral {
 export interface PlatformSettings {
   registrationOpen: boolean; maintenanceMode: boolean;
   payoutsEnabled: boolean; newJobsEnabled: boolean; announcement: string;
+  commissionEnabled: boolean; commissionWallet: number;
 }
 
 /* ── Mappers (Prisma → our types) ────────────────────────────────────── */
@@ -106,6 +108,8 @@ function mapChannel(c: any): Channel {
     paystackPublicKey: c.paystackPublicKey, paystackSecretKey: c.paystackSecretKey,
     lensPaystackLink: c.lensPaystackLink, referralCommissionRate: c.referralCommissionRate,
     jobPassFee: c.jobPassFee, isActive: c.isActive, balance: c.balance, region: c.region,
+    workWalletEnabled: c.workWalletEnabled ?? true,
+    recruitWalletEnabled: c.recruitWalletEnabled ?? true,
     createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : c.createdAt,
   };
 }
@@ -289,7 +293,11 @@ export const adminStore = {
 
   async updateChannel(id: string, data: Partial<Omit<Channel, "id" | "ownerEmail" | "createdAt">>): Promise<Channel | null> {
     try {
-      const ch = await prisma.channel.update({ where: { id }, data });
+      // Strip read-only / non-Prisma fields that must never appear in update data
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { id: _id, ownerEmail: _oe, createdAt: _ca, ...safe } = data as any;
+      void _id; void _oe; void _ca;
+      const ch = await prisma.channel.update({ where: { id }, data: safe });
       return mapChannel(ch);
     } catch { return null; }
   },
@@ -398,10 +406,23 @@ export const adminStore = {
     } catch { return null; }
   },
 
+  async _deductSuperAdminCommission(grossAmount: number): Promise<number> {
+    const settings = await prisma.platformSettings.findUnique({ where: { id: "singleton" } });
+    if (!(settings as { commissionEnabled?: boolean } | null)?.commissionEnabled) return grossAmount;
+    const cut = Math.round(grossAmount * 0.10 * 100) / 100;
+    if (cut <= 0) return grossAmount;
+    await prisma.platformSettings.update({
+      where: { id: "singleton" },
+      data: { commissionWallet: { increment: cut } },
+    });
+    return Math.round((grossAmount - cut) * 100) / 100;
+  },
+
   async _creditCommission(channelId: string, userId: string, userName: string, paidAmount: number) {
     const ch = await prisma.channel.findUnique({ where: { id: channelId } });
     if (!ch || paidAmount <= 0) return;
-    const commission = (paidAmount * ch.referralCommissionRate) / 100;
+    const gross = (paidAmount * ch.referralCommissionRate) / 100;
+    const commission = await this._deductSuperAdminCommission(gross);
     await prisma.channel.update({ where: { id: channelId }, data: { balance: { increment: commission } } });
     await prisma.channelCommission.create({
       data: {
@@ -834,11 +855,12 @@ export const adminStore = {
   async claimReferralBonus(bonusId: string): Promise<ReferralBonus | null> {
     const b = await prisma.referralBonus.findUnique({ where: { id: bonusId } });
     if (!b || b.status !== "pending") return null;
+    const netAmount = await this._deductSuperAdminCommission(b.amount);
     const updated = await prisma.referralBonus.update({
       where: { id: bonusId },
       data: { status: "claimed", claimedAt: new Date() },
     });
-    await prisma.user.update({ where: { id: b.referrerId }, data: { recruitWallet: { increment: b.amount } } });
+    await prisma.user.update({ where: { id: b.referrerId }, data: { recruitWallet: { increment: netAmount } } });
     return mapReferralBonus(updated);
   },
 
@@ -848,11 +870,12 @@ export const adminStore = {
       where: { status: "pending", autoCreditsAt: { lte: now } },
     });
     for (const b of expired) {
+      const netAmount = await this._deductSuperAdminCommission(b.amount);
       await prisma.referralBonus.update({
         where: { id: b.id },
         data: { status: "auto-credited", claimedAt: now },
       });
-      await prisma.user.update({ where: { id: b.referrerId }, data: { recruitWallet: { increment: b.amount } } });
+      await prisma.user.update({ where: { id: b.referrerId }, data: { recruitWallet: { increment: netAmount } } });
     }
   },
 
@@ -885,6 +908,8 @@ export const adminStore = {
     return {
       registrationOpen: s.registrationOpen, maintenanceMode: s.maintenanceMode,
       payoutsEnabled: s.payoutsEnabled, newJobsEnabled: s.newJobsEnabled, announcement: s.announcement,
+      commissionEnabled: (s as { commissionEnabled?: boolean }).commissionEnabled ?? false,
+      commissionWallet: (s as { commissionWallet?: number }).commissionWallet ?? 0,
     };
   },
 
@@ -897,6 +922,8 @@ export const adminStore = {
     return {
       registrationOpen: s.registrationOpen, maintenanceMode: s.maintenanceMode,
       payoutsEnabled: s.payoutsEnabled, newJobsEnabled: s.newJobsEnabled, announcement: s.announcement,
+      commissionEnabled: (s as { commissionEnabled?: boolean }).commissionEnabled ?? false,
+      commissionWallet: (s as { commissionWallet?: number }).commissionWallet ?? 0,
     };
   },
 

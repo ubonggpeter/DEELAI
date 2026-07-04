@@ -328,49 +328,59 @@ export default function WalletScreen({ user, setUser }: Props) {
   );
 
   /* ── Wallet Select ── */
-  if (step === "wallet-select") return (
-    <div className="max-w-lg mx-auto px-4 sm:px-6 py-6 sm:py-8 animate-fadeUp">
-      <BackBtn to="main" />
-      <h2 className="font-black text-xl sm:text-2xl mb-1">Choose Wallet</h2>
-      <p className="text-sm mb-6" style={{ color: "var(--txt2)" }}>Select which wallet to withdraw from.</p>
-      <div className="space-y-3">
-        <div
-          onClick={() => { setWalletType("work"); setStep("method"); }}
-          className="flex items-center gap-4 rounded-2xl p-4 sm:p-5 cursor-pointer transition-colors"
-          style={{ background: "var(--s1)", border: "1px solid var(--b1)" }}
-        >
-          <div className="flex items-center justify-center rounded-xl shrink-0" style={{ width: 48, height: 48, background: "rgba(0,212,255,.12)", border: "1px solid rgba(0,212,255,.3)" }}>
-            <Briefcase size={22} color="var(--cyan)" />
+  if (step === "wallet-select") {
+    const workEnabled    = user.workWalletEnabled    !== false;
+    const recruitEnabled = user.recruitWalletEnabled !== false;
+    return (
+      <div className="max-w-lg mx-auto px-4 sm:px-6 py-6 sm:py-8 animate-fadeUp">
+        <BackBtn to="main" />
+        <h2 className="font-black text-xl sm:text-2xl mb-1">Choose Wallet</h2>
+        <p className="text-sm mb-6" style={{ color: "var(--txt2)" }}>Select which wallet to withdraw from.</p>
+        <div className="space-y-3">
+          {/* Work Wallet */}
+          <div
+            onClick={() => workEnabled && (setWalletType("work"), setStep("method"))}
+            className="flex items-center gap-4 rounded-2xl p-4 sm:p-5 transition-colors"
+            style={{ background: "var(--s1)", border: "1px solid var(--b1)", cursor: workEnabled ? "pointer" : "not-allowed", opacity: workEnabled ? 1 : 0.5 }}
+          >
+            <div className="flex items-center justify-center rounded-xl shrink-0" style={{ width: 48, height: 48, background: "rgba(0,212,255,.12)", border: "1px solid rgba(0,212,255,.3)" }}>
+              <Briefcase size={22} color="var(--cyan)" />
+            </div>
+            <div className="flex-1">
+              <div className="font-semibold text-sm sm:text-base">Work Wallet</div>
+              <div className="text-xs mt-0.5" style={{ color: workEnabled ? "var(--txt2)" : "#FF4D6D" }}>
+                {workEnabled ? "Earnings from annotation jobs" : "Withdrawals disabled by admin"}
+              </div>
+            </div>
+            <div className="text-right shrink-0">
+              <div className="font-bold text-base" style={{ color: "var(--cyan)" }}>${workBalance.toFixed(2)}</div>
+            </div>
+            {workEnabled ? <ChevronRight size={16} color="var(--txt2)" /> : <AlertTriangle size={16} color="#FF4D6D" />}
           </div>
-          <div className="flex-1">
-            <div className="font-semibold text-sm sm:text-base">Work Wallet</div>
-            <div className="text-xs mt-0.5" style={{ color: "var(--txt2)" }}>Earnings from annotation jobs</div>
+          {/* Recruit Earnings */}
+          <div
+            onClick={() => recruitEnabled && (setWalletType("recruit"), setStep("method"))}
+            className="flex items-center gap-4 rounded-2xl p-4 sm:p-5 transition-colors"
+            style={{ background: "var(--s1)", border: "1px solid var(--b1)", cursor: recruitEnabled ? "pointer" : "not-allowed", opacity: recruitEnabled ? 1 : 0.5 }}
+          >
+            <div className="flex items-center justify-center rounded-xl shrink-0" style={{ width: 48, height: 48, background: "rgba(0,229,160,.12)", border: "1px solid rgba(0,229,160,.3)" }}>
+              <Users size={22} color="#00E5A0" />
+            </div>
+            <div className="flex-1">
+              <div className="font-semibold text-sm sm:text-base">Recruit Earnings</div>
+              <div className="text-xs mt-0.5" style={{ color: recruitEnabled ? "var(--txt2)" : "#FF4D6D" }}>
+                {recruitEnabled ? "Referral bonuses & recruit commissions" : "Withdrawals disabled by admin"}
+              </div>
+            </div>
+            <div className="text-right shrink-0">
+              <div className="font-bold text-base" style={{ color: "#00E5A0" }}>${recruitBalance.toFixed(2)}</div>
+            </div>
+            {recruitEnabled ? <ChevronRight size={16} color="var(--txt2)" /> : <AlertTriangle size={16} color="#FF4D6D" />}
           </div>
-          <div className="text-right shrink-0">
-            <div className="font-bold text-base" style={{ color: "var(--cyan)" }}>${workBalance.toFixed(2)}</div>
-          </div>
-          <ChevronRight size={16} color="var(--txt2)" />
-        </div>
-        <div
-          onClick={() => { setWalletType("recruit"); setStep("method"); }}
-          className="flex items-center gap-4 rounded-2xl p-4 sm:p-5 cursor-pointer transition-colors"
-          style={{ background: "var(--s1)", border: "1px solid var(--b1)" }}
-        >
-          <div className="flex items-center justify-center rounded-xl shrink-0" style={{ width: 48, height: 48, background: "rgba(0,229,160,.12)", border: "1px solid rgba(0,229,160,.3)" }}>
-            <Users size={22} color="#00E5A0" />
-          </div>
-          <div className="flex-1">
-            <div className="font-semibold text-sm sm:text-base">Recruit Earnings</div>
-            <div className="text-xs mt-0.5" style={{ color: "var(--txt2)" }}>Referral bonuses &amp; recruit commissions</div>
-          </div>
-          <div className="text-right shrink-0">
-            <div className="font-bold text-base" style={{ color: "#00E5A0" }}>${recruitBalance.toFixed(2)}</div>
-          </div>
-          <ChevronRight size={16} color="var(--txt2)" />
         </div>
       </div>
-    </div>
-  );
+    );
+  }
 
   /* ── Main ── */
   return (

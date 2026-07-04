@@ -8,7 +8,7 @@ import {
   Trash2, Edit2, Plus, X, Save, RefreshCw, Menu, UserCheck,
   TrendingUp, DollarSign, CheckSquare, BarChart3,
   Radio, Key, Link, Copy, ExternalLink, ToggleLeft, ToggleRight,
-  CircleDot, Coins, ClipboardList, KeyRound,
+  CircleDot, Coins, ClipboardList, KeyRound, Download,
 } from "lucide-react";
 import { ALL_PERMISSIONS, PERMISSION_LABELS, ADMIN_REGIONS, type Permission } from "@/lib/adminConfig";
 
@@ -31,6 +31,7 @@ interface Channel {
   paystackPublicKey: string; paystackSecretKey: string; lensPaystackLink: string;
   referralCommissionRate: number; jobPassFee: number;
   isActive: boolean; balance: number; region: string; createdAt: string;
+  workWalletEnabled: boolean; recruitWalletEnabled: boolean;
 }
 interface QuizQuestion { id: string; q: string; opts: string[]; ans: number; }
 interface TrainingDoc { id: string; title: string; url: string; type: string; addedAt: string; }
@@ -72,6 +73,7 @@ interface SubAdmin {
 interface PlatformSettings {
   registrationOpen: boolean; maintenanceMode: boolean;
   payoutsEnabled: boolean; newJobsEnabled: boolean; announcement: string;
+  commissionEnabled: boolean; commissionWallet: number;
 }
 
 /* ─── Design tokens ──────────────────────────────────────────────── */
@@ -340,6 +342,28 @@ export default function AdminDashboard() {
   );
 }
 
+/* ─── CSV export helper ─────────────────────────────────────────── */
+async function downloadCSV(type: string, extra?: string) {
+  const url = `/api/admin/export?type=${type}${extra ? `&${extra}` : ""}`;
+  const res = await fetch(url);
+  if (!res.ok) { alert("Export failed"); return; }
+  const blob = await res.blob();
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `${type}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+async function clearHistory(type: string, label: string, extra?: object) {
+  if (!confirm(`Clear all ${label} history? This cannot be undone.`)) return;
+  await fetch("/api/admin/export", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type, ...extra }),
+  });
+}
+
 /* ═══════════════════════════════════════════════════════════════════ */
 /* OVERVIEW TAB                                                        */
 /* ═══════════════════════════════════════════════════════════════════ */
@@ -574,6 +598,12 @@ function JobsTab() {
           {v:"",l:"All Status"},{v:"Approved",l:"Approved"},{v:"Pending",l:"Pending"},{v:"Rejected",l:"Rejected"},
         ]} />
         <RefreshBtn onClick={load} />
+        <button onClick={() => downloadCSV("jobs")} style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:7, padding:"7px 10px", color:C.green, cursor:"pointer", display:"flex", alignItems:"center", gap:4, fontSize:"12px" }}>
+          <Download size={12} /> CSV
+        </button>
+        <button onClick={() => clearHistory("jobs","job").then(load)} style={{ background:C.s1, border:`1px solid ${C.red}33`, borderRadius:7, padding:"7px 10px", color:C.red, cursor:"pointer", display:"flex", alignItems:"center", gap:4, fontSize:"12px" }}>
+          <Trash2 size={12} /> Clear
+        </button>
       </div>
       {loading ? <Spinner /> : (
         <div className="table-scroll">
@@ -658,6 +688,12 @@ function PaymentsTab() {
           {v:"",l:"All Status"},{v:"Paid",l:"Paid"},{v:"Pending",l:"Pending"},{v:"Processing",l:"Processing"},
         ]} />
         <RefreshBtn onClick={load} />
+        <button onClick={() => downloadCSV("payments")} style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:7, padding:"7px 10px", color:C.green, cursor:"pointer", display:"flex", alignItems:"center", gap:4, fontSize:"12px" }}>
+          <Download size={12} /> CSV
+        </button>
+        <button onClick={() => clearHistory("payments","payment").then(load)} style={{ background:C.s1, border:`1px solid ${C.red}33`, borderRadius:7, padding:"7px 10px", color:C.red, cursor:"pointer", display:"flex", alignItems:"center", gap:4, fontSize:"12px" }}>
+          <Trash2 size={12} /> Clear
+        </button>
       </div>
       {loading ? <Spinner /> : (
         <div className="table-scroll">
@@ -711,7 +747,14 @@ function ReferralsTab() {
 
   return (
     <div style={{ animation:"fadeUp 0.3s ease" }}>
-      <SectionTitle title="Referral Network" sub={`${refs.length} referrals · $${totalBonus} in bonuses`} />
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20, flexWrap:"wrap", gap:8 }}>
+        <SectionTitle title="Referral Network" sub={`${refs.length} referrals · $${totalBonus} in bonuses`} noMargin />
+        <div style={{ display:"flex", gap:8 }}>
+          <button onClick={() => downloadCSV("referrals")} style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:7, padding:"7px 10px", color:C.green, cursor:"pointer", display:"flex", alignItems:"center", gap:4, fontSize:"12px" }}>
+            <Download size={12} /> CSV
+          </button>
+        </div>
+      </div>
       {loading ? <Spinner /> : (
         <div className="table-scroll">
           <table style={{ width:"100%", borderCollapse:"collapse", fontSize:"13px" }}>
@@ -783,10 +826,11 @@ function SettingsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   if (!settings) return <ErrorMsg msg="Failed to load settings" />;
 
   const toggles: { key: keyof PlatformSettings; label: string; desc: string; color: string }[] = [
-    { key:"registrationOpen", label:"Open Registration",  desc:"Allow new users to sign up", color:C.green },
-    { key:"maintenanceMode",  label:"Maintenance Mode",   desc:"Block all user access temporarily", color:C.red },
-    { key:"payoutsEnabled",   label:"Payouts Enabled",    desc:"Allow workers to request payouts", color:C.gold },
-    { key:"newJobsEnabled",   label:"New Jobs Available", desc:"Release new annotation batches", color:C.cyan },
+    { key:"registrationOpen",  label:"Open Registration",       desc:"Allow new users to sign up", color:C.green },
+    { key:"maintenanceMode",   label:"Maintenance Mode",        desc:"Block all user access temporarily", color:C.red },
+    { key:"payoutsEnabled",    label:"Payouts Enabled",         desc:"Allow workers to request payouts", color:C.gold },
+    { key:"newJobsEnabled",    label:"New Jobs Available",      desc:"Release new annotation batches", color:C.cyan },
+    { key:"commissionEnabled", label:"10% Commission System",   desc:"Deduct 10% from referral/recruit/registration earnings into your commission wallet", color:C.purple },
   ];
 
   return (
@@ -819,6 +863,19 @@ function SettingsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
           </div>
         ))}
       </div>
+
+      {/* Commission wallet balance */}
+      {isSuperAdmin && settings.commissionEnabled && (
+        <div style={{ background:`${C.purple}08`, border:`1px solid ${C.purple}25`, borderRadius:10, padding:"12px 16px", marginBottom:16, display:"flex", alignItems:"center", gap:12 }}>
+          <Coins size={18} color={C.purple} style={{ flexShrink:0 }} />
+          <div>
+            <div style={{ color:C.txt3, fontSize:"11px", fontWeight:600, textTransform:"uppercase" }}>Commission Wallet (10% pool)</div>
+            <div style={{ color:C.purple, fontSize:"20px", fontWeight:700 }}>
+              ${settings.commissionWallet.toLocaleString(undefined, { minimumFractionDigits:2 })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Announcement */}
       <div style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:10, padding:"14px 16px", marginBottom:16 }}>
@@ -1361,6 +1418,14 @@ function RegistrationsTab({ adminInfo }: { adminInfo: AdminInfo }) {
           ]}
         />
         <RefreshBtn onClick={loadRegs} />
+        <button onClick={() => downloadCSV("registrations")} style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:7, padding:"7px 10px", color:C.green, cursor:"pointer", display:"flex", alignItems:"center", gap:4, fontSize:"12px" }}>
+          <Download size={12} /> CSV
+        </button>
+        {adminInfo.isSuperAdmin && (
+          <button onClick={() => clearHistory("registrations","registration").then(loadRegs)} style={{ background:C.s1, border:`1px solid ${C.red}33`, borderRadius:7, padding:"7px 10px", color:C.red, cursor:"pointer", display:"flex", alignItems:"center", gap:4, fontSize:"12px" }}>
+            <Trash2 size={12} /> Clear
+          </button>
+        )}
       </div>
 
       {loading ? <Spinner /> : filtered.length === 0 ? (
@@ -1790,6 +1855,34 @@ function ChannelSettingsTab({ adminInfo }: { adminInfo: AdminInfo }) {
           </button>
         </div>
 
+        {/* Wallet enable toggles */}
+        <div style={{ marginTop:14, paddingTop:14, borderTop:`1px solid ${C.s3}` }}>
+          <h4 style={{ color:C.txt2, fontSize:"12px", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:10 }}>
+            Withdrawal Controls
+          </h4>
+          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+            {([
+              { key:"workWalletEnabled" as const, label:"Work Wallet Withdrawals", color:C.cyan },
+              { key:"recruitWalletEnabled" as const, label:"Recruit Earnings Withdrawals", color:C.green },
+            ]).map(({ key, label, color }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setForm((p) => ({ ...p, [key]: !p[key] }))}
+                style={{ background:"none", border:"none", cursor:"pointer", padding:0, display:"flex", alignItems:"center", gap:8 }}
+              >
+                {form[key]
+                  ? <ToggleRight size={24} color={color} style={{ flexShrink:0 }} />
+                  : <ToggleLeft  size={24} color={C.txt3} style={{ flexShrink:0 }} />
+                }
+                <span style={{ color: form[key] ? color : C.txt3, fontSize:"13px" }}>
+                  {label} — {form[key] ? "Enabled" : "Disabled"}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {saveErr && (
           <div style={{ display:"flex", gap:6, background:`${C.red}11`, border:`1px solid ${C.red}33`, borderRadius:7, padding:"8px 10px", marginTop:12 }}>
             <AlertCircle size={13} color={C.red} style={{ flexShrink:0 }} />
@@ -2081,6 +2174,8 @@ function TrainingTab({ adminInfo }: { adminInfo: AdminInfo }) {
   const [docType,       setDocType]       = useState<"pdf"|"doc"|"link">("pdf");
   const [addingDoc,     setAddingDoc]     = useState(false);
   const [uploadErr,     setUploadErr]     = useState("");
+  const [uploadPct,     setUploadPct]     = useState(0);
+  const [uploading,     setUploading]     = useState(false);
   // Annotation job form
   const [ajTitle,       setAjTitle]       = useState("");
   const [ajDesc,        setAjDesc]        = useState("");
@@ -2118,18 +2213,31 @@ function TrainingTab({ adminInfo }: { adminInfo: AdminInfo }) {
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploadErr("");
+    setUploadErr(""); setUploadPct(0); setUploading(true);
     const fd = new FormData();
     fd.append("file", file);
-    const res = await fetch("/api/admin/training/upload", { method: "POST", body: fd });
-    const data = await res.json();
-    if (!res.ok) {
-      setUploadErr(data.error ?? "Upload failed");
-      return;
-    }
-    setDocUrl(data.url);
-    setDocType("pdf");
-    if (!docTitle) setDocTitle(file.name.replace(/\.pdf$/i, ""));
+    await new Promise<void>((resolve) => {
+      const xhr = new XMLHttpRequest();
+      xhr.upload.onprogress = (ev) => {
+        if (ev.lengthComputable) setUploadPct(Math.round((ev.loaded / ev.total) * 100));
+      };
+      xhr.onload = () => {
+        setUploading(false);
+        try {
+          const data = JSON.parse(xhr.responseText);
+          if (xhr.status >= 400) { setUploadErr(data.error ?? "Upload failed"); }
+          else {
+            setDocUrl(data.url);
+            setDocType("pdf");
+            if (!docTitle) setDocTitle(file.name.replace(/\.pdf$/i, ""));
+          }
+        } catch { setUploadErr("Upload failed"); }
+        resolve();
+      };
+      xhr.onerror = () => { setUploading(false); setUploadErr("Network error"); resolve(); };
+      xhr.open("POST", "/api/admin/training/upload");
+      xhr.send(fd);
+    });
   }
 
   async function addDoc() {
@@ -2286,15 +2394,23 @@ function TrainingTab({ adminInfo }: { adminInfo: AdminInfo }) {
         </div>
 
         {/* PDF file upload */}
-        <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
-          <button
-            onClick={() => fileRef.current?.click()}
-            style={{ background:`${C.gold}15`, border:`1px solid ${C.gold}30`, color:C.gold, borderRadius:7, padding:"5px 10px", fontSize:"12px", cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}
-          >
-            <Plus size={12} /> Upload PDF File
-          </button>
-          <span style={{ color:C.txt3, fontSize:"11px" }}>or paste a URL above · max 20MB</span>
-          <input ref={fileRef} type="file" accept=".pdf,application/pdf" onChange={handleFileUpload} style={{ display:"none" }} />
+        <div style={{ marginBottom:12 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              style={{ background:`${C.gold}15`, border:`1px solid ${C.gold}30`, color:C.gold, borderRadius:7, padding:"5px 10px", fontSize:"12px", cursor:"pointer", display:"flex", alignItems:"center", gap:4, opacity: uploading ? 0.6 : 1 }}
+            >
+              {uploading ? <><Loader2 size={12} style={{ animation:"spin 1s linear infinite" }} /> Uploading {uploadPct}%…</> : <><Plus size={12} /> Upload PDF File</>}
+            </button>
+            <span style={{ color:C.txt3, fontSize:"11px" }}>or paste a URL above · max 20MB</span>
+            <input ref={fileRef} type="file" accept=".pdf,application/pdf,image/*" onChange={handleFileUpload} style={{ display:"none" }} />
+          </div>
+          {uploading && (
+            <div style={{ height:4, background:C.s3, borderRadius:2, overflow:"hidden", maxWidth:300 }}>
+              <div style={{ height:"100%", background:C.gold, borderRadius:2, width:`${uploadPct}%`, transition:"width 0.2s" }} />
+            </div>
+          )}
         </div>
 
         {uploadErr && (

@@ -20,9 +20,7 @@ export async function GET() {
       region:      owner?.region ?? "Global",
     };
   });
-  // Cache at CDN edge for 30s, serve stale for 60s while revalidating — safe because
-  // channel mutations (admin panel) are infrequent and a 30–60s lag is acceptable
   return NextResponse.json({ channels: result }, {
-    headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60" },
+    headers: { "Cache-Control": "no-store" },
   });
 }

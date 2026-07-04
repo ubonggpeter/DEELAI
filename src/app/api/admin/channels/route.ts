@@ -37,6 +37,8 @@ export async function POST(req: NextRequest) {
       jobPassFee:             Number(jobPassFee      ?? 0),
       isActive:               isActive               ?? true,
       region:                 sa?.region             ?? "",
+      workWalletEnabled:      true,
+      recruitWalletEnabled:   true,
     });
     return NextResponse.json({ channel: ch }, { status: 201 });
   } catch (e: unknown) {

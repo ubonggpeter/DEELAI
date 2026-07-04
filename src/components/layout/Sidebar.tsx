@@ -4,6 +4,7 @@ import {
   Bell, User, TrendingUp, Settings, LogOut, ShieldCheck,
   LucideIcon,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Screen } from "@/lib/types";
 import { SUPER_ADMIN_EMAIL } from "@/lib/adminConfig";
 
@@ -31,6 +32,7 @@ const SECONDARY: { id: Screen; Icon: LucideIcon; label: string }[] = [
 ];
 
 export default function Sidebar({ screen, setScreen, user, notifCount, onMenuOpen }: SidebarProps) {
+  const router = useRouter();
   return (
     <aside
       className="hidden md:flex flex-col shrink-0 border-r overflow-y-auto"
@@ -119,19 +121,18 @@ export default function Sidebar({ screen, setScreen, user, notifCount, onMenuOpe
       {(user.email === SUPER_ADMIN_EMAIL || user.isAdmin) && (
         <nav className="flex flex-col gap-1 px-3 pt-5">
           <p className="text-[10px] font-mono tracking-[1px] px-3 pb-2" style={{ color: "var(--txt3)" }}>ADMIN</p>
-          <a
-            href="/admin/dashboard"
-            className="flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-left border no-underline transition-all duration-150"
+          <button
+            onClick={() => router.push("/admin/dashboard")}
+            className="flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-left border transition-all duration-150"
             style={{
               background: "rgba(139,92,246,.1)",
               borderColor: "rgba(139,92,246,.25)",
               color: "#8B5CF6",
-              textDecoration: "none",
             }}
           >
             <ShieldCheck size={18} strokeWidth={2} />
             <span className="text-[13px] font-semibold">Switch to Admin Panel</span>
-          </a>
+          </button>
         </nav>
       )}
 

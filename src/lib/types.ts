@@ -25,6 +25,8 @@ export interface User {
   bankAccountName?: string;
   country?: string;
   isAdmin?: boolean;
+  workWalletEnabled?: boolean;
+  recruitWalletEnabled?: boolean;
 }
 
 export interface Notification {

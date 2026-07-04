@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(vercel *)"
+      "Bash(vercel *)",
+      "Bash(curl -s -b /tmp/cookies2.txt -w '\\\\nHTTP %{http_code}' -X POST https://deelai.vercel.app/api/auth/upload-avatar -F 'file=@/tmp/test.png;type=image/png')",
+      "Bash(curl -s -b /tmp/cookies2.txt -w '\\\\nHTTP %{http_code}' -X POST https://deelai.vercel.app/api/admin/training/upload -F 'file=@/tmp/test.png;type=image/png')"
     ]
   }
 }

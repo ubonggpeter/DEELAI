@@ -87,6 +87,8 @@ model Channel {
   isActive               Boolean   @default(true)
   balance                Float     @default(0)
   region                 String    @default("")
+  workWalletEnabled      Boolean   @default(true)
+  recruitWalletEnabled   Boolean   @default(true)
   createdAt              DateTime  @default(now())
 
   users              User[]
@@ -218,9 +220,11 @@ model ActivityLog {
 
 model PlatformSettings {
   id               String  @id @default("singleton")
-  registrationOpen Boolean @default(true)
-  maintenanceMode  Boolean @default(false)
-  payoutsEnabled   Boolean @default(true)
-  newJobsEnabled   Boolean @default(true)
-  announcement     String  @default("")
+  registrationOpen   Boolean @default(true)
+  maintenanceMode    Boolean @default(false)
+  payoutsEnabled     Boolean @default(true)
+  newJobsEnabled     Boolean @default(true)
+  announcement       String  @default("")
+  commissionEnabled  Boolean @default(false)
+  commissionWallet   Float   @default(0)
 }

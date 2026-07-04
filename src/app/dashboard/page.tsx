@@ -47,11 +47,14 @@ interface SessionData {
   completedModules?: number[];
   channelId?:        string;
   avatarUrl?:        string | null;
+  bankCode?:         string | null;
   bankAccountNumber?: string | null;
   bankAccountName?:  string | null;
   bankName?:         string | null;
   country?:          string | null;
-  isAdmin?:          boolean;
+  isAdmin?:             boolean;
+  workWalletEnabled?:   boolean;
+  recruitWalletEnabled?: boolean;
 }
 
 export default function Dashboard() {
@@ -97,11 +100,14 @@ export default function Dashboard() {
           completedModules:  data.completedModules ?? u.completedModules,
           channelId:         data.channelId,
           avatarUrl:         data.avatarUrl ?? undefined,
+          bankCode:          data.bankCode ?? undefined,
           bankAccountNumber: data.bankAccountNumber ?? undefined,
           bankAccountName:   data.bankAccountName ?? undefined,
           bankName:          data.bankName ?? undefined,
           country:           data.country ?? "",
-          isAdmin:           data.isAdmin ?? false,
+          isAdmin:              data.isAdmin ?? false,
+          workWalletEnabled:    data.workWalletEnabled ?? true,
+          recruitWalletEnabled: data.recruitWalletEnabled ?? true,
         }));
         setAuthReady(true);
       })
