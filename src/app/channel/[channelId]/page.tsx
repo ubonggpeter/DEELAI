@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
+import Image from "next/image";
 import {
   CheckCircle2, AlertCircle, Loader2, Upload, X,
   Clock, Briefcase, Shield, User, Mail, ChevronDown,
@@ -20,6 +21,7 @@ interface ChannelInfo {
   paystackPublicKey: string;
   jobPassFee: number;
   isActive: boolean;
+  ownerAvatarUrl?: string | null;
 }
 
 type Step = "form" | "payment" | "success" | "error";
@@ -261,9 +263,12 @@ export default function ChannelRegistrationPage() {
           <div style={{
             width:44, height:44, borderRadius:11,
             background:`${C.cyan}15`, border:`1px solid ${C.cyan}30`,
-            display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0,
+            display:"flex", alignItems:"center", justifyContent:"center",
+            flexShrink:0, overflow:"hidden",
           }}>
-            <Shield size={22} color={C.cyan} />
+            {channel.ownerAvatarUrl
+              ? <Image src={channel.ownerAvatarUrl} alt={channel.channelName} width={44} height={44} style={{ width:"100%", height:"100%", objectFit:"cover" }} unoptimized />
+              : <Shield size={22} color={C.cyan} />}
           </div>
           <div>
             <div style={{ color:C.txt3, fontSize:"11px", fontWeight:600, textTransform:"uppercase", letterSpacing:"0.06em" }}>
