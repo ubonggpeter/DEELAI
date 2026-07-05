@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminStore } from "@/lib/adminStore";
 import { ADMIN_COOKIE } from "@/lib/adminConfig";
-import type { QuizQuestion } from "@/lib/adminStore";
+import type { QuizQuestion, TrainingModule } from "@/lib/adminStore";
 
 export async function GET(req: NextRequest) {
   const email = req.cookies.get(ADMIN_COOKIE)?.value;
@@ -9,11 +9,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const ownerEmail = adminStore.isSuperAdmin(email) ? null : email;
-  const [quizQuestions, trainingDocs] = await Promise.all([
+  const [quizQuestions, trainingDocs, trainingModules] = await Promise.all([
     adminStore.getQuizQuestionsForOwner(ownerEmail),
     adminStore.getTrainingDocsForOwner(ownerEmail),
+    adminStore.getTrainingModules(),
   ]);
-  return NextResponse.json({ quizQuestions, trainingDocs });
+  return NextResponse.json({ quizQuestions, trainingDocs, trainingModules });
 }
 
 export async function PUT(req: NextRequest) {
@@ -21,13 +22,22 @@ export async function PUT(req: NextRequest) {
   if (!email || !(await adminStore.isAdmin(email))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const body = await req.json() as { quizQuestions: QuizQuestion[] };
-  if (!Array.isArray(body.quizQuestions)) {
-    return NextResponse.json({ error: "quizQuestions must be an array" }, { status: 400 });
-  }
+  const body = await req.json() as { quizQuestions?: QuizQuestion[]; trainingModules?: TrainingModule[] };
   const ownerEmail = adminStore.isSuperAdmin(email) ? null : email;
-  await adminStore.setQuizQuestionsForOwner(ownerEmail, body.quizQuestions);
-  return NextResponse.json({ success: true, quizQuestions: await adminStore.getQuizQuestionsForOwner(ownerEmail) });
+
+  const tasks: Promise<unknown>[] = [];
+
+  if (Array.isArray(body.quizQuestions)) {
+    tasks.push(adminStore.setQuizQuestionsForOwner(ownerEmail, body.quizQuestions));
+  }
+  if (Array.isArray(body.trainingModules)) {
+    tasks.push(adminStore.setTrainingModules(body.trainingModules));
+  }
+  if (tasks.length === 0) {
+    return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
+  }
+  await Promise.all(tasks);
+  return NextResponse.json({ success: true });
 }
 
 export async function POST(req: NextRequest) {

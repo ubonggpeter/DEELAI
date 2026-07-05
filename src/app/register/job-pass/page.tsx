@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Briefcase, Clock, AlertCircle, Loader2, CheckCircle2, Shield, WifiOff } from "lucide-react";
+import { Briefcase, Clock, AlertCircle, Loader2, CheckCircle2, Shield, WifiOff, Info } from "lucide-react";
 
 const C = { bg:"#060A12", s1:"#0C1220", s2:"#101829", s3:"#162035", cyan:"#00D4FF", green:"#00E5A0", gold:"#FFB800", red:"#FF4D6D", purple:"#8B5CF6", txt:"#EEF2FF", txt2:"#7D8BAA", txt3:"#4A5470" };
 
@@ -195,18 +195,26 @@ function JobPassPageInner() {
       </div>
 
       {hasFee ? (
-        <div style={{ background:`${C.gold}08`, border:`1px solid ${C.gold}25`, borderRadius:9, padding:"10px 13px", marginBottom:16, display:"flex", gap:8, alignItems:"flex-start" }}>
+        <div style={{ background:`${C.gold}08`, border:`1px solid ${C.gold}25`, borderRadius:9, padding:"10px 13px", marginBottom:10, display:"flex", gap:8, alignItems:"flex-start" }}>
           <Clock size={13} color={C.gold} style={{ flexShrink:0, marginTop:2 }} />
           <p style={{ color:C.txt3, fontSize:12, margin:0, lineHeight:1.6 }}>
             One-time registration fee of <strong style={{ color:C.gold }}>${channel.jobPassFee.toLocaleString()}</strong> paid via Paystack.
           </p>
         </div>
       ) : (
-        <div style={{ background:`${C.green}08`, border:`1px solid ${C.green}25`, borderRadius:9, padding:"10px 13px", marginBottom:16, display:"flex", gap:8 }}>
+        <div style={{ background:`${C.green}08`, border:`1px solid ${C.green}25`, borderRadius:9, padding:"10px 13px", marginBottom:10, display:"flex", gap:8 }}>
           <CheckCircle2 size={13} color={C.green} style={{ flexShrink:0 }} />
           <span style={{ color:C.green, fontSize:12, fontWeight:600 }}>This channel has no registration fee — your job pass is free!</span>
         </div>
       )}
+
+      {/* Refund policy notice */}
+      <div style={{ background:`rgba(100,116,139,.08)`, border:`1px solid rgba(100,116,139,.2)`, borderRadius:9, padding:"10px 13px", marginBottom:16, display:"flex", gap:8, alignItems:"flex-start" }}>
+        <Info size={13} color={C.txt3} style={{ flexShrink:0, marginTop:2 }} />
+        <p style={{ color:C.txt3, fontSize:12, margin:0, lineHeight:1.7 }}>
+          <strong style={{ color:C.txt2 }}>Refund Policy:</strong> The registration fee covers access to the DEELAI platform training resources and course materials. Once any training resource has been accessed or downloaded, the payment is <strong style={{ color:"#FF4D6D" }}>non-refundable</strong>. Please review all terms before proceeding.
+        </p>
+      </div>
 
       {/* Paystack failed to load */}
       {paystackFailed && hasFee && (

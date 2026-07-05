@@ -8,7 +8,7 @@ import {
   Trash2, Edit2, Plus, X, Save, RefreshCw, Menu, UserCheck,
   TrendingUp, DollarSign, CheckSquare, BarChart3,
   Radio, Key, Link, Copy, ExternalLink, ToggleLeft, ToggleRight,
-  CircleDot, Coins, ClipboardList, KeyRound, Download, Upload, Camera,
+  CircleDot, Coins, ClipboardList, KeyRound, Download, Upload, Camera, BookOpen, ChevronRight,
 } from "lucide-react";
 import Image from "next/image";
 import { ALL_PERMISSIONS, PERMISSION_LABELS, ADMIN_REGIONS, type Permission } from "@/lib/adminConfig";
@@ -36,6 +36,7 @@ interface Channel {
 }
 interface QuizQuestion { id: string; q: string; opts: string[]; ans: number; }
 interface TrainingDoc { id: string; title: string; url: string; type: string; addedAt: string; }
+interface TrainingModuleRow { id: number; sortOrder: number; title: string; dur: string; lessons: number; desc: string; topics: string[]; content: string; }
 interface ReferralBonus {
   id: string; channelId: string; referrerId: string; referrerName: string; referrerEmail: string;
   recruitEmail: string; recruitName: string; amount: number;
@@ -2347,12 +2348,16 @@ const labelStyle: React.CSSProperties = {
 interface AnnotationJobRow { id: string; channelId: string|null; title: string; description: string; imageUrls: string[]; labels: string[]; difficulty: string; createdBy: string; createdAt: string; }
 
 function TrainingTab({ adminInfo }: { adminInfo: AdminInfo }) {
-  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
-  const [docs,          setDocs]          = useState<TrainingDoc[]>([]);
-  const [annJobs,       setAnnJobs]       = useState<AnnotationJobRow[]>([]);
-  const [loading,       setLoading]       = useState(true);
-  const [saving,        setSaving]        = useState(false);
-  const [saved,         setSaved]         = useState(false);
+  const [quizQuestions,  setQuizQuestions]  = useState<QuizQuestion[]>([]);
+  const [docs,           setDocs]           = useState<TrainingDoc[]>([]);
+  const [annJobs,        setAnnJobs]        = useState<AnnotationJobRow[]>([]);
+  const [trainingMods,   setTrainingMods]   = useState<TrainingModuleRow[]>([]);
+  const [loading,        setLoading]        = useState(true);
+  const [saving,         setSaving]         = useState(false);
+  const [saved,          setSaved]          = useState(false);
+  const [modSaving,      setModSaving]      = useState(false);
+  const [modSaved,       setModSaved]       = useState(false);
+  const [expandedMod,    setExpandedMod]    = useState<number | null>(null);
   const [docUrl,        setDocUrl]        = useState("");
   const [docTitle,      setDocTitle]      = useState("");
   const [docType,       setDocType]       = useState<"pdf"|"doc"|"link">("pdf");
@@ -2382,6 +2387,7 @@ function TrainingTab({ adminInfo }: { adminInfo: AdminInfo }) {
     const ajData = await ajRes.json();
     setQuizQuestions(trData.quizQuestions ?? []);
     setDocs(trData.trainingDocs ?? []);
+    setTrainingMods(trData.trainingModules ?? []);
     setAnnJobs(ajData.jobs ?? []);
     setLoading(false);
   }, []);
@@ -2508,6 +2514,53 @@ function TrainingTab({ adminInfo }: { adminInfo: AdminInfo }) {
     setQuizQuestions((prev) => prev.filter((_, i) => i !== idx));
   }
 
+  function updateMod(id: number, field: keyof TrainingModuleRow, value: string | number | string[]) {
+    setTrainingMods((prev) => prev.map((m) => m.id === id ? { ...m, [field]: value } : m));
+  }
+
+  function updateModTopic(modId: number, tIdx: number, value: string) {
+    setTrainingMods((prev) => prev.map((m) => {
+      if (m.id !== modId) return m;
+      const topics = [...m.topics];
+      topics[tIdx] = value;
+      return { ...m, topics };
+    }));
+  }
+
+  function addModTopic(modId: number) {
+    setTrainingMods((prev) => prev.map((m) =>
+      m.id === modId ? { ...m, topics: [...m.topics, ""] } : m
+    ));
+  }
+
+  function removeModTopic(modId: number, tIdx: number) {
+    setTrainingMods((prev) => prev.map((m) =>
+      m.id === modId ? { ...m, topics: m.topics.filter((_, i) => i !== tIdx) } : m
+    ));
+  }
+
+  async function saveModules() {
+    setModSaving(true);
+    await fetch("/api/admin/training", {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ trainingModules: trainingMods }),
+    });
+    setModSaving(false); setModSaved(true); setTimeout(() => setModSaved(false), 2500);
+  }
+
+  function addModule() {
+    const newId = trainingMods.length > 0 ? Math.max(...trainingMods.map(m => m.id)) + 1 : 1;
+    setTrainingMods((prev) => [...prev, {
+      id: newId, sortOrder: prev.length,
+      title: "New Module", dur: "30 mins", lessons: 1,
+      desc: "", topics: ["Lesson 1"], content: "",
+    }]);
+  }
+
+  function removeModule(id: number) {
+    setTrainingMods((prev) => prev.filter((m) => m.id !== id));
+  }
+
   const fieldStyle: React.CSSProperties = {
     width:"100%", background:C.s2, border:`1px solid ${C.s3}`, borderRadius:7,
     padding:"8px 10px", color:C.txt, fontSize:"13px", outline:"none",
@@ -2523,6 +2576,101 @@ function TrainingTab({ adminInfo }: { adminInfo: AdminInfo }) {
         title="Training Management"
         sub={`Manage quiz questions, training documents, and annotation jobs — ${scope}`}
       />
+
+      {/* ── Training Modules editor ── */}
+      <div style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:12, padding:20, marginBottom:20 }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16, gap:10, flexWrap:"wrap" }}>
+          <h3 style={{ color:C.txt, fontSize:"14px", fontWeight:700, margin:0, display:"flex", alignItems:"center", gap:8 }}>
+            <BookOpen size={14} color={C.cyan} /> Training Modules ({trainingMods.length})
+          </h3>
+          <div style={{ display:"flex", gap:6 }}>
+            <button onClick={addModule} style={{ background:`${C.cyan}15`, border:`1px solid ${C.cyan}30`, color:C.cyan, borderRadius:7, padding:"5px 10px", fontSize:"12px", cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>
+              <Plus size={12} /> Add Module
+            </button>
+            <button onClick={saveModules} disabled={modSaving || modSaved} style={{ background: modSaved ? C.green : C.purple, color:"#fff", border:"none", borderRadius:7, padding:"5px 12px", fontSize:"12px", fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>
+              {modSaving ? <><Loader2 size={11} style={{ animation:"spin 1s linear infinite" }} /> Saving…</> : modSaved ? <><CheckCircle2 size={11} /> Saved!</> : <><Save size={11} /> Save Modules</>}
+            </button>
+          </div>
+        </div>
+        {trainingMods.length === 0 ? (
+          <EmptyState msg="No modules yet. Add one or reload to seed defaults." />
+        ) : (
+          <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+            {trainingMods.map((m) => {
+              const expanded = expandedMod === m.id;
+              return (
+                <div key={m.id} style={{ background:C.s2, border:`1px solid ${C.s3}`, borderRadius:10, overflow:"hidden" }}>
+                  {/* Module header row — click to expand */}
+                  <div
+                    onClick={() => setExpandedMod(expanded ? null : m.id)}
+                    style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 14px", cursor:"pointer", userSelect:"none" }}
+                  >
+                    <span style={{ color:C.txt3, fontSize:"11px", fontWeight:700, flexShrink:0 }}>#{m.id}</span>
+                    <span style={{ color:C.txt, fontSize:"13px", fontWeight:600, flex:1, minWidth:0 }}>{m.title}</span>
+                    <span style={{ color:C.txt3, fontSize:"11px", flexShrink:0 }}>{m.lessons} lessons · {m.dur}</span>
+                    <button onClick={(e) => { e.stopPropagation(); removeModule(m.id); }} style={{ background:"none", border:"none", cursor:"pointer", padding:4, flexShrink:0 }}><X size={13} color={C.red} /></button>
+                    <ChevronRight size={13} color={C.txt3} style={{ flexShrink:0, transform: expanded ? "rotate(90deg)" : "none", transition:"transform 0.2s" }} />
+                  </div>
+                  {expanded && (
+                    <div style={{ padding:"0 14px 14px", display:"flex", flexDirection:"column", gap:10, borderTop:`1px solid ${C.s3}` }}>
+                      {/* Title */}
+                      <div style={{ paddingTop:12 }}>
+                        <label style={labelStyle}>Module Title</label>
+                        <input value={m.title} onChange={(e) => updateMod(m.id, "title", e.target.value)} style={{ ...fieldStyle, width:"100%" }} />
+                      </div>
+                      {/* Description */}
+                      <div>
+                        <label style={labelStyle}>Description</label>
+                        <input value={m.desc} onChange={(e) => updateMod(m.id, "desc", e.target.value)} placeholder="Short description shown in module list…" style={{ ...fieldStyle, width:"100%" }} />
+                      </div>
+                      {/* Lessons & Duration */}
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                        <div>
+                          <label style={labelStyle}>Lesson Count</label>
+                          <input type="number" min={1} value={m.lessons} onChange={(e) => updateMod(m.id, "lessons", parseInt(e.target.value) || 1)} style={{ ...fieldStyle, width:"100%" }} />
+                        </div>
+                        <div>
+                          <label style={labelStyle}>Duration</label>
+                          <input value={m.dur} onChange={(e) => updateMod(m.id, "dur", e.target.value)} placeholder="45 mins" style={{ ...fieldStyle, width:"100%" }} />
+                        </div>
+                      </div>
+                      {/* Topics / Lesson List */}
+                      <div>
+                        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:6 }}>
+                          <label style={{ ...labelStyle, margin:0 }}>Lesson List Items</label>
+                          <button onClick={() => addModTopic(m.id)} style={{ background:`${C.cyan}15`, border:`1px solid ${C.cyan}30`, color:C.cyan, borderRadius:6, padding:"3px 8px", fontSize:"11px", cursor:"pointer", display:"flex", alignItems:"center", gap:3 }}>
+                            <Plus size={10} /> Add
+                          </button>
+                        </div>
+                        <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                          {m.topics.map((t, ti) => (
+                            <div key={ti} style={{ display:"flex", gap:6, alignItems:"center" }}>
+                              <span style={{ color:C.txt3, fontSize:"10px", fontWeight:700, flexShrink:0, width:18, textAlign:"right" }}>{ti + 1}.</span>
+                              <input value={t} onChange={(e) => updateModTopic(m.id, ti, e.target.value)} placeholder={`Lesson ${ti + 1}`} style={{ ...fieldStyle, flex:1 }} />
+                              <button onClick={() => removeModTopic(m.id, ti)} style={{ background:"none", border:"none", cursor:"pointer", flexShrink:0 }}><X size={12} color={C.red} /></button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      {/* Module Content (optional prose) */}
+                      <div>
+                        <label style={labelStyle}>Module Content <span style={{ color:C.txt3, fontWeight:400 }}>(optional — shown to workers inside the module)</span></label>
+                        <textarea
+                          value={m.content}
+                          onChange={(e) => updateMod(m.id, "content", e.target.value)}
+                          placeholder={"Write detailed instructions, guidelines, or reading material for this module…"}
+                          rows={6}
+                          style={{ ...fieldStyle, width:"100%", resize:"vertical", lineHeight:1.6 }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* ── Quiz editor ── */}
       <div style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:12, padding:20, marginBottom:20 }}>

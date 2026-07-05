@@ -25,6 +25,7 @@ export interface Channel {
 }
 export interface QuizQuestion { id: string; q: string; opts: string[]; ans: number; }
 export interface TrainingDoc { id: string; title: string; url: string; type: "pdf" | "doc" | "link"; ownerEmail?: string | null; addedAt: string; }
+export interface TrainingModule { id: number; sortOrder: number; title: string; dur: string; lessons: number; desc: string; topics: string[]; content: string; }
 export interface AnnotationJob {
   id: string; channelId: string | null; title: string; description: string;
   imageUrls: string[]; labels: string[]; difficulty: string; createdBy: string; createdAt: string;
@@ -551,6 +552,51 @@ export const adminStore = {
       await prisma.trainingDoc.delete({ where: { id } });
       return true;
     } catch { return false; }
+  },
+
+  /* ── Training Modules ───────────────────────────────────────────── */
+  async getTrainingModules(): Promise<TrainingModule[]> {
+    const mods = await prisma.trainingModule.findMany({ orderBy: { sortOrder: "asc" } });
+    if (mods.length === 0) {
+      await this.seedTrainingModules();
+      return this.getTrainingModules();
+    }
+    return mods.map((m) => ({
+      id: m.id, sortOrder: m.sortOrder, title: m.title, dur: m.dur,
+      lessons: m.lessons, desc: m.desc, topics: m.topics, content: m.content,
+    }));
+  },
+  async setTrainingModules(modules: TrainingModule[]): Promise<void> {
+    // Delete then re-insert inside a transaction
+    await prisma.$transaction([
+      prisma.trainingModule.deleteMany({}),
+      prisma.trainingModule.createMany({
+        data: modules.map((m, i) => ({
+          id: m.id, sortOrder: i, title: m.title, dur: m.dur,
+          lessons: m.lessons, desc: m.desc, topics: m.topics, content: m.content ?? "",
+        })),
+      }),
+    ]);
+  },
+  async seedTrainingModules(): Promise<void> {
+    const defaults: TrainingModule[] = [
+      { id: 1, sortOrder: 0, title: "Introduction to AI Data Labeling",    dur: "45 mins", lessons: 6, content: "",
+        desc: "Understand how human annotators power real AI systems at global scale.",
+        topics: ["What is machine learning data?","Why annotation matters","Types of annotation jobs","Quality standards & accuracy","Global AI data market overview","Your role as a DEELAi Contributor"] },
+      { id: 2, sortOrder: 1, title: "Bounding Box Fundamentals",           dur: "1.5 hrs",  lessons: 8, content: "",
+        desc: "Master drawing precise bounding boxes around objects for computer vision.",
+        topics: ["Anatomy of a bounding box","Precision vs speed tradeoffs","Edge cases & partial objects","Overlap and occlusion rules","Vehicle & person annotation","Tool shortcuts & efficiency","Common beginner mistakes","Practice drills"] },
+      { id: 3, sortOrder: 2, title: "Image Classification & Tagging",      dur: "1 hr",     lessons: 5, content: "",
+        desc: "Assign correct labels and attributes using client taxonomy guides.",
+        topics: ["Label hierarchies explained","Attribute tagging systems","Multi-label classification","Ambiguous case handling","Client taxonomy deep dive","Speed tagging techniques"] },
+      { id: 4, sortOrder: 3, title: "Quality Assurance Standards",         dur: "2 hrs",    lessons: 7, content: "",
+        desc: "DEELAi maintains 99.2% client satisfaction. Here is the quality framework that keeps our standards elite.",
+        topics: ["DEELAi accuracy rubric","Rejection criteria","Self-review checklist","Calibration exercises","Feedback & revision workflow","Accuracy score impact","Top annotator habits"] },
+      { id: 5, sortOrder: 4, title: "Platform Tools & Workspace",          dur: "30 mins",  lessons: 4, content: "",
+        desc: "Navigate the annotation workspace and maximise your earning potential.",
+        topics: ["Workspace interface tour","Job queue management","Keyboard shortcuts","Salary & withdrawal system"] },
+    ];
+    await prisma.trainingModule.createMany({ data: defaults });
   },
 
   /* ── Annotation Jobs ────────────────────────────────────────────── */

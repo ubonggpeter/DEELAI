@@ -195,6 +195,17 @@ model TrainingDoc {
   addedAt    DateTime @default(now())
 }
 
+model TrainingModule {
+  id        Int      @id
+  sortOrder Int      @default(0)
+  title     String
+  dur       String   @default("30 mins")
+  lessons   Int      @default(1)
+  desc      String   @default("")
+  topics    String[] @default([])
+  content   String   @default("")
+}
+
 model AnnotationJob {
   id          String   @id
   channelId   String?  // null = global default; set = channel-specific
