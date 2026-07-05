@@ -26,6 +26,7 @@ export interface Channel {
 export interface QuizQuestion { id: string; q: string; opts: string[]; ans: number; }
 export interface TrainingDoc { id: string; title: string; url: string; type: "pdf" | "doc" | "link"; ownerEmail?: string | null; addedAt: string; }
 export interface TrainingModule { id: number; sortOrder: number; title: string; dur: string; lessons: number; desc: string; topics: string[]; content: string; }
+export interface ModuleDoc { id: string; moduleId: number; title: string; url: string; type: string; addedAt: string; }
 export interface AnnotationJob {
   id: string; channelId: string | null; title: string; description: string;
   imageUrls: string[]; labels: string[]; difficulty: string; createdBy: string; createdAt: string;
@@ -568,15 +569,19 @@ export const adminStore = {
     }));
   },
   async setTrainingModules(modules: TrainingModule[]): Promise<void> {
-    // Delete then re-insert inside a transaction
+    // Upsert each module (preserves child moduleDocs via cascade-safe approach)
+    const incomingIds = new Set(modules.map(m => m.id));
+    const existing = await prisma.trainingModule.findMany({ select: { id: true } });
+    const toDelete = existing.filter(e => !incomingIds.has(e.id)).map(e => e.id);
     await prisma.$transaction([
-      prisma.trainingModule.deleteMany({}),
-      prisma.trainingModule.createMany({
-        data: modules.map((m, i) => ({
-          id: m.id, sortOrder: i, title: m.title, dur: m.dur,
-          lessons: m.lessons, desc: m.desc, topics: m.topics, content: m.content ?? "",
-        })),
-      }),
+      // Remove modules that were deleted by the admin (cascades to their docs)
+      ...(toDelete.length > 0 ? [prisma.trainingModule.deleteMany({ where: { id: { in: toDelete } } })] : []),
+      // Upsert remaining/new modules
+      ...modules.map((m, i) => prisma.trainingModule.upsert({
+        where: { id: m.id },
+        create: { id: m.id, sortOrder: i, title: m.title, dur: m.dur, lessons: m.lessons, desc: m.desc, topics: m.topics, content: m.content ?? "" },
+        update: { sortOrder: i, title: m.title, dur: m.dur, lessons: m.lessons, desc: m.desc, topics: m.topics, content: m.content ?? "" },
+      })),
     ]);
   },
   async seedTrainingModules(): Promise<void> {
@@ -598,6 +603,20 @@ export const adminStore = {
         topics: ["Workspace interface tour","Job queue management","Keyboard shortcuts","Salary & withdrawal system"] },
     ];
     await prisma.trainingModule.createMany({ data: defaults });
+  },
+
+  /* ── Per-module resource docs ───────────────────────────────────── */
+  async getAllModuleDocs(): Promise<ModuleDoc[]> {
+    const rows = await prisma.trainingModuleDoc.findMany({ orderBy: { addedAt: "asc" } });
+    return rows.map(r => ({ id: r.id, moduleId: r.moduleId, title: r.title, url: r.url, type: r.type, addedAt: r.addedAt instanceof Date ? r.addedAt.toISOString() : String(r.addedAt) }));
+  },
+  async addModuleDoc(data: { moduleId: number; title: string; url: string; type: string }): Promise<ModuleDoc> {
+    const row = await prisma.trainingModuleDoc.create({ data });
+    return { id: row.id, moduleId: row.moduleId, title: row.title, url: row.url, type: row.type, addedAt: row.addedAt instanceof Date ? row.addedAt.toISOString() : String(row.addedAt) };
+  },
+  async removeModuleDoc(id: string): Promise<boolean> {
+    try { await prisma.trainingModuleDoc.delete({ where: { id } }); return true; }
+    catch { return false; }
   },
 
   /* ── Annotation Jobs ────────────────────────────────────────────── */

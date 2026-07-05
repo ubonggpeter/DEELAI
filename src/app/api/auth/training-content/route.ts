@@ -32,11 +32,12 @@ export async function GET(req: NextRequest) {
     } catch { /* fall back to global */ }
   }
 
-  const [quizQuestions, trainingDocs, trainingModules] = await Promise.all([
+  const [quizQuestions, trainingDocs, trainingModules, moduleDocs] = await Promise.all([
     adminStore.getQuizQuestionsForApprover(approvedBy),
     adminStore.getTrainingDocsForChannel(channelOwnerEmail),
     adminStore.getTrainingModules(),
+    adminStore.getAllModuleDocs(),
   ]);
 
-  return NextResponse.json({ quizQuestions, trainingDocs, trainingModules });
+  return NextResponse.json({ quizQuestions, trainingDocs, trainingModules, moduleDocs });
 }

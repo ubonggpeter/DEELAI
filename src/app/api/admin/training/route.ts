@@ -9,12 +9,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const ownerEmail = adminStore.isSuperAdmin(email) ? null : email;
-  const [quizQuestions, trainingDocs, trainingModules] = await Promise.all([
+  const [quizQuestions, trainingDocs, trainingModules, moduleDocs] = await Promise.all([
     adminStore.getQuizQuestionsForOwner(ownerEmail),
     adminStore.getTrainingDocsForOwner(ownerEmail),
     adminStore.getTrainingModules(),
+    adminStore.getAllModuleDocs(),
   ]);
-  return NextResponse.json({ quizQuestions, trainingDocs, trainingModules });
+  return NextResponse.json({ quizQuestions, trainingDocs, trainingModules, moduleDocs });
 }
 
 export async function PUT(req: NextRequest) {

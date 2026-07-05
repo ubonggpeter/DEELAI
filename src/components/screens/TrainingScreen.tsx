@@ -18,6 +18,7 @@ interface Props {
 
 interface QuizQuestion { id: string; q: string; opts: string[]; ans: number; }
 interface TrainingDoc { id: string; title: string; url: string; type: string; addedAt: string; }
+interface ModuleDoc { id: string; moduleId: number; title: string; url: string; type: string; }
 interface DynModule { id: number; sortOrder: number; title: string; dur: string; lessons: number; desc: string; topics: string[]; content: string; }
 
 type View = "list" | "module" | "quiz" | "cert" | "lens";
@@ -42,8 +43,9 @@ export default function TrainingScreen({ user, setUser }: Props) {
   const [answers, setAnswers] = useState<{ q: number; sel: number; ans: number }[]>([]);
   const [quizDone, setQuizDone] = useState(false);
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
-  const [docs, setDocs]       = useState<TrainingDoc[]>([]);
-  const [modules, setModules] = useState<DynModule[]>([]);
+  const [docs, setDocs]         = useState<TrainingDoc[]>([]);
+  const [moduleDocs, setModuleDocs] = useState<ModuleDoc[]>([]);
+  const [modules, setModules]   = useState<DynModule[]>([]);
   const [lensLink, setLensLink] = useState("");
   const [loadingData, setLoadingData] = useState(true);
   // Track which docs the user has opened/downloaded this session
@@ -59,6 +61,7 @@ export default function TrainingScreen({ user, setUser }: Props) {
     ]).then(([trainingData, channelData]) => {
       setQuizQuestions(trainingData.quizQuestions ?? []);
       setDocs(trainingData.trainingDocs ?? []);
+      setModuleDocs(trainingData.moduleDocs ?? []);
       // Use DB modules if available, fall back to static
       const dynMods: DynModule[] = trainingData.trainingModules ?? [];
       if (dynMods.length > 0) {
@@ -91,8 +94,10 @@ export default function TrainingScreen({ user, setUser }: Props) {
   }
 
   function handleMarkComplete(id: number) {
-    // Warn if there are training resources the user hasn't opened
-    if (docs.length > 0 && openedDocIds.size === 0) {
+    // Warn if there are general docs OR module-specific docs and none have been opened
+    const thisModuleDocs = moduleDocs.filter(d => d.moduleId === id);
+    const hasResources = docs.length > 0 || thisModuleDocs.length > 0;
+    if (hasResources && openedDocIds.size === 0) {
       setPendingCompleteId(id);
       setShowReadWarning(true);
       return;
@@ -452,7 +457,52 @@ export default function TrainingScreen({ user, setUser }: Props) {
     if (!m) { setView("list"); return null; }
     const isDone = done.includes(m.id);
 
-    // Training Resources block (reused below the button)
+    // Module-specific resource docs
+    const thisModuleDocs = moduleDocs.filter(d => d.moduleId === m.id);
+    const ModuleResourcesBlock = thisModuleDocs.length > 0 ? (
+      <div style={{ marginTop:20 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+          <FileText size={15} color="var(--cyan)" />
+          <span className="font-bold text-sm text-white" style={{ fontFamily:"system-ui" }}>Module Resources</span>
+          <span style={{ fontSize:11, color:"var(--txt3)" }}>— files specific to this module</span>
+        </div>
+        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+          {thisModuleDocs.map((doc) => {
+            const ext = doc.url.split(".").pop()?.toLowerCase() ?? "pdf";
+            const href = `/api/auth/download?url=${encodeURIComponent(doc.url)}`;
+            const opened = openedDocIds.has(doc.id);
+            return (
+              <a
+                key={doc.id}
+                href={href}
+                target="_self"
+                rel="noopener noreferrer"
+                download
+                onClick={() => handleDocOpen(doc.id)}
+                style={{
+                  background: opened ? "rgba(0,212,255,.06)" : "var(--s2)",
+                  border: `1px solid ${opened ? "rgba(0,212,255,.25)" : "var(--b1)"}`,
+                  borderRadius:12, padding:"12px 14px",
+                  display:"flex", alignItems:"center", gap:12, textDecoration:"none",
+                }}
+              >
+                <FileText size={18} color={opened ? "var(--cyan)" : "var(--cyan)"} style={{ flexShrink:0, opacity: opened ? 1 : 0.7 }} />
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ color:"var(--txt)", fontSize:13, fontWeight:600 }}>{doc.title}</div>
+                  <div style={{ color:"var(--txt3)", fontSize:11, textTransform:"uppercase", marginTop:2 }}>{ext}</div>
+                </div>
+                {opened
+                  ? <Check size={14} color="var(--cyan)" style={{ flexShrink:0 }} />
+                  : <ExternalLink size={14} color="var(--txt3)" style={{ flexShrink:0 }} />
+                }
+              </a>
+            );
+          })}
+        </div>
+      </div>
+    ) : null;
+
+    // General Training Resources block (reused below the button)
     const ResourcesBlock = docs.length > 0 ? (
       <div style={{ marginTop:20 }}>
         <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
@@ -577,7 +627,9 @@ export default function TrainingScreen({ user, setUser }: Props) {
               </div>
             )}
 
-            {/* Training Resources BELOW the complete button */}
+            {/* Module-specific resources (shown first, more relevant) */}
+            {ModuleResourcesBlock}
+            {/* General Training Resources BELOW the complete button */}
             {ResourcesBlock}
           </div>
         </div>

@@ -8,7 +8,7 @@ import {
   Trash2, Edit2, Plus, X, Save, RefreshCw, Menu, UserCheck,
   TrendingUp, DollarSign, CheckSquare, BarChart3,
   Radio, Key, Link, Copy, ExternalLink, ToggleLeft, ToggleRight,
-  CircleDot, Coins, ClipboardList, KeyRound, Download, Upload, Camera, BookOpen, ChevronRight,
+  CircleDot, Coins, ClipboardList, KeyRound, Download, Upload, Camera, BookOpen, ChevronRight, FileText,
 } from "lucide-react";
 import Image from "next/image";
 import { ALL_PERMISSIONS, PERMISSION_LABELS, ADMIN_REGIONS, type Permission } from "@/lib/adminConfig";
@@ -2459,6 +2459,10 @@ function TrainingTab({ adminInfo }: { adminInfo: AdminInfo }) {
   const [ajImgErr,       setAjImgErr]       = useState("");
   const fileRef    = React.useRef<HTMLInputElement>(null);
   const ajImgRef   = React.useRef<HTMLInputElement>(null);
+  const modDocRef  = React.useRef<HTMLInputElement>(null);
+  const [moduleDocs,        setModuleDocs]        = useState<{ id: string; moduleId: number; title: string; url: string; type: string }[]>([]);
+  const [modDocUploadingId, setModDocUploadingId] = useState<number | null>(null);
+  const [modDocErr,         setModDocErr]         = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -2471,6 +2475,7 @@ function TrainingTab({ adminInfo }: { adminInfo: AdminInfo }) {
     setQuizQuestions(trData.quizQuestions ?? []);
     setDocs(trData.trainingDocs ?? []);
     setTrainingMods(trData.trainingModules ?? []);
+    setModuleDocs(trData.moduleDocs ?? []);
     setAnnJobs(ajData.jobs ?? []);
     setLoading(false);
   }, []);
@@ -2644,6 +2649,36 @@ function TrainingTab({ adminInfo }: { adminInfo: AdminInfo }) {
     setTrainingMods((prev) => prev.filter((m) => m.id !== id));
   }
 
+  async function uploadModuleDoc(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    const moduleId = Number(modDocRef.current?.dataset.mid ?? 0);
+    if (!file || !moduleId) return;
+    setModDocErr(""); setModDocUploadingId(moduleId);
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("moduleId", String(moduleId));
+    fd.append("title", file.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " "));
+    try {
+      const res = await fetch("/api/admin/training/module-docs/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) { setModDocErr(data.error ?? "Upload failed"); return; }
+      setModuleDocs((prev) => [...prev, data.doc]);
+    } catch {
+      setModDocErr("Upload failed — check your connection.");
+    } finally {
+      setModDocUploadingId(null);
+      if (modDocRef.current) modDocRef.current.value = "";
+    }
+  }
+
+  async function removeModDocItem(docId: string) {
+    await fetch("/api/admin/training/module-docs", {
+      method: "DELETE", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: docId }),
+    });
+    setModuleDocs((prev) => prev.filter(d => d.id !== docId));
+  }
+
   const fieldStyle: React.CSSProperties = {
     width:"100%", background:C.s2, border:`1px solid ${C.s3}`, borderRadius:7,
     padding:"8px 10px", color:C.txt, fontSize:"13px", outline:"none",
@@ -2746,6 +2781,62 @@ function TrainingTab({ adminInfo }: { adminInfo: AdminInfo }) {
                           style={{ ...fieldStyle, width:"100%", resize:"vertical", lineHeight:1.6 }}
                         />
                       </div>
+
+                      {/* Module Resources (per-module file uploads) */}
+                      <div style={{ borderTop:`1px solid ${C.s3}`, marginTop:16, paddingTop:16 }}>
+                        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10, gap:8, flexWrap:"wrap" }}>
+                          <label style={{ ...labelStyle, marginBottom:0 }}>
+                            Module Resources
+                            <span style={{ color:C.txt3, fontWeight:400, textTransform:"none", letterSpacing:0, marginLeft:4 }}>— PDF/DOCX files shown to workers inside this module</span>
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (modDocRef.current) {
+                                modDocRef.current.dataset.mid = String(m.id);
+                                modDocRef.current.click();
+                              }
+                            }}
+                            disabled={modDocUploadingId === m.id}
+                            style={{
+                              background:`${C.gold}15`, border:`1px solid ${C.gold}35`, color:C.gold,
+                              borderRadius:6, padding:"5px 10px", fontSize:"11px", fontWeight:700,
+                              cursor:"pointer", display:"flex", alignItems:"center", gap:4, flexShrink:0,
+                            }}
+                          >
+                            {modDocUploadingId === m.id
+                              ? <><Loader2 size={11} style={{ animation:"spin 1s linear infinite" }} /> Uploading…</>
+                              : <><Upload size={11} /> Upload File</>}
+                          </button>
+                        </div>
+                        {(() => {
+                          const mDocs = moduleDocs.filter(d => d.moduleId === m.id);
+                          return mDocs.length === 0
+                            ? <div style={{ color:C.txt3, fontSize:"12px", padding:"6px 0" }}>No files uploaded yet for this module.</div>
+                            : (
+                              <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                                {mDocs.map(doc => (
+                                  <div key={doc.id} style={{
+                                    display:"flex", alignItems:"center", gap:8,
+                                    background:C.s2, border:`1px solid ${C.s3}`, borderRadius:7, padding:"7px 10px",
+                                  }}>
+                                    <FileText size={13} color={C.gold} style={{ flexShrink:0 }} />
+                                    <span style={{ flex:1, color:C.txt2, fontSize:"12px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{doc.title}</span>
+                                    <span style={{ color:C.txt3, fontSize:"10px", textTransform:"uppercase", flexShrink:0 }}>{doc.type}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => removeModDocItem(doc.id)}
+                                      style={{ background:"none", border:"none", cursor:"pointer", padding:2, flexShrink:0 }}
+                                    >
+                                      <X size={12} color={C.red} />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                        })()}
+                        {modDocErr && modDocUploadingId === null && <div style={{ color:C.red, fontSize:"11px", marginTop:6 }}>{modDocErr}</div>}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -2754,6 +2845,14 @@ function TrainingTab({ adminInfo }: { adminInfo: AdminInfo }) {
           </div>
         )}
       </div>
+      {/* Hidden file input shared across all module upload buttons */}
+      <input
+        ref={modDocRef}
+        type="file"
+        accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        onChange={uploadModuleDoc}
+        style={{ display:"none" }}
+      />
 
       {/* ── Quiz editor ── */}
       <div style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:12, padding:20, marginBottom:20 }}>

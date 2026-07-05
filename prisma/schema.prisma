@@ -205,6 +205,19 @@ model TrainingModule {
   desc      String   @default("")
   topics    String[] @default([])
   content   String   @default("")
+
+  moduleDocs TrainingModuleDoc[]
+}
+
+model TrainingModuleDoc {
+  id       String   @id @default(cuid())
+  moduleId Int
+  title    String
+  url      String
+  type     String   @default("pdf")
+  addedAt  DateTime @default(now())
+
+  module TrainingModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
 }
 
 model AnnotationJob {
