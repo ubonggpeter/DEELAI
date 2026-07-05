@@ -127,9 +127,9 @@ function RegisterPageInner() {
           </div>
           <span style={{ color:C.txt2, fontSize:13, lineHeight:1.5 }}>
             I accept the{" "}
-            <a href="#" style={{ color:C.cyan, textDecoration:"none" }}>Terms &amp; Conditions</a>
+            <a href="/terms" target="_blank" onClick={(e) => e.stopPropagation()} style={{ color:C.cyan, textDecoration:"underline" }}>Terms of Service</a>
             {" "}and{" "}
-            <a href="#" style={{ color:C.cyan, textDecoration:"none" }}>Privacy Policy</a>
+            <a href="/privacy" target="_blank" onClick={(e) => e.stopPropagation()} style={{ color:C.cyan, textDecoration:"underline" }}>Privacy Policy</a>
           </span>
         </label>
 

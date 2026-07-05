@@ -380,17 +380,49 @@ export default function ChannelRegistrationPage() {
           </FormField>
 
           {/* Terms */}
-          <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
-            <input
-              type="checkbox" id="terms" checked={terms} onChange={(e) => setTerms(e.target.checked)}
-              style={{ marginTop:3, accentColor:C.cyan, width:15, height:15, cursor:"pointer", flexShrink:0 }}
-            />
-            <label htmlFor="terms" style={{ color:C.txt2, fontSize:"13px", lineHeight:1.5, cursor:"pointer" }}>
-              I agree to the{" "}
-              <a href="/terms" target="_blank" style={{ color:C.cyan, textDecoration:"underline" }}>Terms of Service</a>
-              {" "}and{" "}
-              <a href="/privacy" target="_blank" style={{ color:C.cyan, textDecoration:"underline" }}>Privacy Policy</a>
-            </label>
+          <div
+            onClick={() => setTerms((v) => !v)}
+            style={{
+              display:"flex", alignItems:"flex-start", gap:12, cursor:"pointer",
+              background: terms ? `${C.green}08` : C.s2,
+              border:`1.5px solid ${terms ? C.green+"55" : C.s3}`,
+              borderRadius:10, padding:"12px 14px",
+              transition:"all 0.2s",
+            }}
+          >
+            {/* Custom visual checkbox */}
+            <div style={{
+              width:20, height:20, borderRadius:5, flexShrink:0, marginTop:1,
+              border:`2px solid ${terms ? C.green : C.txt3}`,
+              background: terms ? C.green : "transparent",
+              display:"flex", alignItems:"center", justifyContent:"center",
+              transition:"all 0.2s",
+            }}>
+              {terms && (
+                <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+                  <path d="M1 4.5L4 7.5L10 1" stroke="#060A12" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              )}
+            </div>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ color:C.txt2, fontSize:"13px", lineHeight:1.6 }}>
+                I agree to the{" "}
+                <a
+                  href="/terms" target="_blank"
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ color:C.cyan, textDecoration:"underline" }}
+                >Terms of Service</a>
+                {" "}and{" "}
+                <a
+                  href="/privacy" target="_blank"
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ color:C.cyan, textDecoration:"underline" }}
+                >Privacy Policy</a>
+              </div>
+              <div style={{ color:C.txt3, fontSize:"11px", marginTop:2 }}>
+                Including the non-refundable fee policy once training resources are accessed
+              </div>
+            </div>
           </div>
 
           {/* CV Upload */}
