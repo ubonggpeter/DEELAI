@@ -1630,11 +1630,21 @@ function RegistrationsTab({ adminInfo }: { adminInfo: AdminInfo }) {
         >
           <Download size={12} /> CSV {(search || statusFilter) ? `(${filtered.length})` : ""}
         </button>
-        {adminInfo.isSuperAdmin && (
-          <button onClick={() => clearHistory("registrations","registration").then(loadRegs)} style={{ background:C.s1, border:`1px solid ${C.red}33`, borderRadius:7, padding:"7px 10px", color:C.red, cursor:"pointer", display:"flex", alignItems:"center", gap:4, fontSize:"12px" }}>
-            <Trash2 size={12} /> Clear All
-          </button>
-        )}
+        <button
+          onClick={async () => {
+            const scopeLabel = adminInfo.isSuperAdmin ? "ALL registrations on the platform" : "all registrations in your channel";
+            if (!confirm(`⚠️ IRREVERSIBLE: This will permanently delete ${scopeLabel} and all associated data.\n\nType OK in the next prompt to confirm.`)) return;
+            if (prompt("Type DELETE to confirm permanent removal of all registrations:") !== "DELETE") return;
+            await fetch("/api/admin/channels/registrations", {
+              method: "DELETE", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ clearAll: true }),
+            });
+            await loadRegs();
+          }}
+          style={{ background:C.s1, border:`1px solid ${C.red}33`, borderRadius:7, padding:"7px 10px", color:C.red, cursor:"pointer", display:"flex", alignItems:"center", gap:4, fontSize:"12px" }}
+        >
+          <Trash2 size={12} /> Clear All
+        </button>
       </div>
 
       {loading ? <Spinner /> : filtered.length === 0 ? (
@@ -1900,6 +1910,8 @@ function ChannelSettingsTab({ adminInfo }: { adminInfo: AdminInfo }) {
   const [regsLoading, setRegsLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState<"" | "pending" | "approved" | "rejected">("");
   const [actioning, setActioning] = useState<string | null>(null);
+  const [regSearch,   setRegSearch]   = useState("");
+  const [deletingReg, setDeletingReg] = useState<string | null>(null);
 
   const loadChannel = useCallback(async () => {
     setLoading(true);
@@ -1955,6 +1967,49 @@ function ChannelSettingsTab({ adminInfo }: { adminInfo: AdminInfo }) {
     });
     await loadRegs();
     setActioning(null);
+  }
+
+  async function deleteReg(userId: string, name: string) {
+    if (!confirm(`Delete registration for "${name}"? This is permanent and cannot be undone.`)) return;
+    setDeletingReg(userId);
+    await fetch("/api/admin/channels/registrations", {
+      method: "DELETE", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+    setRegs((prev) => prev.filter((r) => r.id !== userId));
+    setDeletingReg(null);
+  }
+
+  function exportCSV() {
+    const q = regSearch.toLowerCase();
+    const src = regs.filter((r) =>
+      (!q || r.name.toLowerCase().includes(q) || r.email.toLowerCase().includes(q)) &&
+      (!statusFilter || r.accountStatus === statusFilter)
+    );
+    const header = ["Name", "Email", "Permit Type", "Fee Paid", "Status", "Registered At"];
+    const rows = src.map((r) => [
+      r.name, r.email, r.permitType,
+      r.jobPassPaid ? `$${r.jobPassAmount}` : "Not paid",
+      r.accountStatus,
+      r.registeredAt ? new Date(r.registeredAt).toLocaleDateString() : "",
+    ]);
+    const csv = [header, ...rows].map((row) => row.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+    a.download = `channel-registrations-${new Date().toISOString().slice(0,10)}.csv`; a.click();
+  }
+
+  async function clearAllRegs() {
+    const scopeLabel = adminInfo.isSuperAdmin ? "ALL registrations on the platform" : "all registrations in your channel";
+    if (!confirm(`⚠️ IRREVERSIBLE: This will permanently delete ${scopeLabel} and all associated data.\n\nType OK in the next prompt to confirm.`)) return;
+    if (prompt("Type DELETE to confirm permanent removal of all registrations:") !== "DELETE") return;
+    setRegsLoading(true);
+    await fetch("/api/admin/channels/registrations", {
+      method: "DELETE", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clearAll: true }),
+    });
+    setRegs([]);
+    setRegsLoading(false);
   }
 
   function copyLink() {
@@ -2304,98 +2359,154 @@ function ChannelSettingsTab({ adminInfo }: { adminInfo: AdminInfo }) {
       )}
 
       {/* ── Registrations table ─────────────────────────────────────── */}
-      {channel && (
-        <div style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:12, padding:20 }}>
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14, flexWrap:"wrap", gap:8 }}>
-            <h3 style={{ color:C.txt, fontSize:"14px", fontWeight:700, margin:0, display:"flex", alignItems:"center", gap:8 }}>
-              <Users size={14} color={C.cyan} /> Channel Registrations
-              {regs.length > 0 && (
-                <span style={{ background:C.s3, borderRadius:10, padding:"2px 7px", fontSize:"11px", color:C.txt2 }}>
-                  {regs.length}
-                </span>
-              )}
-            </h3>
-            <div style={{ display:"flex", gap:6 }}>
-              <Select
-                value={statusFilter}
-                onChange={(v) => setStatusFilter(v as "" | "pending" | "approved" | "rejected")}
-                options={[
-                  { v:"",         l:"All Status" },
-                  { v:"pending",  l:"Pending"    },
-                  { v:"approved", l:"Approved"   },
-                  { v:"rejected", l:"Rejected"   },
-                ]}
-              />
-              <RefreshBtn onClick={loadRegs} />
+      {channel && (() => {
+        const q = regSearch.toLowerCase();
+        const filtered = regs.filter((r) =>
+          (!q || r.name.toLowerCase().includes(q) || r.email.toLowerCase().includes(q)) &&
+          (!statusFilter || r.accountStatus === statusFilter)
+        );
+        return (
+          <div style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:12, padding:20 }}>
+            {/* Header row */}
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10, flexWrap:"wrap", gap:8 }}>
+              <h3 style={{ color:C.txt, fontSize:"14px", fontWeight:700, margin:0, display:"flex", alignItems:"center", gap:8 }}>
+                <Users size={14} color={C.cyan} /> Channel Registrations
+                {regs.length > 0 && (
+                  <span style={{ background:C.s3, borderRadius:10, padding:"2px 7px", fontSize:"11px", color:C.txt2 }}>
+                    {filtered.length !== regs.length ? `${filtered.length} / ${regs.length}` : regs.length}
+                  </span>
+                )}
+              </h3>
+              <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                <Select
+                  value={statusFilter}
+                  onChange={(v) => setStatusFilter(v as "" | "pending" | "approved" | "rejected")}
+                  options={[
+                    { v:"",         l:"All Status" },
+                    { v:"pending",  l:"Pending"    },
+                    { v:"approved", l:"Approved"   },
+                    { v:"rejected", l:"Rejected"   },
+                  ]}
+                />
+                <RefreshBtn onClick={loadRegs} />
+                <button
+                  onClick={exportCSV}
+                  title={`Export ${filtered.length} result(s) as CSV`}
+                  style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:7, padding:"7px 10px", color:C.green, cursor:"pointer", display:"flex", alignItems:"center", gap:4, fontSize:"12px" }}
+                >
+                  <Download size={12} /> CSV{(regSearch || statusFilter) ? ` (${filtered.length})` : ""}
+                </button>
+                <button
+                  onClick={clearAllRegs}
+                  style={{ background:C.s1, border:`1px solid ${C.red}33`, borderRadius:7, padding:"7px 10px", color:C.red, cursor:"pointer", display:"flex", alignItems:"center", gap:4, fontSize:"12px" }}
+                >
+                  <Trash2 size={12} /> Clear All
+                </button>
+              </div>
             </div>
-          </div>
 
-          {regsLoading ? <Spinner /> : regs.length === 0 ? (
-            <EmptyState msg={statusFilter ? `No ${statusFilter} registrations` : "No registrations yet. Share your registration link to get started."} />
-          ) : (
-            <div className="table-scroll">
-              <table style={{ width:"100%", borderCollapse:"collapse", fontSize:"13px" }}>
-                <thead>
-                  <tr style={{ borderBottom:`1px solid ${C.s3}` }}>
-                    {["Name","Email","Permit","Fee Paid","Status","Registered","Actions"].map((h) => (
-                      <th key={h} style={{ color:C.txt3, fontWeight:600, fontSize:"11px", textAlign:"left", padding:"6px 8px", whiteSpace:"nowrap" }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {regs.map((r) => (
-                    <tr key={r.id} style={{ borderBottom:`1px solid ${C.s3}22` }}>
-                      <td style={{ padding:"8px 8px", color:C.txt, fontWeight:500 }}>{r.name}</td>
-                      <td style={{ padding:"8px 8px", color:C.txt2 }}>{r.email}</td>
-                      <td style={{ padding:"8px 8px" }}>
-                        <span style={{
-                          fontSize:"10px", fontWeight:700, padding:"2px 6px", borderRadius:4,
-                          background: r.permitType==="full-time" ? `${C.cyan}15` : `${C.purple}15`,
-                          color: r.permitType==="full-time" ? C.cyan : C.purple,
-                          textTransform:"capitalize",
-                        }}>
-                          {r.permitType}
-                        </span>
-                      </td>
-                      <td style={{ padding:"8px 8px" }}>
-                        {r.jobPassPaid
-                          ? <span style={{ color:C.green, fontSize:"12px", fontWeight:600 }}>${r.jobPassAmount.toLocaleString()} ✓</span>
-                          : <span style={{ color:C.txt3, fontSize:"12px" }}>Not paid</span>
-                        }
-                      </td>
-                      <td style={{ padding:"8px 8px" }}>
-                        <RegStatusPill status={r.accountStatus} />
-                      </td>
-                      <td style={{ padding:"8px 8px", color:C.txt3, fontSize:"11px" }}>
-                        {r.registeredAt ? new Date(r.registeredAt).toLocaleDateString() : "—"}
-                      </td>
-                      <td style={{ padding:"8px 8px" }}>
-                        {r.accountStatus === "pending" && (
-                          <div style={{ display:"flex", gap:4 }}>
-                            <ActionBtn
-                              label="Approve" color={C.green}
-                              disabled={actioning===r.id}
-                              onClick={() => reviewReg(r.id, "approve")}
-                            />
-                            <ActionBtn
-                              label="Reject"  color={C.red}
-                              disabled={actioning===r.id}
-                              onClick={() => reviewReg(r.id, "reject")}
-                            />
-                          </div>
-                        )}
-                        {r.accountStatus !== "pending" && (
-                          <span style={{ color:C.txt3, fontSize:"11px" }}>—</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            {/* Search bar */}
+            <div style={{ marginBottom:12 }}>
+              <input
+                value={regSearch}
+                onChange={(e) => setRegSearch(e.target.value)}
+                placeholder="Search by name or email…"
+                style={{
+                  width:"100%", background:C.s2, border:`1px solid ${C.s3}`, borderRadius:8,
+                  padding:"8px 11px", color:C.txt, fontSize:"12px", outline:"none", boxSizing:"border-box",
+                }}
+              />
             </div>
-          )}
-        </div>
-      )}
+
+            {regsLoading ? <Spinner /> : filtered.length === 0 ? (
+              <EmptyState msg={
+                regSearch      ? "No registrations match your search." :
+                statusFilter   ? `No ${statusFilter} registrations.`   :
+                                 "No registrations yet. Share your registration link to get started."
+              } />
+            ) : (
+              <div className="table-scroll">
+                <table style={{ width:"100%", borderCollapse:"collapse", fontSize:"13px" }}>
+                  <thead>
+                    <tr style={{ borderBottom:`1px solid ${C.s3}` }}>
+                      {["Name","Email","Permit","Fee Paid","Status","Registered","Actions",""].map((h) => (
+                        <th key={h} style={{ color:C.txt3, fontWeight:600, fontSize:"11px", textAlign:"left", padding:"6px 8px", whiteSpace:"nowrap" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((r) => (
+                      <tr key={r.id} style={{ borderBottom:`1px solid ${C.s3}22` }}>
+                        <td style={{ padding:"8px 8px", color:C.txt, fontWeight:500 }}>{r.name}</td>
+                        <td style={{ padding:"8px 8px", color:C.txt2 }}>{r.email}</td>
+                        <td style={{ padding:"8px 8px" }}>
+                          <span style={{
+                            fontSize:"10px", fontWeight:700, padding:"2px 6px", borderRadius:4,
+                            background: r.permitType==="full-time" ? `${C.cyan}15` : `${C.purple}15`,
+                            color: r.permitType==="full-time" ? C.cyan : C.purple,
+                            textTransform:"capitalize",
+                          }}>
+                            {r.permitType}
+                          </span>
+                        </td>
+                        <td style={{ padding:"8px 8px" }}>
+                          {r.jobPassPaid
+                            ? <span style={{ color:C.green, fontSize:"12px", fontWeight:600 }}>${r.jobPassAmount.toLocaleString()} ✓</span>
+                            : <span style={{ color:C.txt3, fontSize:"12px" }}>Not paid</span>
+                          }
+                        </td>
+                        <td style={{ padding:"8px 8px" }}>
+                          <RegStatusPill status={r.accountStatus} />
+                        </td>
+                        <td style={{ padding:"8px 8px", color:C.txt3, fontSize:"11px" }}>
+                          {r.registeredAt ? new Date(r.registeredAt).toLocaleDateString() : "—"}
+                        </td>
+                        <td style={{ padding:"8px 8px" }}>
+                          {r.accountStatus === "pending" && (
+                            <div style={{ display:"flex", gap:4 }}>
+                              <ActionBtn
+                                label="Approve" color={C.green}
+                                disabled={actioning===r.id || deletingReg===r.id}
+                                onClick={() => reviewReg(r.id, "approve")}
+                              />
+                              <ActionBtn
+                                label="Reject"  color={C.red}
+                                disabled={actioning===r.id || deletingReg===r.id}
+                                onClick={() => reviewReg(r.id, "reject")}
+                              />
+                            </div>
+                          )}
+                          {r.accountStatus !== "pending" && (
+                            <span style={{ color:C.txt3, fontSize:"11px" }}>—</span>
+                          )}
+                        </td>
+                        <td style={{ padding:"8px 4px" }}>
+                          <button
+                            title="Delete this registration permanently"
+                            disabled={deletingReg === r.id || actioning === r.id}
+                            onClick={() => deleteReg(r.id, r.name)}
+                            style={{
+                              background:"none", border:`1px solid ${C.red}40`,
+                              color:C.red, borderRadius:5, padding:"3px 6px",
+                              cursor:"pointer", display:"flex", alignItems:"center", gap:3,
+                              fontSize:"10px", opacity:(deletingReg===r.id || actioning===r.id) ? 0.4 : 1,
+                            }}
+                          >
+                            {deletingReg === r.id
+                              ? <Loader2 size={10} style={{ animation:"spin 1s linear infinite" }} />
+                              : <Trash2 size={10} />
+                            }
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ── Quiz Questions (sub-admin only — manage their own question set) ── */}
       {!adminInfo.isSuperAdmin && (

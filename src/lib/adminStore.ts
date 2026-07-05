@@ -436,6 +436,25 @@ export const adminStore = {
     } catch { return false; }
   },
 
+  async clearRegistrations(channelId?: string): Promise<number> {
+    const users = channelId
+      ? await prisma.user.findMany({ where: { channelId }, select: { id: true } })
+      : await prisma.user.findMany({ select: { id: true } });
+    const ids = users.map((u) => u.id);
+    if (ids.length === 0) return 0;
+    await prisma.$transaction([
+      prisma.job.deleteMany({ where: { userId: { in: ids } } }),
+      prisma.payment.deleteMany({ where: { userId: { in: ids } } }),
+      prisma.referral.deleteMany({ where: { referrerId: { in: ids } } }),
+      prisma.referralBonus.deleteMany({ where: { referrerId: { in: ids } } }),
+      prisma.channelCommission.deleteMany({ where: { userId: { in: ids } } }),
+      prisma.passwordResetRequest.deleteMany({ where: { userId: { in: ids } } }),
+      prisma.activityLog.deleteMany({ where: { userId: { in: ids } } }),
+      prisma.user.deleteMany({ where: { id: { in: ids } } }),
+    ]);
+    return ids.length;
+  },
+
   async suspendUser(id: string): Promise<AdminUser | null> {
     try {
       const u = await prisma.user.update({ where: { id }, data: { status: "Suspended" } });
