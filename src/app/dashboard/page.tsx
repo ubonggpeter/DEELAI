@@ -145,7 +145,7 @@ export default function Dashboard() {
         onMenuOpen={() => setMenuOpen(true)}
       />
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <div className="flex-1 overflow-y-auto" style={{ paddingBottom: isMain ? undefined : 0 }}>
+        <div className={`flex-1 overflow-y-auto${isMain ? " pb-20 md:pb-0" : ""}`}>
           <ScreenContent
             screen={screen} user={user} setUser={setUser}
             notifs={notifs} setNotifs={setNotifs} notifCount={notifCount}

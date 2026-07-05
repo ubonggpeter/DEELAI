@@ -103,15 +103,37 @@ export default function WorkspaceScreen({ user, setUser }: Props) {
     drawingRef.current = false; startPtRef.current = null; curBoxRef.current = null; setCurBox(null);
   }
 
+  // Returns true if a box label is valid for the current image
+  const isValidLabel = (boxLabel: string) =>
+    img.objects.some((o) => o.toLowerCase() === boxLabel.toLowerCase());
+
   async function submit() {
     if (!boxes.length || submitted || dailyLimitHit) return;
+
+    // Validate labels against expected objects
+    const wrongBoxes  = boxes.filter((b) => !isValidLabel(b.label));
+    const rightBoxes  = boxes.filter((b) =>  isValidLabel(b.label));
+    const wrongRatio  = wrongBoxes.length / boxes.length;
+
+    // More than half incorrectly labeled → reject immediately with explanation
+    if (wrongRatio > 0.5) {
+      setResult({
+        status: "rejected",
+        earnings: 0,
+        reason: `Incorrect labels: ${Array.from(new Set(wrongBoxes.map((b) => b.label))).join(", ")} — expected ${img.objects.join(", ")}`,
+      });
+      setSubmitted(true);
+      setTimeout(() => { setSubmitted(false); setResult(null); setBoxes([]); }, 4000);
+      return;
+    }
+
     setSubmitted(true);
     const batchId = `A-${2291 + imgIdx}`;
 
-    // Accuracy is scored server-side; client signals annotation quality via box count
-    const boxQuality = Math.min(boxes.length, 3) / 3; // 0-1
-    // Client generates a plausible accuracy range; server validates/applies earnings logic
-    const accuracy = Math.round(65 + boxQuality * 20 + Math.random() * 15); // 65-100
+    // Accuracy reduced proportionally for wrong labels
+    const boxQuality = Math.min(rightBoxes.length, 3) / 3;
+    const labelPenalty = wrongRatio * 30; // up to -30 pts for partial wrong labels
+    const accuracy = Math.max(0, Math.round(65 + boxQuality * 20 + Math.random() * 15 - labelPenalty));
 
     const res = await fetch("/api/auth/submit-job", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -247,19 +269,20 @@ export default function WorkspaceScreen({ user, setUser }: Props) {
                       backgroundSize: "40px 40px",
                     }} />
                   {/* Bounding boxes */}
-                  {[...boxes, curBox].filter(Boolean).map((b, i) => (
-                    <div key={i} className="absolute pointer-events-none"
-                      style={{
-                        left: `${(b!.x / bw) * 100}%`, top: `${(b!.y / bh) * 100}%`,
-                        width: `${(b!.w / bw) * 100}%`, height: `${(b!.h / bh) * 100}%`,
-                        border: "2px solid var(--cyan)", background: "rgba(0,212,255,.08)",
-                      }}>
-                      <span className="absolute font-mono font-semibold"
-                        style={{ top: -20, left: 0, background: "var(--cyan)", color: "#000", fontSize: 9, padding: "2px 7px", borderRadius: "4px 4px 4px 0", whiteSpace: "nowrap" }}>
-                        {b!.label}
-                      </span>
-                    </div>
-                  ))}
+                  {[...boxes, curBox].filter(Boolean).map((b, i) => {
+                    const valid = isValidLabel(b!.label);
+                    const color = b === curBox ? "var(--cyan)" : valid ? "#00E5A0" : "#FF4D6D";
+                    const bg    = b === curBox ? "rgba(0,212,255,.08)" : valid ? "rgba(0,229,160,.08)" : "rgba(255,77,109,.12)";
+                    return (
+                      <div key={i} className="absolute pointer-events-none"
+                        style={{ left:`${(b!.x/bw)*100}%`, top:`${(b!.y/bh)*100}%`, width:`${(b!.w/bw)*100}%`, height:`${(b!.h/bh)*100}%`, border:`2px solid ${color}`, background:bg }}>
+                        <span className="absolute font-mono font-semibold"
+                          style={{ top:-20, left:0, background:color, color:"#000", fontSize:9, padding:"2px 7px", borderRadius:"4px 4px 4px 0", whiteSpace:"nowrap" }}>
+                          {b!.label}{!valid && b !== curBox ? " ✗" : ""}
+                        </span>
+                      </div>
+                    );
+                  })}
                   {/* Submit overlay */}
                   {submitted && result && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"

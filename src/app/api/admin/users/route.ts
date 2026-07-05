@@ -25,10 +25,12 @@ export async function PATCH(req: NextRequest) {
   if (!email || !(await adminStore.isAdmin(email))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const { id, action } = await req.json();
+  const body = await req.json();
+  const { id, action } = body;
   let user = null;
-  if (action === "suspend")  user = await adminStore.suspendUser(id);
-  if (action === "activate") user = await adminStore.activateUser(id);
+  if (action === "suspend")        user = await adminStore.suspendUser(id);
+  if (action === "activate")       user = await adminStore.activateUser(id);
+  if (action === "setAgentAvatar") user = await adminStore.setAgentAvatar(id, body.adminAvatarUrl ?? null);
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
   return NextResponse.json({ user });
 }

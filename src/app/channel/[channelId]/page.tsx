@@ -35,13 +35,16 @@ declare global {
   }
 }
 
+type SessionStatus = "pending" | "approved" | "rejected" | null;
+
 export default function ChannelRegistrationPage() {
   const { channelId } = useParams() as { channelId: string };
   const router = useRouter();
 
-  const [channel, setChannel]         = useState<ChannelInfo | null>(null);
-  const [loading, setLoading]         = useState(true);
+  const [channel, setChannel]           = useState<ChannelInfo | null>(null);
+  const [loading, setLoading]           = useState(true);
   const [channelError, setChannelError] = useState("");
+  const [sessionStatus, setSessionStatus] = useState<SessionStatus>(null);
 
   const [step, setStep]               = useState<Step>("form");
   const [submitting, setSubmitting]   = useState(false);
@@ -64,16 +67,22 @@ export default function ChannelRegistrationPage() {
 
   useEffect(() => {
     if (!channelId) return;
-    fetch(`/api/channel/${channelId}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.error) { setChannelError(d.error); return; }
-        if (!d.isActive) { setChannelError("This channel is not currently accepting registrations."); return; }
-        setChannel(d);
-      })
-      .catch(() => setChannelError("Failed to load channel info."))
-      .finally(() => setLoading(false));
-  }, [channelId]);
+    Promise.all([
+      fetch(`/api/channel/${channelId}`).then((r) => r.json()),
+      fetch("/api/auth/session").then((r) => r.json()),
+    ]).then(([d, sess]) => {
+      if (d.error) { setChannelError(d.error); return; }
+      if (!d.isActive) { setChannelError("This channel is not currently accepting registrations."); return; }
+      setChannel(d);
+      if (sess?.loggedIn) {
+        const st = sess.accountStatus as SessionStatus;
+        if (st === "approved") { router.push("/dashboard"); return; }
+        setSessionStatus(st);
+      }
+    })
+    .catch(() => setChannelError("Failed to load channel info."))
+    .finally(() => setLoading(false));
+  }, [channelId, router]);
 
   useEffect(() => {
     if (!channel?.paystackPublicKey) return;
@@ -165,6 +174,44 @@ export default function ChannelRegistrationPage() {
           <a href="/" style={{ color:C.cyan, fontSize:"13px", marginTop:8, display:"block" }}>
             ← Back to DEELAI
           </a>
+        </div>
+      </PageShell>
+    );
+  }
+
+  /* ── Already-registered status screens ──────────────────────────── */
+  if (sessionStatus === "pending" && channel) {
+    return (
+      <PageShell>
+        <div style={{ background:`${C.gold}11`, border:`1px solid ${C.gold}33`, borderRadius:16, padding:"40px 28px", textAlign:"center" }}>
+          <div style={{ width:60, height:60, borderRadius:"50%", background:`${C.gold}20`, border:`2px solid ${C.gold}50`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px" }}>
+            <Clock size={28} color={C.gold} />
+          </div>
+          <h2 style={{ color:C.txt, fontSize:"20px", fontWeight:700, marginBottom:8 }}>Registration Under Review</h2>
+          <p style={{ color:C.txt2, fontSize:"13px", lineHeight:1.6, marginBottom:20 }}>
+            Your application to <strong style={{ color:C.cyan }}>{channel.channelName}</strong> is pending admin approval.
+            You&apos;ll be notified once a decision is made.
+          </p>
+          <div style={{ background:C.s2, borderRadius:10, padding:"10px 14px", border:`1px solid ${C.s3}`, display:"flex", alignItems:"center", gap:8 }}>
+            <Clock size={14} color={C.gold} />
+            <span style={{ color:C.txt2, fontSize:"12px" }}>Est. review time: <strong style={{ color:C.gold }}>{channel.estTime}</strong></span>
+          </div>
+          <a href="/login" style={{ display:"block", marginTop:20, color:C.cyan, fontSize:"13px" }}>Log in to check status →</a>
+        </div>
+      </PageShell>
+    );
+  }
+
+  if (sessionStatus === "rejected" && channel) {
+    return (
+      <PageShell>
+        <div style={{ background:`${C.red}11`, border:`1px solid ${C.red}33`, borderRadius:16, padding:"40px 28px", textAlign:"center" }}>
+          <AlertCircle size={36} color={C.red} style={{ margin:"0 auto 16px" }} />
+          <h2 style={{ color:C.txt, fontSize:"20px", fontWeight:700, marginBottom:8 }}>Application Not Approved</h2>
+          <p style={{ color:C.txt2, fontSize:"13px", lineHeight:1.6 }}>
+            Your application to <strong style={{ color:C.cyan }}>{channel.channelName}</strong> was not approved.
+            Contact the channel admin for more details.
+          </p>
         </div>
       </PageShell>
     );

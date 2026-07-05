@@ -50,6 +50,7 @@ export interface AdminUser {
   refCode: string; referredByUserId?: string;
   quizPassed: boolean; lensActivated: boolean; trainingDone: boolean; completedModules: number[];
   avatarUrl?: string;
+  adminAvatarUrl?: string;
   bankCode?: string; bankName?: string; bankAccountNumber?: string; bankAccountName?: string;
   jobsToday: number; lastJobDate: string;
 }
@@ -73,6 +74,7 @@ export interface PlatformSettings {
   registrationOpen: boolean; maintenanceMode: boolean;
   payoutsEnabled: boolean; newJobsEnabled: boolean; announcement: string;
   commissionEnabled: boolean; commissionWallet: number;
+  leaderboardThreshold: number;
 }
 
 /* ── Mappers (Prisma → our types) ────────────────────────────────────── */
@@ -95,6 +97,7 @@ function mapUser(u: any): AdminUser {
     quizPassed: u.quizPassed, lensActivated: u.lensActivated,
     trainingDone: u.trainingDone, completedModules: u.completedModules ?? [],
     avatarUrl: u.avatarUrl ?? undefined,
+    adminAvatarUrl: u.adminAvatarUrl ?? undefined,
     bankCode: u.bankCode ?? undefined, bankName: u.bankName ?? undefined,
     bankAccountNumber: u.bankAccountNumber ?? undefined, bankAccountName: u.bankAccountName ?? undefined,
     jobsToday: u.jobsToday ?? 0, lastJobDate: u.lastJobDate ?? "",
@@ -930,8 +933,9 @@ export const adminStore = {
     return {
       registrationOpen: s.registrationOpen, maintenanceMode: s.maintenanceMode,
       payoutsEnabled: s.payoutsEnabled, newJobsEnabled: s.newJobsEnabled, announcement: s.announcement,
-      commissionEnabled: (s as { commissionEnabled?: boolean }).commissionEnabled ?? false,
-      commissionWallet: (s as { commissionWallet?: number }).commissionWallet ?? 0,
+      commissionEnabled: s.commissionEnabled ?? false,
+      commissionWallet: s.commissionWallet ?? 0,
+      leaderboardThreshold: s.leaderboardThreshold ?? 0,
     };
   },
 
@@ -944,9 +948,40 @@ export const adminStore = {
     return {
       registrationOpen: s.registrationOpen, maintenanceMode: s.maintenanceMode,
       payoutsEnabled: s.payoutsEnabled, newJobsEnabled: s.newJobsEnabled, announcement: s.announcement,
-      commissionEnabled: (s as { commissionEnabled?: boolean }).commissionEnabled ?? false,
-      commissionWallet: (s as { commissionWallet?: number }).commissionWallet ?? 0,
+      commissionEnabled: s.commissionEnabled ?? false,
+      commissionWallet: s.commissionWallet ?? 0,
+      leaderboardThreshold: s.leaderboardThreshold ?? 0,
     };
+  },
+
+  async resetPlatform(): Promise<{ deletedJobs: number; deletedLogs: number; usersReset: number }> {
+    const [jobsResult, logsResult] = await Promise.all([
+      prisma.job.deleteMany({}),
+      prisma.activityLog.deleteMany({}),
+    ]);
+    const usersResult = await prisma.user.updateMany({
+      where: { is_super_admin: false },
+      data: { salary: 0, recruitWallet: 0, jobsDone: 0, accuracy: 0, streak: 0, jobsToday: 0, lastJobDate: "" },
+    });
+    return {
+      deletedJobs: jobsResult.count,
+      deletedLogs: logsResult.count,
+      usersReset:  usersResult.count,
+    };
+  },
+
+  async setAgentAvatar(userId: string, adminAvatarUrl: string | null): Promise<AdminUser | null> {
+    const u = await prisma.user.update({ where: { id: userId }, data: { adminAvatarUrl } });
+    return u ? mapUser(u) : null;
+  },
+
+  async getLeaderboard(threshold = 0): Promise<AdminUser[]> {
+    const users = await prisma.user.findMany({
+      where: { is_super_admin: false, accountStatus: "approved", salary: { gte: threshold } },
+      orderBy: { salary: "desc" },
+      take: 50,
+    });
+    return users.map(mapUser);
   },
 
   /* ── Stats ──────────────────────────────────────────────────────────── */

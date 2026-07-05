@@ -8,8 +8,9 @@ import {
   Trash2, Edit2, Plus, X, Save, RefreshCw, Menu, UserCheck,
   TrendingUp, DollarSign, CheckSquare, BarChart3,
   Radio, Key, Link, Copy, ExternalLink, ToggleLeft, ToggleRight,
-  CircleDot, Coins, ClipboardList, KeyRound, Download,
+  CircleDot, Coins, ClipboardList, KeyRound, Download, Upload, Camera,
 } from "lucide-react";
+import Image from "next/image";
 import { ALL_PERMISSIONS, PERMISSION_LABELS, ADMIN_REGIONS, type Permission } from "@/lib/adminConfig";
 
 /* ─── Types (mirrors adminStore) ─────────────────────────────────── */
@@ -51,6 +52,7 @@ interface AdminUser {
   id: string; email: string; name: string; level: string; salary: number;
   jobsDone: number; accuracy: number; streak: number; tier: string;
   status: "Active" | "Suspended"; joinedAt: string; country: string;
+  avatarUrl?: string; adminAvatarUrl?: string;
 }
 interface Job {
   id: string; userId: string; userName: string; type: string; batchId: string;
@@ -74,6 +76,7 @@ interface PlatformSettings {
   registrationOpen: boolean; maintenanceMode: boolean;
   payoutsEnabled: boolean; newJobsEnabled: boolean; announcement: string;
   commissionEnabled: boolean; commissionWallet: number;
+  leaderboardThreshold: number;
 }
 
 /* ─── Design tokens ──────────────────────────────────────────────── */
@@ -454,6 +457,47 @@ function OverviewTab() {
 /* ═══════════════════════════════════════════════════════════════════ */
 /* USERS TAB                                                           */
 /* ═══════════════════════════════════════════════════════════════════ */
+function AgentAvatarCell({ user, onUpdated }: { user: AdminUser; onUpdated: (u: AdminUser) => void }) {
+  const ref = React.useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = React.useState(false);
+  const avatar = user.adminAvatarUrl ?? user.avatarUrl;
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const fd = new FormData(); fd.append("file", file);
+    const up = await fetch("/api/admin/training/upload", { method:"POST", body:fd });
+    const upData = await up.json();
+    if (!up.ok) { setUploading(false); return; }
+    const res = await fetch("/api/admin/users", {
+      method:"PATCH", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ id: user.id, action:"setAgentAvatar", adminAvatarUrl: upData.url }),
+    });
+    const data = await res.json();
+    if (res.ok) onUpdated(data.user);
+    setUploading(false);
+    if (ref.current) ref.current.value = "";
+  }
+
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+      <div style={{ width:30, height:30, borderRadius:"50%", overflow:"hidden", background:C.s3, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+        {avatar
+          ? <Image src={avatar} alt={user.name} width={30} height={30} style={{ width:"100%", height:"100%", objectFit:"cover" }} unoptimized />
+          : <Users size={14} color={C.txt3} />}
+      </div>
+      <button
+        onClick={() => ref.current?.click()} disabled={uploading}
+        style={{ background:`${C.cyan}15`, border:`1px solid ${C.cyan}30`, color:C.cyan, borderRadius:5, padding:"3px 6px", fontSize:"10px", cursor:"pointer", display:"flex", alignItems:"center", gap:3 }}
+      >
+        {uploading ? <Loader2 size={10} style={{ animation:"spin 1s linear infinite" }} /> : <Camera size={10} />}
+      </button>
+      <input ref={ref} type="file" accept="image/*" onChange={handleFile} style={{ display:"none" }} />
+    </div>
+  );
+}
+
 function UsersTab() {
   const [users, setUsers]   = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -505,7 +549,7 @@ function UsersTab() {
           <table style={{ width:"100%", borderCollapse:"collapse", fontSize:"13px" }}>
             <thead>
               <tr style={{ borderBottom:`1px solid ${C.s3}` }}>
-                {["Name","Email","Level","Salary","Jobs","Accuracy","Status","Actions"].map((h) => (
+                {["Avatar","Name","Email","Level","Salary","Jobs","Accuracy","Status","Actions"].map((h) => (
                   <th key={h} style={{ color:C.txt3, fontWeight:600, fontSize:"11px", textAlign:"left", padding:"6px 8px", whiteSpace:"nowrap" }}>
                     {h}
                   </th>
@@ -515,6 +559,9 @@ function UsersTab() {
             <tbody>
               {users.map((u) => (
                 <tr key={u.id} style={{ borderBottom:`1px solid ${C.s3}22` }}>
+                  <td style={{ padding:"8px 8px" }}>
+                    <AgentAvatarCell user={u} onUpdated={(updated) => setUsers((prev) => prev.map((x) => x.id === updated.id ? { ...x, ...updated } : x))} />
+                  </td>
                   <td style={{ padding:"8px 8px", color:C.txt, fontWeight:500 }}>{u.name}</td>
                   <td style={{ padding:"8px 8px", color:C.txt2 }}>{u.email}</td>
                   <td style={{ padding:"8px 8px" }}>
@@ -877,6 +924,23 @@ function SettingsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
         </div>
       )}
 
+      {/* Leaderboard threshold */}
+      {isSuperAdmin && (
+        <div style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:10, padding:"14px 16px", marginBottom:16 }}>
+          <label style={{ color:C.txt, fontSize:"14px", fontWeight:600, display:"block", marginBottom:4 }}>
+            Leaderboard Minimum Earnings ($)
+          </label>
+          <div style={{ color:C.txt3, fontSize:"12px", marginBottom:8 }}>
+            Only show users who have earned at least this amount. Set 0 to show everyone.
+          </div>
+          <input
+            type="number" min="0" value={settings.leaderboardThreshold ?? 0}
+            onChange={(e) => setSettings({ ...settings, leaderboardThreshold: Number(e.target.value) })}
+            style={{ background:C.s2, border:`1px solid ${C.s3}`, borderRadius:7, padding:"8px 10px", color:C.txt, fontSize:"13px", width:160, outline:"none" }}
+          />
+        </div>
+      )}
+
       {/* Announcement */}
       <div style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:10, padding:"14px 16px", marginBottom:16 }}>
         <label style={{ color:C.txt, fontSize:"14px", fontWeight:600, display:"block", marginBottom:8 }}>
@@ -897,20 +961,88 @@ function SettingsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
       </div>
 
       {isSuperAdmin && (
-        <button
-          onClick={save}
-          disabled={saving || saved}
-          style={{
-            background: saved ? C.green : C.cyan, color:"#060A12", border:"none",
-            borderRadius:8, padding:"10px 20px", fontWeight:700, fontSize:"13px",
-            cursor: saving ? "wait" : "pointer", display:"flex", alignItems:"center", gap:8,
-          }}
-        >
-          {saving ? <><Loader2 size={14} style={{ animation:"spin 1s linear infinite" }} /> Saving…</> :
-           saved  ? <><CheckCircle2 size={14} /> Saved!</> :
-                    <><Save size={14} /> Save Settings</>}
-        </button>
+        <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+          <button
+            onClick={save}
+            disabled={saving || saved}
+            style={{
+              background: saved ? C.green : C.cyan, color:"#060A12", border:"none",
+              borderRadius:8, padding:"10px 20px", fontWeight:700, fontSize:"13px",
+              cursor: saving ? "wait" : "pointer", display:"flex", alignItems:"center", gap:8,
+            }}
+          >
+            {saving ? <><Loader2 size={14} style={{ animation:"spin 1s linear infinite" }} /> Saving…</> :
+             saved  ? <><CheckCircle2 size={14} /> Saved!</> :
+                      <><Save size={14} /> Save Settings</>}
+          </button>
+          <PlatformResetButton />
+        </div>
       )}
+    </div>
+  );
+}
+
+function PlatformResetButton() {
+  const [phase, setPhase] = useState<"idle"|"confirm1"|"confirm2"|"running"|"done">("idle");
+  const [result, setResult] = useState<{ deletedJobs: number; deletedLogs: number; usersReset: number } | null>(null);
+
+  async function doReset() {
+    setPhase("running");
+    const res = await fetch("/api/admin/reset", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ confirm: "RESET" }),
+    });
+    const data = await res.json();
+    setResult(data);
+    setPhase("done");
+  }
+
+  if (phase === "idle") return (
+    <button onClick={() => setPhase("confirm1")} style={{ background:`${C.red}15`, color:C.red, border:`1px solid ${C.red}33`, borderRadius:8, padding:"10px 16px", fontWeight:700, fontSize:"13px", cursor:"pointer", display:"flex", alignItems:"center", gap:8 }}>
+      <Trash2 size={14} /> Reset Platform
+    </button>
+  );
+
+  if (phase === "confirm1") return (
+    <div style={{ background:`${C.red}11`, border:`1px solid ${C.red}33`, borderRadius:10, padding:"14px 16px", width:"100%", maxWidth:480 }}>
+      <div style={{ color:C.red, fontWeight:700, marginBottom:6 }}>⚠ Reset Platform — Scope</div>
+      <div style={{ color:C.txt2, fontSize:"13px", marginBottom:12, lineHeight:1.6 }}>
+        This will <strong style={{ color:C.txt }}>permanently delete</strong>:
+        <br/>• All job submission history
+        <br/>• All activity logs
+        <br/>• Reset all user earnings, accuracy, streak and job counts to zero
+        <br/><br/>
+        <strong style={{ color:C.green }}>Kept intact:</strong> User accounts, channels, training docs, quiz questions, payment records, registrations.
+      </div>
+      <div style={{ display:"flex", gap:8 }}>
+        <button onClick={() => setPhase("confirm2")} style={{ background:C.red, color:"#fff", border:"none", borderRadius:7, padding:"8px 16px", fontWeight:700, fontSize:"13px", cursor:"pointer" }}>Continue →</button>
+        <button onClick={() => setPhase("idle")} style={{ background:C.s2, color:C.txt2, border:`1px solid ${C.s3}`, borderRadius:7, padding:"8px 14px", fontSize:"13px", cursor:"pointer" }}>Cancel</button>
+      </div>
+    </div>
+  );
+
+  if (phase === "confirm2") return (
+    <div style={{ background:`${C.red}11`, border:`1px solid ${C.red}55`, borderRadius:10, padding:"14px 16px", width:"100%", maxWidth:480 }}>
+      <div style={{ color:C.red, fontWeight:700, marginBottom:8 }}>Final confirmation — this cannot be undone</div>
+      <div style={{ display:"flex", gap:8 }}>
+        <button onClick={doReset} style={{ background:C.red, color:"#fff", border:"none", borderRadius:7, padding:"8px 16px", fontWeight:700, fontSize:"13px", cursor:"pointer" }}>Yes, Reset Everything</button>
+        <button onClick={() => setPhase("idle")} style={{ background:C.s2, color:C.txt2, border:`1px solid ${C.s3}`, borderRadius:7, padding:"8px 14px", fontSize:"13px", cursor:"pointer" }}>Cancel</button>
+      </div>
+    </div>
+  );
+
+  if (phase === "running") return (
+    <div style={{ display:"flex", alignItems:"center", gap:8, color:C.txt2, fontSize:"13px" }}>
+      <Loader2 size={14} style={{ animation:"spin 1s linear infinite" }} /> Resetting…
+    </div>
+  );
+
+  return (
+    <div style={{ background:`${C.green}11`, border:`1px solid ${C.green}33`, borderRadius:10, padding:"12px 16px" }}>
+      <div style={{ color:C.green, fontWeight:700, marginBottom:4 }}>✓ Platform Reset Complete</div>
+      <div style={{ color:C.txt2, fontSize:"12px" }}>
+        {result?.deletedJobs} jobs deleted · {result?.deletedLogs} activity logs cleared · {result?.usersReset} users reset
+      </div>
     </div>
   );
 }
@@ -2211,7 +2343,10 @@ function TrainingTab({ adminInfo }: { adminInfo: AdminInfo }) {
   const [ajLabels,      setAjLabels]      = useState("");
   const [ajDiff,        setAjDiff]        = useState("medium");
   const [addingAj,      setAddingAj]      = useState(false);
-  const fileRef = React.useRef<HTMLInputElement>(null);
+  const [ajImgUploading, setAjImgUploading] = useState(false);
+  const [ajImgErr,       setAjImgErr]       = useState("");
+  const fileRef    = React.useRef<HTMLInputElement>(null);
+  const ajImgRef   = React.useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -2305,6 +2440,19 @@ function TrainingTab({ adminInfo }: { adminInfo: AdminInfo }) {
       setAnnJobs(j => [...j, data.job]);
       setAjTitle(""); setAjDesc(""); setAjImages(""); setAjLabels(""); setAjDiff("medium");
     }
+  }
+
+  async function handleAjImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAjImgErr(""); setAjImgUploading(true);
+    const fd = new FormData(); fd.append("file", file);
+    const res = await fetch("/api/admin/training/upload", { method:"POST", body:fd });
+    const data = await res.json();
+    setAjImgUploading(false);
+    if (!res.ok) { setAjImgErr(data.error ?? "Upload failed"); return; }
+    setAjImages((prev) => prev ? `${prev}\n${data.url}` : data.url);
+    if (ajImgRef.current) ajImgRef.current.value = "";
   }
 
   async function deleteAnnotationJob(id: string) {
@@ -2501,7 +2649,20 @@ function TrainingTab({ adminInfo }: { adminInfo: AdminInfo }) {
             <input value={ajDesc} onChange={e => setAjDesc(e.target.value)} placeholder="Identify all vehicles in street images." style={fieldStyle} />
           </div>
           <div>
-            <label style={labelStyle}>Image URLs (one per line)</label>
+            <label style={labelStyle}>Images</label>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
+              <button
+                type="button"
+                onClick={() => ajImgRef.current?.click()}
+                disabled={ajImgUploading}
+                style={{ background:`${C.cyan}15`, border:`1px solid ${C.cyan}30`, color:C.cyan, borderRadius:7, padding:"5px 10px", fontSize:"12px", cursor:"pointer", display:"flex", alignItems:"center", gap:4, flexShrink:0 }}
+              >
+                {ajImgUploading ? <><Loader2 size={11} style={{ animation:"spin 1s linear infinite" }} /> Uploading…</> : <><Upload size={11} /> Upload Image</>}
+              </button>
+              <span style={{ color:C.txt3, fontSize:"11px" }}>or paste URLs below</span>
+              <input ref={ajImgRef} type="file" accept="image/*" onChange={handleAjImageUpload} style={{ display:"none" }} />
+            </div>
+            {ajImgErr && <div style={{ color:C.red, fontSize:"11px", marginBottom:4 }}>{ajImgErr}</div>}
             <textarea
               value={ajImages}
               onChange={e => setAjImages(e.target.value)}

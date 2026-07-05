@@ -43,6 +43,7 @@ model User {
   passwordHash      String    @default("")
   approvedBy        String?
   avatarUrl         String?
+  adminAvatarUrl    String?
   bankCode          String?
   bankName          String?
   bankAccountNumber String?
@@ -220,11 +221,12 @@ model ActivityLog {
 
 model PlatformSettings {
   id               String  @id @default("singleton")
-  registrationOpen   Boolean @default(true)
-  maintenanceMode    Boolean @default(false)
-  payoutsEnabled     Boolean @default(true)
-  newJobsEnabled     Boolean @default(true)
-  announcement       String  @default("")
-  commissionEnabled  Boolean @default(false)
-  commissionWallet   Float   @default(0)
+  registrationOpen        Boolean @default(true)
+  maintenanceMode         Boolean @default(false)
+  payoutsEnabled          Boolean @default(true)
+  newJobsEnabled          Boolean @default(true)
+  announcement            String  @default("")
+  commissionEnabled       Boolean @default(false)
+  commissionWallet        Float   @default(0)
+  leaderboardThreshold    Float   @default(0)
 }
