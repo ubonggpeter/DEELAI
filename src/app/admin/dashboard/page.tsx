@@ -47,6 +47,7 @@ interface Registration {
   accountStatus: "pending" | "approved" | "rejected";
   cvUrl?: string; jobPassPaid: boolean; jobPassAmount: number;
   channelId: string; channelName?: string; registeredAt?: string;
+  avatarUrl?: string; adminAvatarUrl?: string;
 }
 interface AdminUser {
   id: string; email: string; name: string; level: string; salary: number;
@@ -982,9 +983,12 @@ function SettingsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   );
 }
 
+interface ResetResult { deletedJobs: number; deletedLogs: number; deletedPayments: number; deletedReferrals: number; deletedBonuses: number; deletedCommissions: number; usersReset: number; }
+
 function PlatformResetButton() {
-  const [phase, setPhase] = useState<"idle"|"confirm1"|"confirm2"|"running"|"done">("idle");
-  const [result, setResult] = useState<{ deletedJobs: number; deletedLogs: number; usersReset: number } | null>(null);
+  const [phase, setPhase] = useState<"idle"|"confirm1"|"confirm2"|"running"|"done"|"error">("idle");
+  const [result, setResult] = useState<ResetResult | null>(null);
+  const [err, setErr] = useState("");
 
   async function doReset() {
     setPhase("running");
@@ -993,6 +997,7 @@ function PlatformResetButton() {
       body: JSON.stringify({ confirm: "RESET" }),
     });
     const data = await res.json();
+    if (!res.ok) { setErr(data.error ?? "Reset failed"); setPhase("error"); return; }
     setResult(data);
     setPhase("done");
   }
@@ -1004,15 +1009,18 @@ function PlatformResetButton() {
   );
 
   if (phase === "confirm1") return (
-    <div style={{ background:`${C.red}11`, border:`1px solid ${C.red}33`, borderRadius:10, padding:"14px 16px", width:"100%", maxWidth:480 }}>
-      <div style={{ color:C.red, fontWeight:700, marginBottom:6 }}>⚠ Reset Platform — Scope</div>
-      <div style={{ color:C.txt2, fontSize:"13px", marginBottom:12, lineHeight:1.6 }}>
-        This will <strong style={{ color:C.txt }}>permanently delete</strong>:
-        <br/>• All job submission history
-        <br/>• All activity logs
-        <br/>• Reset all user earnings, accuracy, streak and job counts to zero
+    <div style={{ background:`${C.red}11`, border:`1px solid ${C.red}33`, borderRadius:10, padding:"14px 16px", width:"100%", maxWidth:520 }}>
+      <div style={{ color:C.red, fontWeight:700, marginBottom:6 }}>⚠ Reset Platform — Full Scope</div>
+      <div style={{ color:C.txt2, fontSize:"13px", marginBottom:12, lineHeight:1.7 }}>
+        This will <strong style={{ color:C.txt }}>permanently delete all history</strong>:
+        <br/>• All job submissions &amp; activity logs
+        <br/>• All payment records
+        <br/>• All referrals &amp; referral bonuses
+        <br/>• All channel commission records
+        <br/>• Reset all user earnings, wallets, accuracy, streak, training progress to zero
+        <br/>• Reset all channel balances and commission wallet to zero
         <br/><br/>
-        <strong style={{ color:C.green }}>Kept intact:</strong> User accounts, channels, training docs, quiz questions, payment records, registrations.
+        <strong style={{ color:C.green }}>Kept intact:</strong> User accounts, channels, training documents, quiz questions, registration records.
       </div>
       <div style={{ display:"flex", gap:8 }}>
         <button onClick={() => setPhase("confirm2")} style={{ background:C.red, color:"#fff", border:"none", borderRadius:7, padding:"8px 16px", fontWeight:700, fontSize:"13px", cursor:"pointer" }}>Continue →</button>
@@ -1025,7 +1033,7 @@ function PlatformResetButton() {
     <div style={{ background:`${C.red}11`, border:`1px solid ${C.red}55`, borderRadius:10, padding:"14px 16px", width:"100%", maxWidth:480 }}>
       <div style={{ color:C.red, fontWeight:700, marginBottom:8 }}>Final confirmation — this cannot be undone</div>
       <div style={{ display:"flex", gap:8 }}>
-        <button onClick={doReset} style={{ background:C.red, color:"#fff", border:"none", borderRadius:7, padding:"8px 16px", fontWeight:700, fontSize:"13px", cursor:"pointer" }}>Yes, Reset Everything</button>
+        <button onClick={doReset} style={{ background:C.red, color:"#fff", border:"none", borderRadius:7, padding:"8px 16px", fontWeight:700, fontSize:"13px", cursor:"pointer" }}>Yes, Wipe All History</button>
         <button onClick={() => setPhase("idle")} style={{ background:C.s2, color:C.txt2, border:`1px solid ${C.s3}`, borderRadius:7, padding:"8px 14px", fontSize:"13px", cursor:"pointer" }}>Cancel</button>
       </div>
     </div>
@@ -1033,15 +1041,25 @@ function PlatformResetButton() {
 
   if (phase === "running") return (
     <div style={{ display:"flex", alignItems:"center", gap:8, color:C.txt2, fontSize:"13px" }}>
-      <Loader2 size={14} style={{ animation:"spin 1s linear infinite" }} /> Resetting…
+      <Loader2 size={14} style={{ animation:"spin 1s linear infinite" }} /> Resetting all platform history…
+    </div>
+  );
+
+  if (phase === "error") return (
+    <div style={{ background:`${C.red}11`, border:`1px solid ${C.red}33`, borderRadius:10, padding:"12px 16px" }}>
+      <div style={{ color:C.red, fontWeight:700, marginBottom:4 }}>Reset Failed</div>
+      <div style={{ color:C.txt2, fontSize:"12px" }}>{err}</div>
+      <button onClick={() => setPhase("idle")} style={{ marginTop:8, background:C.s2, color:C.txt2, border:`1px solid ${C.s3}`, borderRadius:6, padding:"5px 10px", fontSize:"12px", cursor:"pointer" }}>Try Again</button>
     </div>
   );
 
   return (
     <div style={{ background:`${C.green}11`, border:`1px solid ${C.green}33`, borderRadius:10, padding:"12px 16px" }}>
-      <div style={{ color:C.green, fontWeight:700, marginBottom:4 }}>✓ Platform Reset Complete</div>
-      <div style={{ color:C.txt2, fontSize:"12px" }}>
-        {result?.deletedJobs} jobs deleted · {result?.deletedLogs} activity logs cleared · {result?.usersReset} users reset
+      <div style={{ color:C.green, fontWeight:700, marginBottom:6 }}>✓ Platform Reset Complete</div>
+      <div style={{ color:C.txt2, fontSize:"12px", lineHeight:1.7 }}>
+        Jobs: {result?.deletedJobs} · Logs: {result?.deletedLogs} · Payments: {result?.deletedPayments}
+        <br/>Referrals: {result?.deletedReferrals} · Bonuses: {result?.deletedBonuses} · Commissions: {result?.deletedCommissions}
+        <br/>Users reset: {result?.usersReset}
       </div>
     </div>
   );
@@ -1572,7 +1590,7 @@ function RegistrationsTab({ adminInfo }: { adminInfo: AdminInfo }) {
             <thead>
               <tr style={{ borderBottom: `1px solid ${C.s3}` }}>
                 {[
-                  "Name", "Email",
+                  "Photo", "Name", "Email",
                   ...(adminInfo.isSuperAdmin ? ["Channel"] : []),
                   "Permit", "Fee Paid", "Status", "Registered", "Actions",
                 ].map((h) => (
@@ -1585,6 +1603,12 @@ function RegistrationsTab({ adminInfo }: { adminInfo: AdminInfo }) {
             <tbody>
               {filtered.map((r) => (
                 <tr key={r.id} style={{ borderBottom: `1px solid ${C.s3}22` }}>
+                  <td style={{ padding: "8px 8px" }}>
+                    <AgentAvatarCell
+                      user={{ id: r.id, name: r.name, avatarUrl: r.avatarUrl, adminAvatarUrl: r.adminAvatarUrl } as AdminUser}
+                      onUpdated={(updated) => setRegs((prev) => prev.map((x) => x.id === updated.id ? { ...x, adminAvatarUrl: updated.adminAvatarUrl } : x))}
+                    />
+                  </td>
                   <td style={{ padding: "8px 8px", color: C.txt, fontWeight: 500, whiteSpace: "nowrap" }}>{r.name}</td>
                   <td style={{ padding: "8px 8px", color: C.txt2 }}>{r.email}</td>
                   {adminInfo.isSuperAdmin && (

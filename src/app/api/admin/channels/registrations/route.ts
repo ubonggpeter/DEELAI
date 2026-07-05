@@ -33,6 +33,8 @@ export async function GET(req: NextRequest) {
       channelId: u.channelId,
       channelName: u.channelId ? (channelNameMap[u.channelId] ?? u.channelId) : undefined,
       registeredAt: u.registeredAt,
+      avatarUrl: u.avatarUrl,
+      adminAvatarUrl: u.adminAvatarUrl,
     })),
   });
 }

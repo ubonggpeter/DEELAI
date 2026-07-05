@@ -11,6 +11,12 @@ export async function POST(req: NextRequest) {
   if (body.confirm !== "RESET") {
     return NextResponse.json({ error: "Send { confirm: 'RESET' } to confirm" }, { status: 400 });
   }
-  const result = await adminStore.resetPlatform();
-  return NextResponse.json({ ok: true, ...result });
+  try {
+    const result = await adminStore.resetPlatform();
+    return NextResponse.json({ ok: true, ...result });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[POST /api/admin/reset]", msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 }

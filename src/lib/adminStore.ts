@@ -954,19 +954,45 @@ export const adminStore = {
     };
   },
 
-  async resetPlatform(): Promise<{ deletedJobs: number; deletedLogs: number; usersReset: number }> {
-    const [jobsResult, logsResult] = await Promise.all([
+  async resetPlatform(): Promise<{ deletedJobs: number; deletedLogs: number; deletedPayments: number; deletedReferrals: number; deletedBonuses: number; deletedCommissions: number; usersReset: number }> {
+    // Must delete child records before dependent ones (foreign key order)
+    const [jobsResult, logsResult, paymentsResult, referralsResult, bonusesResult, commissionsResult] = await Promise.all([
       prisma.job.deleteMany({}),
       prisma.activityLog.deleteMany({}),
+      prisma.payment.deleteMany({}),
+      prisma.referral.deleteMany({}),
+      prisma.referralBonus.deleteMany({}),
+      prisma.channelCommission.deleteMany({}),
     ]);
+
+    // Reset all user earnings and stats
     const usersResult = await prisma.user.updateMany({
       where: { is_super_admin: false },
-      data: { salary: 0, recruitWallet: 0, jobsDone: 0, accuracy: 0, streak: 0, jobsToday: 0, lastJobDate: "" },
+      data: {
+        salary: 0, recruitWallet: 0,
+        jobsDone: 0, accuracy: 0, streak: 0, jobsToday: 0, lastJobDate: "",
+        quizPassed: false, lensActivated: false, trainingDone: false, completedModules: [],
+      },
     });
+
+    // Reset channel balances and platform commission wallet
+    await Promise.all([
+      prisma.channel.updateMany({ data: { balance: 0 } }),
+      prisma.platformSettings.upsert({
+        where: { id: "singleton" },
+        update: { commissionWallet: 0 },
+        create: { id: "singleton", commissionWallet: 0 },
+      }),
+    ]);
+
     return {
-      deletedJobs: jobsResult.count,
-      deletedLogs: logsResult.count,
-      usersReset:  usersResult.count,
+      deletedJobs:         jobsResult.count,
+      deletedLogs:         logsResult.count,
+      deletedPayments:     paymentsResult.count,
+      deletedReferrals:    referralsResult.count,
+      deletedBonuses:      bonusesResult.count,
+      deletedCommissions:  commissionsResult.count,
+      usersReset:          usersResult.count,
     };
   },
 
