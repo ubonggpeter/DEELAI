@@ -18,6 +18,7 @@ export async function GET() {
       jobPassFee:  c.jobPassFee,
       isActive:    c.isActive,
       region:      owner?.region ?? "Global",
+      logoUrl:     c.logoUrl ?? "",
     };
   });
   return NextResponse.json({ channels: result }, {

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Loader2, CheckCircle2, ChevronRight, Globe2, MapPin, Clock, Search, X } from "lucide-react";
 
 const C = {
@@ -16,6 +17,7 @@ interface Channel {
   estTime: string;
   jobPassFee: number;
   region: string;
+  logoUrl?: string;
 }
 
 const CHANNEL_COLORS = ["#00D4FF", "#00E5A0", "#FFB800", "#8B5CF6", "#FF4D6D"];
@@ -179,7 +181,10 @@ export default function ChannelList() {
                       fontSize: 18, fontWeight: 900, color, fontFamily: "system-ui",
                       overflow: "hidden",
                     }}>
-                      {ch.channelName.charAt(0).toUpperCase()}
+                      {ch.logoUrl
+                        ? <Image src={ch.logoUrl} alt={ch.channelName} width={42} height={42} style={{ width: "100%", height: "100%", objectFit: "cover" }} unoptimized />
+                        : ch.channelName.charAt(0).toUpperCase()
+                      }
                     </div>
 
                     {/* Info */}

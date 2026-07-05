@@ -90,6 +90,7 @@ model Channel {
   region                 String    @default("")
   workWalletEnabled      Boolean   @default(true)
   recruitWalletEnabled   Boolean   @default(true)
+  logoUrl                String?   @default("")
   createdAt              DateTime  @default(now())
 
   users              User[]

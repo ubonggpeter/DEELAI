@@ -21,7 +21,7 @@ export interface Channel {
   estTime: string; paystackPublicKey: string; paystackSecretKey: string;
   lensPaystackLink: string; referralCommissionRate: number; jobPassFee: number;
   isActive: boolean; balance: number; region: string; createdAt: string;
-  workWalletEnabled: boolean; recruitWalletEnabled: boolean;
+  workWalletEnabled: boolean; recruitWalletEnabled: boolean; logoUrl?: string;
 }
 export interface QuizQuestion { id: string; q: string; opts: string[]; ans: number; }
 export interface TrainingDoc { id: string; title: string; url: string; type: "pdf" | "doc" | "link"; ownerEmail?: string | null; addedAt: string; }
@@ -114,6 +114,7 @@ function mapChannel(c: any): Channel {
     jobPassFee: c.jobPassFee, isActive: c.isActive, balance: c.balance, region: c.region,
     workWalletEnabled: c.workWalletEnabled ?? true,
     recruitWalletEnabled: c.recruitWalletEnabled ?? true,
+    logoUrl: c.logoUrl ?? "",
     createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : c.createdAt,
   };
 }
@@ -304,7 +305,7 @@ export const adminStore = {
     // Sanitize string fields — null/undefined values from old DB rows would fail Prisma's
     // non-nullable String validation; replace with empty string to be safe
     const STRING_FIELDS = ["channelName", "description", "estTime", "paystackPublicKey",
-                           "paystackSecretKey", "lensPaystackLink", "region"];
+                           "paystackSecretKey", "lensPaystackLink", "region", "logoUrl"];
     for (const f of STRING_FIELDS) {
       if (f in safe && (safe[f] === null || safe[f] === undefined)) safe[f] = "";
     }

@@ -32,7 +32,7 @@ interface Channel {
   paystackPublicKey: string; paystackSecretKey: string; lensPaystackLink: string;
   referralCommissionRate: number; jobPassFee: number;
   isActive: boolean; balance: number; region: string; createdAt: string;
-  workWalletEnabled: boolean; recruitWalletEnabled: boolean;
+  workWalletEnabled: boolean; recruitWalletEnabled: boolean; logoUrl?: string;
 }
 interface QuizQuestion { id: string; q: string; opts: string[]; ans: number; }
 interface TrainingDoc { id: string; title: string; url: string; type: string; addedAt: string; }
@@ -1814,6 +1814,9 @@ function ChannelSettingsTab({ adminInfo }: { adminInfo: AdminInfo }) {
   const [saveErr, setSaveErr]   = useState("");
   const [showSecret, setShowSecret] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoErr, setLogoErr]   = useState("");
+  const logoFileRef = React.useRef<HTMLInputElement>(null);
 
   // Registrations
   const [regs, setRegs]         = useState<Registration[]>([]);
@@ -1887,6 +1890,27 @@ function ChannelSettingsTab({ adminInfo }: { adminInfo: AdminInfo }) {
     return (e: React.ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, [key]: e.target.value }));
   }
 
+  async function uploadLogo(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !channel) return;
+    setLogoErr(""); setLogoUploading(true);
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("channelId", channel.id);
+    try {
+      const res = await fetch("/api/admin/channels/upload-logo", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) { setLogoErr(data.error ?? "Upload failed"); return; }
+      setChannel((p) => p ? { ...p, logoUrl: data.url } : p);
+      setForm((p) => ({ ...p, logoUrl: data.url }));
+    } catch {
+      setLogoErr("Upload failed — check your connection.");
+    } finally {
+      setLogoUploading(false);
+      if (logoFileRef.current) logoFileRef.current.value = "";
+    }
+  }
+
   const fieldStyle: React.CSSProperties = {
     width:"100%", background:C.s2, border:`1px solid ${C.s3}`, borderRadius:8,
     padding:"9px 11px", color:C.txt, fontSize:"13px", outline:"none",
@@ -1910,6 +1934,65 @@ function ChannelSettingsTab({ adminInfo }: { adminInfo: AdminInfo }) {
         <h3 style={{ color:C.txt, fontSize:"14px", fontWeight:700, marginBottom:16, display:"flex", alignItems:"center", gap:8 }}>
           <Radio size={14} color={C.cyan} /> Channel Configuration
         </h3>
+
+        {/* Channel Profile Photo */}
+        {channel && (
+          <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:16, paddingBottom:16, borderBottom:`1px solid ${C.s3}` }}>
+            <div style={{
+              width:64, height:64, borderRadius:12, flexShrink:0,
+              background:`${C.cyan}15`, border:`1.5px solid ${C.cyan}35`,
+              display:"flex", alignItems:"center", justifyContent:"center",
+              overflow:"hidden", fontSize:24, fontWeight:900, color:C.cyan, fontFamily:"system-ui",
+            }}>
+              {form.logoUrl
+                ? <Image src={form.logoUrl} alt="Channel logo" width={64} height={64} style={{ width:"100%", height:"100%", objectFit:"cover" }} unoptimized />
+                : channel.channelName.charAt(0).toUpperCase()
+              }
+            </div>
+            <div>
+              <div style={{ color:C.txt, fontSize:"13px", fontWeight:700, marginBottom:4 }}>Channel Photo</div>
+              <div style={{ color:C.txt3, fontSize:"11px", marginBottom:8 }}>
+                Shown on the public agent listing. JPG, PNG or WebP, max 5 MB.
+              </div>
+              <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
+                <button
+                  type="button"
+                  onClick={() => logoFileRef.current?.click()}
+                  disabled={logoUploading}
+                  style={{
+                    background:`${C.cyan}18`, border:`1px solid ${C.cyan}40`,
+                    color:C.cyan, borderRadius:7, padding:"6px 14px",
+                    fontSize:"12px", fontWeight:700, cursor:"pointer",
+                    display:"flex", alignItems:"center", gap:5,
+                  }}
+                >
+                  {logoUploading
+                    ? <><Loader2 size={12} style={{ animation:"spin 1s linear infinite" }} /> Uploading…</>
+                    : <><Camera size={12} /> {form.logoUrl ? "Change Photo" : "Upload Photo"}</>
+                  }
+                </button>
+                {form.logoUrl && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await fetch("/api/admin/channels", {
+                        method:"PATCH", headers:{"Content-Type":"application/json"},
+                        body: JSON.stringify({ channelId: channel.id, logoUrl: "" }),
+                      });
+                      setChannel((p) => p ? { ...p, logoUrl: "" } : p);
+                      setForm((p) => ({ ...p, logoUrl: "" }));
+                    }}
+                    style={{ background:"none", border:`1px solid ${C.red}40`, color:C.red, borderRadius:7, padding:"6px 10px", fontSize:"11px", cursor:"pointer" }}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+              {logoErr && <div style={{ color:C.red, fontSize:"11px", marginTop:5 }}>{logoErr}</div>}
+              <input ref={logoFileRef} type="file" accept="image/*" onChange={uploadLogo} style={{ display:"none" }} />
+            </div>
+          </div>
+        )}
 
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))", gap:12 }}>
           {/* Channel name */}

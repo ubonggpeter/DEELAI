@@ -25,5 +25,6 @@ export async function GET(_req: NextRequest, { params }: { params: { channelId: 
     isActive:               ch.isActive,
     lensPaystackLink:       ch.lensPaystackLink,
     ownerAvatarUrl:         owner?.avatarUrl ?? null,
+    logoUrl:                ch.logoUrl ?? "",
   });
 }
