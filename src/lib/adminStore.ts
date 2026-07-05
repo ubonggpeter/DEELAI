@@ -420,6 +420,22 @@ export const adminStore = {
     } catch { return null; }
   },
 
+  async deleteRegistration(userId: string): Promise<boolean> {
+    try {
+      await prisma.$transaction([
+        prisma.job.deleteMany({ where: { userId } }),
+        prisma.payment.deleteMany({ where: { userId } }),
+        prisma.referral.deleteMany({ where: { referrerId: userId } }),
+        prisma.referralBonus.deleteMany({ where: { referrerId: userId } }),
+        prisma.channelCommission.deleteMany({ where: { userId } }),
+        prisma.passwordResetRequest.deleteMany({ where: { userId } }),
+        prisma.activityLog.deleteMany({ where: { userId } }),
+        prisma.user.delete({ where: { id: userId } }),
+      ]);
+      return true;
+    } catch { return false; }
+  },
+
   async suspendUser(id: string): Promise<AdminUser | null> {
     try {
       const u = await prisma.user.update({ where: { id }, data: { status: "Suspended" } });

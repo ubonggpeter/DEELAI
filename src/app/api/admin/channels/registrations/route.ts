@@ -71,3 +71,24 @@ export async function PATCH(req: NextRequest) {
 
   return NextResponse.json({ user: updated });
 }
+
+export async function DELETE(req: NextRequest) {
+  const email = req.cookies.get(ADMIN_COOKIE)?.value;
+  if (!email || !(await adminStore.isAdmin(email))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const { userId } = await req.json() as { userId: string };
+  if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
+
+  if (!adminStore.isSuperAdmin(email)) {
+    const ch   = await adminStore.getChannelByOwner(email);
+    const user = await adminStore.getUserById(userId);
+    if (!ch || !user || user.channelId !== ch.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+  }
+
+  const ok = await adminStore.deleteRegistration(userId);
+  if (!ok) return NextResponse.json({ error: "User not found" }, { status: 404 });
+  return NextResponse.json({ success: true });
+}

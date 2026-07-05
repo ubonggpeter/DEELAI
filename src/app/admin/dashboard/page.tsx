@@ -1486,6 +1486,7 @@ function RegistrationsTab({ adminInfo }: { adminInfo: AdminInfo }) {
   const [statusFilter,  setStatusFilter]  = useState<"" | "pending" | "approved" | "rejected">("");
   const [search,        setSearch]        = useState("");
   const [actioning,     setActioning]     = useState<string | null>(null);
+  const [deleting,      setDeleting]      = useState<string | null>(null);
   const [actionError,   setActionError]   = useState<string | null>(null);
 
   const loadRegs = useCallback(async () => {
@@ -1515,6 +1516,59 @@ function RegistrationsTab({ adminInfo }: { adminInfo: AdminInfo }) {
       await loadRegs();
     }
     setActioning(null);
+  }
+
+  async function deleteReg(userId: string, name: string) {
+    if (!confirm(`Delete "${name}" permanently?\n\nThis removes their account, all jobs, payments and activity logs. This cannot be undone.`)) return;
+    setDeleting(userId);
+    setActionError(null);
+    try {
+      const res = await fetch("/api/admin/channels/registrations", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      if (res.ok) {
+        setRegs((prev) => prev.filter((r) => r.id !== userId));
+      } else {
+        const d = await res.json();
+        setActionError(d.error ?? "Delete failed");
+      }
+    } catch {
+      setActionError("Network error — delete failed.");
+    } finally {
+      setDeleting(null);
+    }
+  }
+
+  function exportCSV() {
+    const isSA = adminInfo.isSuperAdmin;
+    const headers = [
+      "Name", "Email", "Permit Type", "Status",
+      "Fee Paid", "Fee Amount ($)",
+      ...(isSA ? ["Channel"] : []),
+      "Registered Date",
+    ];
+    const rows = filtered.map((r) => [
+      r.name,
+      r.email,
+      r.permitType,
+      r.accountStatus,
+      r.jobPassPaid ? "Yes" : "No",
+      String(r.jobPassAmount),
+      ...(isSA ? [r.channelName ?? r.channelId ?? ""] : []),
+      r.registeredAt ? new Date(r.registeredAt).toLocaleDateString("en-GB") : "",
+    ]);
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(","))
+      .join("\r\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `registrations-${new Date().toISOString().split("T")[0]}${search ? `-filtered` : ""}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   // Client-side search filters name, email, and (for super admin) channel name
@@ -1569,12 +1623,16 @@ function RegistrationsTab({ adminInfo }: { adminInfo: AdminInfo }) {
           ]}
         />
         <RefreshBtn onClick={loadRegs} />
-        <button onClick={() => downloadCSV("registrations")} style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:7, padding:"7px 10px", color:C.green, cursor:"pointer", display:"flex", alignItems:"center", gap:4, fontSize:"12px" }}>
-          <Download size={12} /> CSV
+        <button
+          onClick={exportCSV}
+          title={search || statusFilter ? `Export ${filtered.length} filtered result(s) as CSV` : "Export all registrations as CSV"}
+          style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:7, padding:"7px 10px", color:C.green, cursor:"pointer", display:"flex", alignItems:"center", gap:4, fontSize:"12px" }}
+        >
+          <Download size={12} /> CSV {(search || statusFilter) ? `(${filtered.length})` : ""}
         </button>
         {adminInfo.isSuperAdmin && (
           <button onClick={() => clearHistory("registrations","registration").then(loadRegs)} style={{ background:C.s1, border:`1px solid ${C.red}33`, borderRadius:7, padding:"7px 10px", color:C.red, cursor:"pointer", display:"flex", alignItems:"center", gap:4, fontSize:"12px" }}>
-            <Trash2 size={12} /> Clear
+            <Trash2 size={12} /> Clear All
           </button>
         )}
       </div>
@@ -1593,7 +1651,7 @@ function RegistrationsTab({ adminInfo }: { adminInfo: AdminInfo }) {
                 {[
                   "Photo", "Name", "Email",
                   ...(adminInfo.isSuperAdmin ? ["Channel"] : []),
-                  "Permit", "Fee Paid", "Status", "Registered", "Actions",
+                  "Permit", "Fee Paid", "Status", "Registered", "Actions", "",
                 ].map((h) => (
                   <th key={h} style={{ color: C.txt3, fontWeight: 600, fontSize: "11px", textAlign: "left", padding: "6px 8px", whiteSpace: "nowrap" }}>
                     {h}
@@ -1646,21 +1704,40 @@ function RegistrationsTab({ adminInfo }: { adminInfo: AdminInfo }) {
                   </td>
                   <td style={{ padding: "8px 8px" }}>
                     {r.accountStatus === "pending" ? (
-                      <div style={{ display: "flex", gap: 4 }}>
+                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                         <ActionBtn
                           label="Approve" color={C.green}
-                          disabled={actioning === r.id}
+                          disabled={actioning === r.id || deleting === r.id}
                           onClick={() => reviewReg(r.id, "approve")}
                         />
                         <ActionBtn
                           label="Reject" color={C.red}
-                          disabled={actioning === r.id}
+                          disabled={actioning === r.id || deleting === r.id}
                           onClick={() => reviewReg(r.id, "reject")}
                         />
                       </div>
                     ) : (
                       <span style={{ color: C.txt3, fontSize: "11px" }}>—</span>
                     )}
+                  </td>
+                  <td style={{ padding: "8px 4px" }}>
+                    <button
+                      title="Delete this registration permanently"
+                      disabled={deleting === r.id || actioning === r.id}
+                      onClick={() => deleteReg(r.id, r.name)}
+                      style={{
+                        background: "none", border: `1px solid ${C.red}40`,
+                        borderRadius: 5, padding: "3px 7px", cursor: "pointer",
+                        color: C.red, fontSize: "11px", fontWeight: 600,
+                        display: "flex", alignItems: "center", gap: 3,
+                        opacity: (deleting === r.id || actioning === r.id) ? 0.4 : 1,
+                      }}
+                    >
+                      {deleting === r.id
+                        ? <Loader2 size={10} style={{ animation: "spin 1s linear infinite" }} />
+                        : <Trash2 size={10} />
+                      }
+                    </button>
                   </td>
                 </tr>
               ))}
