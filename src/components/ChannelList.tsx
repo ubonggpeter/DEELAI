@@ -136,13 +136,13 @@ export default function ChannelList() {
         return (
           <div key={continent}>
             {/* Continent header */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
               <div style={{
-                width: 20, height: 20, borderRadius: 5, flexShrink: 0,
-                background: `${cColor}16`, border: `1px solid ${cColor}28`,
+                width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+                background: `${cColor}18`, border: `1px solid ${cColor}35`,
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}>
-                <Globe2 size={10} color={cColor} />
+                <Globe2 size={13} color={cColor} />
               </div>
               <span style={{ color: C.txt, fontSize: 15, fontWeight: 800, whiteSpace: "nowrap" }}>
                 {continent}
@@ -175,14 +175,14 @@ export default function ChannelList() {
                   >
                     {/* Avatar */}
                     <div style={{
-                      width: 36, height: 36, borderRadius: 8, flexShrink: 0,
-                      background: `${color}16`, border: `1px solid ${color}35`,
+                      width: 42, height: 42, borderRadius: 10, flexShrink: 0,
+                      background: `${color}18`, border: `1.5px solid ${color}40`,
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 15, fontWeight: 900, color, fontFamily: "system-ui",
+                      fontSize: 18, fontWeight: 900, color, fontFamily: "system-ui",
                       overflow: "hidden",
                     }}>
                       {ch.logoUrl
-                        ? <Image src={ch.logoUrl} alt={ch.channelName} width={36} height={36} style={{ width: "100%", height: "100%", objectFit: "cover" }} unoptimized />
+                        ? <Image src={ch.logoUrl} alt={ch.channelName} width={42} height={42} style={{ width: "100%", height: "100%", objectFit: "cover" }} unoptimized />
                         : ch.channelName.charAt(0).toUpperCase()
                       }
                     </div>
