@@ -9,11 +9,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const ownerEmail = adminStore.isSuperAdmin(email) ? null : email;
+  const ch = !adminStore.isSuperAdmin(email) ? await adminStore.getChannelByOwner(email) : null;
+  const channelId = ch?.id ?? null;
   const [quizQuestions, trainingDocs, trainingModules, moduleDocs] = await Promise.all([
     adminStore.getQuizQuestionsForOwner(ownerEmail),
     adminStore.getTrainingDocsForOwner(ownerEmail),
-    adminStore.getTrainingModules(),
-    adminStore.getAllModuleDocs(),
+    adminStore.getTrainingModulesForChannel(channelId),
+    adminStore.getModuleDocsForChannel(channelId),
   ]);
   return NextResponse.json({ quizQuestions, trainingDocs, trainingModules, moduleDocs });
 }
@@ -25,6 +27,8 @@ export async function PUT(req: NextRequest) {
   }
   const body = await req.json() as { quizQuestions?: QuizQuestion[]; trainingModules?: TrainingModule[] };
   const ownerEmail = adminStore.isSuperAdmin(email) ? null : email;
+  const ch = !adminStore.isSuperAdmin(email) ? await adminStore.getChannelByOwner(email) : null;
+  const channelId = ch?.id ?? null;
 
   const tasks: Promise<unknown>[] = [];
 
@@ -32,7 +36,9 @@ export async function PUT(req: NextRequest) {
     tasks.push(adminStore.setQuizQuestionsForOwner(ownerEmail, body.quizQuestions));
   }
   if (Array.isArray(body.trainingModules)) {
-    tasks.push(adminStore.setTrainingModules(body.trainingModules));
+    // Super-admin: saves to global TrainingModule table.
+    // Sub-admin: saves to ChannelTrainingOverride — never touches global content.
+    tasks.push(adminStore.setTrainingModulesForChannel(body.trainingModules, channelId));
   }
   if (tasks.length === 0) {
     return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });

@@ -26,7 +26,7 @@ export interface Channel {
 export interface QuizQuestion { id: string; q: string; opts: string[]; ans: number; }
 export interface TrainingDoc { id: string; title: string; url: string; type: "pdf" | "doc" | "link"; ownerEmail?: string | null; addedAt: string; }
 export interface TrainingModule { id: number; sortOrder: number; title: string; dur: string; lessons: number; desc: string; topics: string[]; content: string; }
-export interface ModuleDoc { id: string; moduleId: number; title: string; url: string; type: string; addedAt: string; }
+export interface ModuleDoc { id: string; moduleId: number; channelId?: string | null; title: string; url: string; type: string; addedAt: string; }
 export interface AnnotationJob {
   id: string; channelId: string | null; title: string; description: string;
   imageUrls: string[]; labels: string[]; difficulty: string; createdBy: string; createdAt: string;
@@ -603,6 +603,31 @@ export const adminStore = {
       lessons: m.lessons, desc: m.desc, topics: m.topics, content: m.content,
     }));
   },
+
+  // Returns channel-specific override if set, otherwise global modules.
+  async getTrainingModulesForChannel(channelId: string | null): Promise<TrainingModule[]> {
+    if (channelId) {
+      const override = await prisma.channelTrainingOverride.findUnique({ where: { channelId } });
+      if (override) {
+        try {
+          const mods = JSON.parse(override.modulesJson) as TrainingModule[];
+          if (mods.length > 0) return mods;
+        } catch { /* fall through to global */ }
+      }
+    }
+    return this.getTrainingModules();
+  },
+
+  // Saves globally (super-admin) or to channel override (sub-admin).
+  async setTrainingModulesForChannel(modules: TrainingModule[], channelId: string | null): Promise<void> {
+    if (!channelId) return this.setTrainingModules(modules);
+    await prisma.channelTrainingOverride.upsert({
+      where:  { channelId },
+      create: { channelId, modulesJson: JSON.stringify(modules) },
+      update: { modulesJson: JSON.stringify(modules) },
+    });
+  },
+
   async setTrainingModules(modules: TrainingModule[]): Promise<void> {
     // Upsert each module (preserves child moduleDocs via cascade-safe approach)
     const incomingIds = new Set(modules.map(m => m.id));
@@ -641,13 +666,39 @@ export const adminStore = {
   },
 
   /* ── Per-module resource docs ───────────────────────────────────── */
+
+  // Global-only (used by super-admin when they need all global docs)
   async getAllModuleDocs(): Promise<ModuleDoc[]> {
     const rows = await prisma.trainingModuleDoc.findMany({ orderBy: { addedAt: "asc" } });
-    return rows.map(r => ({ id: r.id, moduleId: r.moduleId, title: r.title, url: r.url, type: r.type, addedAt: r.addedAt instanceof Date ? r.addedAt.toISOString() : String(r.addedAt) }));
+    return rows.map(r => ({
+      id: r.id, moduleId: r.moduleId, channelId: r.channelId ?? null,
+      title: r.title, url: r.url, type: r.type,
+      addedAt: r.addedAt instanceof Date ? r.addedAt.toISOString() : String(r.addedAt),
+    }));
   },
-  async addModuleDoc(data: { moduleId: number; title: string; url: string; type: string }): Promise<ModuleDoc> {
-    const row = await prisma.trainingModuleDoc.create({ data });
-    return { id: row.id, moduleId: row.moduleId, title: row.title, url: row.url, type: row.type, addedAt: row.addedAt instanceof Date ? row.addedAt.toISOString() : String(row.addedAt) };
+
+  // Returns global docs + channel-specific docs for the given channelId (or global only if null).
+  async getModuleDocsForChannel(channelId: string | null): Promise<ModuleDoc[]> {
+    const where = channelId
+      ? { OR: [{ channelId: null as string | null }, { channelId }] }
+      : { channelId: null as string | null };
+    const rows = await prisma.trainingModuleDoc.findMany({ where, orderBy: { addedAt: "asc" } });
+    return rows.map(r => ({
+      id: r.id, moduleId: r.moduleId, channelId: r.channelId ?? null,
+      title: r.title, url: r.url, type: r.type,
+      addedAt: r.addedAt instanceof Date ? r.addedAt.toISOString() : String(r.addedAt),
+    }));
+  },
+
+  async addModuleDoc(data: { moduleId: number; title: string; url: string; type: string; channelId?: string | null }): Promise<ModuleDoc> {
+    const row = await prisma.trainingModuleDoc.create({
+      data: { moduleId: data.moduleId, title: data.title, url: data.url, type: data.type, channelId: data.channelId ?? null },
+    });
+    return {
+      id: row.id, moduleId: row.moduleId, channelId: row.channelId ?? null,
+      title: row.title, url: row.url, type: row.type,
+      addedAt: row.addedAt instanceof Date ? row.addedAt.toISOString() : String(row.addedAt),
+    };
   },
   async removeModuleDoc(id: string): Promise<boolean> {
     try { await prisma.trainingModuleDoc.delete({ where: { id } }); return true; }
@@ -1102,9 +1153,14 @@ export const adminStore = {
     return u ? mapUser(u) : null;
   },
 
-  async getLeaderboard(threshold = 0): Promise<AdminUser[]> {
+  async getLeaderboard(threshold = 0, channelId?: string | null): Promise<AdminUser[]> {
     const users = await prisma.user.findMany({
-      where: { is_super_admin: false, accountStatus: "approved", salary: { gte: threshold } },
+      where: {
+        is_super_admin: false,
+        accountStatus: "approved",
+        salary: { gte: threshold },
+        ...(channelId ? { channelId } : {}),
+      },
       orderBy: { salary: "desc" },
       take: 50,
     });

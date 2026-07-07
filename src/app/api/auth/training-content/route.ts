@@ -3,10 +3,12 @@ import { adminStore } from "@/lib/adminStore";
 import { USER_COOKIE, ADMIN_COOKIE } from "@/lib/adminConfig";
 import { prisma } from "@/lib/prisma";
 
-// Returns quiz questions + training docs to logged-in users AND admins.
-// Quiz questions are scoped to whoever approved the user's registration:
-//   - super admin approved → super admin's global questions
-//   - sub-admin approved   → that sub-admin's question set (falls back to global if none set)
+// Returns quiz questions + training docs + modules to logged-in users AND admins.
+// All content is scoped to the user's channel:
+//   - Quiz:         approver's question set, falls back to global
+//   - Training docs: channel owner's docs + global docs merged
+//   - Modules:      channel-specific override if set, else global default
+//   - Module docs:  channel-specific + global merged
 export async function GET(req: NextRequest) {
   const userRaw    = req.cookies.get(USER_COOKIE)?.value;
   const adminEmail = req.cookies.get(ADMIN_COOKIE)?.value;
@@ -17,6 +19,8 @@ export async function GET(req: NextRequest) {
 
   let approvedBy: string | null = null;
   let channelOwnerEmail: string | null = null;
+  let userChannelId: string | null = null;
+
   if (userRaw) {
     try {
       const session = JSON.parse(userRaw) as { userId: string };
@@ -24,7 +28,8 @@ export async function GET(req: NextRequest) {
         where: { id: session.userId },
         select: { approvedBy: true, channelId: true },
       });
-      approvedBy = user?.approvedBy ?? null;
+      approvedBy    = user?.approvedBy ?? null;
+      userChannelId = user?.channelId  ?? null;
       if (user?.channelId) {
         const ch = await prisma.channel.findUnique({ where: { id: user.channelId }, select: { ownerEmail: true } });
         channelOwnerEmail = ch?.ownerEmail ?? null;
@@ -35,8 +40,8 @@ export async function GET(req: NextRequest) {
   const [quizQuestions, trainingDocs, trainingModules, moduleDocs] = await Promise.all([
     adminStore.getQuizQuestionsForApprover(approvedBy),
     adminStore.getTrainingDocsForChannel(channelOwnerEmail),
-    adminStore.getTrainingModules(),
-    adminStore.getAllModuleDocs(),
+    adminStore.getTrainingModulesForChannel(userChannelId),
+    adminStore.getModuleDocsForChannel(userChannelId),
   ]);
 
   return NextResponse.json({ quizQuestions, trainingDocs, trainingModules, moduleDocs });

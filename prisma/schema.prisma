@@ -210,14 +210,23 @@ model TrainingModule {
 }
 
 model TrainingModuleDoc {
-  id       String   @id @default(cuid())
-  moduleId Int
-  title    String
-  url      String
-  type     String   @default("pdf")
-  addedAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  moduleId  Int
+  channelId String?  // null = global (super-admin); set = channel-specific
+  title     String
+  url       String
+  type      String   @default("pdf")
+  addedAt   DateTime @default(now())
 
   module TrainingModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+}
+
+// Per-channel training module content overrides
+// Super-admin edits go to the TrainingModule table (global default).
+// Sub-admin edits go here so they never touch global content.
+model ChannelTrainingOverride {
+  channelId   String @id
+  modulesJson String @default("[]")
 }
 
 model AnnotationJob {

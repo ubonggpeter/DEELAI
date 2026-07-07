@@ -48,6 +48,16 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { id } = await req.json() as { id: string };
+
+  // Sub-admin can only delete jobs belonging to their channel
+  if (!adminStore.isSuperAdmin(email)) {
+    const ch   = await adminStore.getChannelByOwner(email);
+    const jobs = await adminStore.getAnnotationJobs(ch?.id ?? null);
+    if (!jobs.some((j) => j.id === id)) {
+      return NextResponse.json({ error: "Forbidden: you can only delete your own channel's jobs" }, { status: 403 });
+    }
+  }
+
   const removed = await adminStore.deleteAnnotationJob(id);
   if (!removed) return NextResponse.json({ error: "Job not found" }, { status: 404 });
   return NextResponse.json({ success: true });

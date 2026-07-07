@@ -2648,7 +2648,7 @@ function TrainingTab({ adminInfo }: { adminInfo: AdminInfo }) {
   const fileRef    = React.useRef<HTMLInputElement>(null);
   const ajImgRef   = React.useRef<HTMLInputElement>(null);
   const modDocRef  = React.useRef<HTMLInputElement>(null);
-  const [moduleDocs,        setModuleDocs]        = useState<{ id: string; moduleId: number; title: string; url: string; type: string }[]>([]);
+  const [moduleDocs,        setModuleDocs]        = useState<{ id: string; moduleId: number; channelId?: string | null; title: string; url: string; type: string }[]>([]);
   const [modDocUploadingId, setModDocUploadingId] = useState<number | null>(null);
   const [modDocErr,         setModDocErr]         = useState("");
 
@@ -3003,23 +3003,36 @@ function TrainingTab({ adminInfo }: { adminInfo: AdminInfo }) {
                             ? <div style={{ color:C.txt3, fontSize:"12px", padding:"6px 0" }}>No files uploaded yet for this module.</div>
                             : (
                               <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-                                {mDocs.map(doc => (
-                                  <div key={doc.id} style={{
-                                    display:"flex", alignItems:"center", gap:8,
-                                    background:C.s2, border:`1px solid ${C.s3}`, borderRadius:7, padding:"7px 10px",
-                                  }}>
-                                    <FileText size={13} color={C.gold} style={{ flexShrink:0 }} />
-                                    <span style={{ flex:1, color:C.txt2, fontSize:"12px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{doc.title}</span>
-                                    <span style={{ color:C.txt3, fontSize:"10px", textTransform:"uppercase", flexShrink:0 }}>{doc.type}</span>
-                                    <button
-                                      type="button"
-                                      onClick={() => removeModDocItem(doc.id)}
-                                      style={{ background:"none", border:"none", cursor:"pointer", padding:2, flexShrink:0 }}
-                                    >
-                                      <X size={12} color={C.red} />
-                                    </button>
-                                  </div>
-                                ))}
+                                {mDocs.map(doc => {
+                                  const isGlobal = !doc.channelId;
+                                  const canRemove = adminInfo.isSuperAdmin || !isGlobal;
+                                  return (
+                                    <div key={doc.id} style={{
+                                      display:"flex", alignItems:"center", gap:8,
+                                      background:C.s2, border:`1px solid ${C.s3}`, borderRadius:7, padding:"7px 10px",
+                                    }}>
+                                      <FileText size={13} color={isGlobal ? C.cyan : C.gold} style={{ flexShrink:0 }} />
+                                      <span style={{ flex:1, color:C.txt2, fontSize:"12px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{doc.title}</span>
+                                      <span style={{ color: isGlobal ? C.cyan : C.gold, fontSize:"10px", fontWeight:600, textTransform:"uppercase", flexShrink:0 }}>
+                                        {isGlobal ? "Global" : "Channel"}
+                                      </span>
+                                      <span style={{ color:C.txt3, fontSize:"10px", textTransform:"uppercase", flexShrink:0 }}>{doc.type}</span>
+                                      {canRemove ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => removeModDocItem(doc.id)}
+                                          style={{ background:"none", border:"none", cursor:"pointer", padding:2, flexShrink:0 }}
+                                        >
+                                          <X size={12} color={C.red} />
+                                        </button>
+                                      ) : (
+                                        <span title="Global resources can only be removed by the super admin" style={{ padding:2, flexShrink:0, opacity:0.3, cursor:"not-allowed" }}>
+                                          <X size={12} color={C.red} />
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                })}
                               </div>
                             );
                         })()}
