@@ -31,6 +31,6 @@ export async function POST(req: NextRequest) {
   if (allSubs.some((s) => s.email === targetLower)) {
     return NextResponse.json({ error: "User is already a sub-admin" }, { status: 400 });
   }
-  const sa = await adminStore.createSubAdmin({ email: targetLower, name, region, permissions, createdBy: email });
+  const sa = await adminStore.createSubAdmin({ email: targetLower, name, region, permissions, createdBy: email, bankCode:"", bankName:"", bankAccountNumber:"", bankAccountName:"" });
   return NextResponse.json({ subAdmin: sa }, { status: 201 });
 }

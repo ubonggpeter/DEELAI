@@ -80,6 +80,14 @@ interface PlatformSettings {
   payoutsEnabled: boolean; newJobsEnabled: boolean; announcement: string;
   commissionEnabled: boolean; commissionWallet: number;
   leaderboardThreshold: number;
+  workWithdrawEnabled: boolean;
+  recruitWithdrawEnabled: boolean;
+  refClaimEnabled: boolean;
+  subAdminWithdrawEnabled: boolean;
+  superAdminBankCode: string;
+  superAdminBankName: string;
+  superAdminBankAccountNumber: string;
+  superAdminBankAccountName: string;
 }
 
 /* ─── Design tokens ──────────────────────────────────────────────── */
@@ -91,9 +99,10 @@ const C = {
 };
 
 /* ─── Tabs ───────────────────────────────────────────────────────── */
-type TabId = "overview"|"registrations"|"password-resets"|"users"|"jobs"|"payments"|"referrals"|"refbonuses"|"channels"|"training"|"settings"|"subadmins";
+type TabId = "overview"|"registrations"|"password-resets"|"users"|"jobs"|"payments"|"referrals"|"refbonuses"|"channels"|"training"|"settings"|"subadmins"|"wallet";
 const ALL_TABS: { id: TabId; label: string; icon: React.ElementType; perm?: Permission; superOnly?: boolean }[] = [
   { id: "overview",        label: "Overview",         icon: LayoutDashboard },
+  { id: "wallet",          label: "My Wallet",        icon: Coins },
   { id: "registrations",   label: "Registrations",    icon: ClipboardList },
   { id: "password-resets", label: "Password Resets",  icon: KeyRound },
   { id: "users",           label: "Users",            icon: Users,           perm: "manage_users" },
@@ -297,6 +306,7 @@ export default function AdminDashboard() {
         {/* Tab content */}
         <div className="admin-tab-content" style={{ flex:1, padding:"20px", maxWidth:"1400px", width:"100%", margin:"0 auto" }}>
           {tab === "overview"        && <OverviewTab />}
+          {tab === "wallet"         && <AdminWalletTab adminInfo={adminInfo} />}
           {tab === "registrations"  && <RegistrationsTab adminInfo={adminInfo} />}
           {tab === "password-resets" && <PasswordResetsTab adminInfo={adminInfo} />}
           {tab === "users"          && <UsersTab />}
@@ -875,12 +885,16 @@ function SettingsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   if (loading) return <Spinner />;
   if (!settings) return <ErrorMsg msg="Failed to load settings" />;
 
-  const toggles: { key: keyof PlatformSettings; label: string; desc: string; color: string }[] = [
-    { key:"registrationOpen",  label:"Open Registration",       desc:"Allow new users to sign up", color:C.green },
-    { key:"maintenanceMode",   label:"Maintenance Mode",        desc:"Block all user access temporarily", color:C.red },
-    { key:"payoutsEnabled",    label:"Payouts Enabled",         desc:"Allow workers to request payouts", color:C.gold },
-    { key:"newJobsEnabled",    label:"New Jobs Available",      desc:"Release new annotation batches", color:C.cyan },
-    { key:"commissionEnabled", label:"10% Commission System",   desc:"Deduct 10% from referral/recruit/registration earnings into your commission wallet", color:C.purple },
+  const toggles: { key: keyof PlatformSettings; label: string; desc: string; color: string; section?: string }[] = [
+    { key:"registrationOpen",       label:"Open Registration",            desc:"Allow new users to sign up", color:C.green },
+    { key:"maintenanceMode",        label:"Maintenance Mode",             desc:"Block all user access temporarily", color:C.red },
+    { key:"newJobsEnabled",         label:"New Jobs Available",           desc:"Release new annotation batches", color:C.cyan },
+    { key:"commissionEnabled",      label:"10% Commission System",        desc:"Deduct 10% from referral/recruit/registration earnings into your commission wallet", color:C.purple },
+    // Withdrawal master controls
+    { key:"workWithdrawEnabled",    label:"Staff Work Withdrawals",       desc:"Allow staff to withdraw from their Work Wallet", color:C.gold, section:"Withdrawal Master Controls" },
+    { key:"recruitWithdrawEnabled", label:"User Recruit Withdrawals",     desc:"Allow users to withdraw their Recruit Earnings", color:C.gold },
+    { key:"refClaimEnabled",        label:"Referral Bonus Claims",        desc:"Allow sub-admins to claim/approve referral bonuses", color:C.gold },
+    { key:"subAdminWithdrawEnabled",label:"Sub-Admin Wallet Withdrawals", desc:"Allow sub-admins to withdraw their channel balance", color:C.gold },
   ];
 
   return (
@@ -889,28 +903,41 @@ function SettingsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
 
       <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:20 }}>
         {toggles.map((t) => (
-          <div key={t.key} style={{
-            background:C.s1, border:`1px solid ${C.s3}`, borderRadius:10, padding:"14px 16px",
-            display:"flex", alignItems:"center", justifyContent:"space-between", gap:12,
-          }}>
-            <div>
-              <div style={{ color:C.txt, fontSize:"14px", fontWeight:600 }}>{t.label}</div>
-              <div style={{ color:C.txt3, fontSize:"12px", marginTop:2 }}>{t.desc}</div>
+          <React.Fragment key={t.key}>
+            {t.section && (
+              <div style={{ paddingTop:8 }}>
+                <div style={{ color:C.txt2, fontSize:"11px", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:2 }}>{t.section}</div>
+                {!isSuperAdmin && <div style={{ color:C.txt3, fontSize:"11px", marginBottom:6 }}>Controlled by super admin — read only</div>}
+              </div>
+            )}
+            <div style={{
+              background:C.s1, border:`1px solid ${t.section ? C.gold+"22" : C.s3}`, borderRadius:10, padding:"14px 16px",
+              display:"flex", alignItems:"center", justifyContent:"space-between", gap:12,
+              opacity: t.section && !isSuperAdmin ? 0.65 : 1,
+            }}>
+              <div>
+                <div style={{ color:C.txt, fontSize:"14px", fontWeight:600 }}>{t.label}</div>
+                <div style={{ color:t.section && !(settings[t.key] as boolean) ? C.red+"cc" : C.txt3, fontSize:"12px", marginTop:2 }}>
+                  {t.section && !(settings[t.key] as boolean) ? "DISABLED — users will see a message" : t.desc}
+                </div>
+              </div>
+              <button
+                onClick={() => isSuperAdmin && toggle(t.key)}
+                style={{
+                  width:44, height:24, borderRadius:12, border:"none",
+                  cursor: isSuperAdmin ? "pointer" : "not-allowed",
+                  background: (settings[t.key] as boolean) ? t.color : C.s3,
+                  position:"relative", transition:"background 0.2s", flexShrink:0,
+                }}
+                title={isSuperAdmin ? undefined : "Super admin only"}
+              >
+                <span style={{
+                  position:"absolute", top:3, width:18, height:18, borderRadius:"50%", background:"#fff",
+                  left: (settings[t.key] as boolean) ? 23 : 3, transition:"left 0.2s",
+                }} />
+              </button>
             </div>
-            <button
-              onClick={() => isSuperAdmin && toggle(t.key)}
-              style={{
-                width:44, height:24, borderRadius:12, border:"none", cursor: isSuperAdmin ? "pointer" : "default",
-                background: settings[t.key] ? t.color : C.s3,
-                position:"relative", transition:"background 0.2s", flexShrink:0,
-              }}
-            >
-              <span style={{
-                position:"absolute", top:3, width:18, height:18, borderRadius:"50%", background:"#fff",
-                left: settings[t.key] ? 23 : 3, transition:"left 0.2s",
-              }} />
-            </button>
-          </div>
+          </React.Fragment>
         ))}
       </div>
 
@@ -3417,6 +3444,301 @@ function ReferralBonusesTab({ adminInfo }: { adminInfo: AdminInfo }) {
               ))}
             </>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ADMIN WALLET TAB                                                     */
+/* ═══════════════════════════════════════════════════════════════════ */
+function AdminWalletTab({ adminInfo }: { adminInfo: AdminInfo }) {
+  const [balance, setBalance]         = useState<number | null>(null);
+  const [bank, setBank]               = useState<{ bankCode:string; bankName:string; bankAccountNumber:string; bankAccountName:string } | null>(null);
+  const [withdrawals, setWithdrawals] = useState<{ id:string; amount:number; status:string; bankName:string; bankAccount:string; ref:string; createdAt:string }[]>([]);
+  const [loading, setLoading]         = useState(true);
+
+  // Bank setup state
+  const [banks,        setBanks]        = useState<{ name:string; code:string }[]>([]);
+  const [bankSearch,   setBankSearch]   = useState("");
+  const [selBank,      setSelBank]      = useState<{ name:string; code:string } | null>(null);
+  const [acctNo,       setAcctNo]       = useState("");
+  const [verifying,    setVerifying]    = useState(false);
+  const [verified,     setVerified]     = useState<string | null>(null);
+  const [verifyErr,    setVerifyErr]    = useState("");
+  const [savingBank,   setSavingBank]   = useState(false);
+  const [bankSaved,    setBankSaved]    = useState(false);
+  const [showBankForm, setShowBankForm] = useState(false);
+
+  // Withdrawal state
+  const [wdAmount, setWdAmount] = useState("");
+  const [wdLoading, setWdLoading] = useState(false);
+  const [wdMsg,    setWdMsg]    = useState<{ ok:boolean; text:string } | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const res = await fetch("/api/admin/wallet");
+    const d = await res.json();
+    setBalance(d.balance ?? 0);
+    setBank(d.bank ?? null);
+    setWithdrawals(d.withdrawals ?? []);
+    setLoading(false);
+  }, []);
+
+  const loadBanks = useCallback(async () => {
+    const res = await fetch("/api/admin/wallet/banks");
+    const d = await res.json();
+    setBanks(d.banks ?? []);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => { if (showBankForm && banks.length === 0) loadBanks(); }, [showBankForm, banks.length, loadBanks]);
+
+  // Reset verified state when account number or bank changes
+  useEffect(() => { setVerified(null); setVerifyErr(""); }, [acctNo, selBank]);
+
+  async function verify() {
+    if (!selBank || acctNo.length < 10) return;
+    setVerifying(true); setVerifyErr("");
+    const res = await fetch("/api/admin/wallet/verify", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ accountNumber: acctNo, bankCode: selBank.code }),
+    });
+    const d = await res.json();
+    if (!res.ok) { setVerifyErr(d.error ?? "Verification failed"); } else { setVerified(d.accountName); }
+    setVerifying(false);
+  }
+
+  async function saveBank() {
+    if (!selBank || !verified || !acctNo) return;
+    setSavingBank(true);
+    await fetch("/api/admin/wallet/save-bank", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ bankCode: selBank.code, bankName: selBank.name, bankAccountNumber: acctNo, bankAccountName: verified }),
+    });
+    setSavingBank(false); setBankSaved(true);
+    await load();
+    setTimeout(() => { setBankSaved(false); setShowBankForm(false); setSelBank(null); setAcctNo(""); setVerified(null); }, 1500);
+  }
+
+  async function withdraw() {
+    const amt = parseFloat(wdAmount);
+    if (!amt || amt <= 0) return;
+    setWdLoading(true); setWdMsg(null);
+    const res = await fetch("/api/admin/wallet/withdraw", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ amount: amt }),
+    });
+    const d = await res.json();
+    if (!res.ok) { setWdMsg({ ok:false, text: d.error ?? "Withdrawal failed" }); }
+    else { setWdMsg({ ok:true, text:`Withdrawal of $${amt.toFixed(2)} requested. Ref: ${d.ref}` }); setWdAmount(""); await load(); }
+    setWdLoading(false);
+  }
+
+  const walletLabel = adminInfo.isSuperAdmin ? "Commission Wallet" : "Channel Balance";
+  const filteredBanks = bankSearch ? banks.filter((b) => b.name.toLowerCase().includes(bankSearch.toLowerCase())) : banks;
+
+  if (loading) return <Spinner />;
+
+  return (
+    <div style={{ animation:"fadeUp 0.3s ease", maxWidth:600 }}>
+      <SectionTitle
+        title="My Wallet"
+        sub={adminInfo.isSuperAdmin ? "Your platform commission earnings" : "Your channel balance and withdrawals"}
+      />
+
+      {/* Balance card */}
+      <div style={{
+        background:`linear-gradient(135deg, ${C.s1}, ${C.s2})`,
+        border:`1px solid ${C.green}30`, borderRadius:16, padding:"24px 28px", marginBottom:20,
+        display:"flex", alignItems:"center", gap:16,
+      }}>
+        <div style={{
+          width:52, height:52, borderRadius:14, background:`${C.green}15`,
+          border:`1px solid ${C.green}30`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0,
+        }}>
+          <Coins size={26} color={C.green} />
+        </div>
+        <div style={{ flex:1 }}>
+          <div style={{ color:C.txt3, fontSize:"11px", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.06em" }}>{walletLabel}</div>
+          <div style={{ color:C.green, fontSize:"32px", fontWeight:800, lineHeight:1.1 }}>
+            ${(balance ?? 0).toLocaleString(undefined, { minimumFractionDigits:2 })}
+          </div>
+        </div>
+      </div>
+
+      {/* Bank account section */}
+      <div style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:12, padding:"16px 20px", marginBottom:20 }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
+          <div>
+            <div style={{ color:C.txt, fontSize:"14px", fontWeight:600 }}>Bank Account</div>
+            {bank?.bankAccountNumber ? (
+              <div style={{ color:C.txt2, fontSize:"13px", marginTop:4 }}>
+                <span style={{ color:C.cyan }}>{bank.bankName}</span>
+                {" · "}···{bank.bankAccountNumber.slice(-4)}
+                {" · "}<span style={{ color:C.green }}>{bank.bankAccountName}</span>
+              </div>
+            ) : (
+              <div style={{ color:C.txt3, fontSize:"12px", marginTop:2 }}>No bank account linked yet</div>
+            )}
+          </div>
+          <button
+            onClick={() => setShowBankForm((v) => !v)}
+            style={{
+              background: showBankForm ? C.s3 : `${C.cyan}18`, color: showBankForm ? C.txt3 : C.cyan,
+              border:`1px solid ${showBankForm ? C.s3 : C.cyan+"33"}`, borderRadius:8,
+              padding:"7px 14px", fontSize:"13px", cursor:"pointer", fontWeight:600, flexShrink:0,
+            }}
+          >
+            {showBankForm ? "Cancel" : bank?.bankAccountNumber ? "Change Bank" : "Set Up Bank"}
+          </button>
+        </div>
+
+        {showBankForm && (
+          <div style={{ marginTop:16, paddingTop:16, borderTop:`1px solid ${C.s3}` }}>
+            {/* Bank search + select */}
+            <div style={{ marginBottom:12 }}>
+              <div style={{ color:C.txt2, fontSize:"12px", fontWeight:600, marginBottom:6 }}>Select Bank</div>
+              <input
+                value={bankSearch} onChange={(e) => setBankSearch(e.target.value)}
+                placeholder="Search bank name…"
+                style={{ width:"100%", background:C.s2, border:`1px solid ${C.s3}`, borderRadius:7, padding:"7px 10px", color:C.txt, fontSize:"13px", outline:"none", marginBottom:8 }}
+              />
+              <div style={{ maxHeight:180, overflowY:"auto", background:C.s2, border:`1px solid ${C.s3}`, borderRadius:7 }}>
+                {filteredBanks.length === 0
+                  ? <div style={{ padding:"12px 10px", color:C.txt3, fontSize:"13px" }}>No banks found</div>
+                  : filteredBanks.map((b) => (
+                    <button
+                      key={b.code} onClick={() => { setSelBank(b); setBankSearch(b.name); }}
+                      style={{
+                        width:"100%", textAlign:"left", padding:"8px 12px", background:"none",
+                        border:"none", cursor:"pointer", fontSize:"13px",
+                        color: selBank?.code === b.code ? C.cyan : C.txt2,
+                        borderBottom:`1px solid ${C.s3}`,
+                      }}
+                    >
+                      {b.name}
+                    </button>
+                  ))}
+              </div>
+            </div>
+
+            {/* Account number */}
+            <div style={{ marginBottom:12 }}>
+              <div style={{ color:C.txt2, fontSize:"12px", fontWeight:600, marginBottom:6 }}>Account Number</div>
+              <div style={{ display:"flex", gap:8 }}>
+                <input
+                  value={acctNo} onChange={(e) => setAcctNo(e.target.value.replace(/\D/g,""))}
+                  maxLength={10} placeholder="10-digit account number"
+                  style={{ flex:1, background:C.s2, border:`1px solid ${C.s3}`, borderRadius:7, padding:"7px 10px", color:C.txt, fontSize:"13px", outline:"none" }}
+                />
+                <button
+                  onClick={verify} disabled={!selBank || acctNo.length < 10 || verifying}
+                  style={{
+                    background: C.cyan, color:"#060A12", border:"none", borderRadius:7,
+                    padding:"7px 14px", fontSize:"13px", fontWeight:700, cursor:"pointer", flexShrink:0,
+                    opacity: (!selBank || acctNo.length < 10) ? 0.4 : 1,
+                  }}
+                >
+                  {verifying ? <Loader2 size={14} style={{ animation:"spin 1s linear infinite" }} /> : "Verify"}
+                </button>
+              </div>
+            </div>
+
+            {/* Verified name */}
+            {verified && (
+              <div style={{ background:`${C.green}11`, border:`1px solid ${C.green}33`, borderRadius:7, padding:"8px 12px", marginBottom:12, display:"flex", alignItems:"center", gap:8 }}>
+                <CheckCircle2 size={14} color={C.green} />
+                <span style={{ color:C.green, fontSize:"13px", fontWeight:600 }}>{verified}</span>
+              </div>
+            )}
+            {verifyErr && (
+              <div style={{ background:`${C.red}11`, border:`1px solid ${C.red}33`, borderRadius:7, padding:"8px 12px", marginBottom:12, display:"flex", alignItems:"center", gap:8 }}>
+                <AlertCircle size={14} color={C.red} />
+                <span style={{ color:C.red, fontSize:"13px" }}>{verifyErr}</span>
+              </div>
+            )}
+
+            <button
+              onClick={saveBank} disabled={!verified || savingBank || bankSaved}
+              style={{
+                background: bankSaved ? C.green : C.cyan, color:"#060A12", border:"none",
+                borderRadius:8, padding:"9px 18px", fontWeight:700, fontSize:"13px",
+                cursor:"pointer", display:"flex", alignItems:"center", gap:6,
+                opacity: !verified ? 0.4 : 1,
+              }}
+            >
+              {savingBank ? <><Loader2 size={13} style={{ animation:"spin 1s linear infinite" }} /> Saving…</> :
+               bankSaved  ? <><CheckCircle2 size={13} /> Saved!</> : <><Save size={13} /> Save Bank</>}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Withdrawal form */}
+      {bank?.bankAccountNumber && (
+        <div style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:12, padding:"16px 20px", marginBottom:20 }}>
+          <div style={{ color:C.txt, fontSize:"14px", fontWeight:600, marginBottom:12 }}>Request Withdrawal</div>
+          <div style={{ display:"flex", gap:8, alignItems:"flex-end" }}>
+            <div style={{ flex:1 }}>
+              <div style={{ color:C.txt2, fontSize:"12px", fontWeight:600, marginBottom:6 }}>Amount (USD)</div>
+              <input
+                type="number" min="1" value={wdAmount} onChange={(e) => setWdAmount(e.target.value)}
+                placeholder="Enter amount"
+                style={{ width:"100%", background:C.s2, border:`1px solid ${C.s3}`, borderRadius:7, padding:"8px 10px", color:C.txt, fontSize:"13px", outline:"none" }}
+              />
+            </div>
+            <button
+              onClick={withdraw}
+              disabled={wdLoading || !wdAmount || parseFloat(wdAmount) <= 0 || parseFloat(wdAmount) > (balance ?? 0)}
+              style={{
+                background: C.gold, color:"#060A12", border:"none", borderRadius:7,
+                padding:"9px 18px", fontWeight:700, fontSize:"13px", cursor:"pointer",
+                display:"flex", alignItems:"center", gap:6, flexShrink:0,
+                opacity: (!wdAmount || parseFloat(wdAmount) <= 0 || parseFloat(wdAmount) > (balance ?? 0)) ? 0.4 : 1,
+              }}
+            >
+              {wdLoading ? <Loader2 size={13} style={{ animation:"spin 1s linear infinite" }} /> : <DollarSign size={13} />}
+              Withdraw
+            </button>
+          </div>
+          {wdMsg && (
+            <div style={{
+              background: wdMsg.ok ? `${C.green}11` : `${C.red}11`,
+              border: `1px solid ${wdMsg.ok ? C.green+"33" : C.red+"33"}`,
+              borderRadius:7, padding:"8px 12px", marginTop:10, display:"flex", alignItems:"center", gap:8,
+            }}>
+              {wdMsg.ok ? <CheckCircle2 size={13} color={C.green} /> : <AlertCircle size={13} color={C.red} />}
+              <span style={{ color: wdMsg.ok ? C.green : C.red, fontSize:"12px" }}>{wdMsg.text}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Withdrawal history */}
+      {withdrawals.length > 0 && (
+        <div style={{ background:C.s1, border:`1px solid ${C.s3}`, borderRadius:12, overflow:"hidden" }}>
+          <div style={{ padding:"12px 16px", borderBottom:`1px solid ${C.s3}` }}>
+            <span style={{ color:C.txt, fontSize:"13px", fontWeight:600 }}>Withdrawal History</span>
+          </div>
+          {withdrawals.map((w) => (
+            <div key={w.id} style={{ padding:"10px 16px", borderBottom:`1px solid ${C.s3}22`, display:"flex", alignItems:"center", gap:12 }}>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ color:C.txt, fontSize:"13px", fontWeight:600 }}>${w.amount.toFixed(2)}</div>
+                <div style={{ color:C.txt3, fontSize:"11px" }}>{w.bankName} · {new Date(w.createdAt).toLocaleDateString()}</div>
+              </div>
+              <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
+                <span style={{ color:C.txt3, fontSize:"11px" }}>{w.ref}</span>
+                <span style={{
+                  fontSize:"10px", fontWeight:700, padding:"2px 7px", borderRadius:4,
+                  background: w.status === "paid" ? `${C.green}15` : `${C.gold}15`,
+                  color: w.status === "paid" ? C.green : C.gold,
+                }}>
+                  {w.status.toUpperCase()}
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

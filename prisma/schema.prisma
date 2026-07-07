@@ -65,13 +65,17 @@ model User {
 }
 
 model SubAdmin {
-  id          String   @id
-  email       String   @unique
-  name        String
-  region      String   @default("")
-  permissions String[] @default([])
-  createdAt   DateTime @default(now())
-  createdBy   String   @default("")
+  id                String   @id
+  email             String   @unique
+  name              String
+  region            String   @default("")
+  permissions       String[] @default([])
+  createdAt         DateTime @default(now())
+  createdBy         String   @default("")
+  bankCode          String   @default("")
+  bankName          String   @default("")
+  bankAccountNumber String   @default("")
+  bankAccountName   String   @default("")
 }
 
 model Channel {
@@ -264,4 +268,25 @@ model PlatformSettings {
   commissionEnabled       Boolean @default(false)
   commissionWallet        Float   @default(0)
   leaderboardThreshold    Float   @default(0)
+  // Granular withdrawal master controls (super-admin only)
+  workWithdrawEnabled      Boolean @default(true)
+  recruitWithdrawEnabled   Boolean @default(true)
+  refClaimEnabled          Boolean @default(true)
+  subAdminWithdrawEnabled  Boolean @default(true)
+  // Super-admin bank details for commission wallet withdrawals
+  superAdminBankCode          String @default("")
+  superAdminBankName          String @default("")
+  superAdminBankAccountNumber String @default("")
+  superAdminBankAccountName   String @default("")
+}
+
+model AdminWithdrawal {
+  id          String   @id @default(cuid())
+  adminEmail  String
+  amount      Float
+  status      String   @default("pending")
+  bankName    String   @default("")
+  bankAccount String   @default("")
+  ref         String   @default("")
+  createdAt   DateTime @default(now())
 }

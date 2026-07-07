@@ -23,6 +23,10 @@ export async function POST(req: NextRequest) {
   if (!email || !(await adminStore.isAdmin(email))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const settings = await adminStore.getSettings();
+  if (!settings.refClaimEnabled) {
+    return NextResponse.json({ error: "Referral bonus claims are temporarily disabled platform-wide." }, { status: 403 });
+  }
   const { bonusId } = await req.json() as { bonusId: string };
   const updated = await adminStore.claimReferralBonus(bonusId);
   if (!updated) return NextResponse.json({ error: "Bonus not found or already processed" }, { status: 400 });

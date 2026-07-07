@@ -17,7 +17,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "walletType, amount, and method are required" }, { status: 400 });
     }
 
-    // Check if the wallet is enabled for this channel
+    // Check global platform toggles first
+    const settings = await adminStore.getSettings();
+    if (walletType === "work" && !settings.workWithdrawEnabled) {
+      return NextResponse.json({ error: "Work Wallet withdrawals are temporarily disabled platform-wide." }, { status: 403 });
+    }
+    if (walletType === "recruit" && !settings.recruitWithdrawEnabled) {
+      return NextResponse.json({ error: "Recruit Earnings withdrawals are temporarily disabled platform-wide." }, { status: 403 });
+    }
+
+    // Check channel-level toggles
     if (session.channelId) {
       const channel = await prisma.channel.findUnique({
         where: { id: session.channelId },
@@ -25,10 +34,10 @@ export async function POST(req: NextRequest) {
       });
       if (channel) {
         if (walletType === "work" && !channel.workWalletEnabled) {
-          return NextResponse.json({ error: "Work Wallet withdrawals are currently disabled by your admin." }, { status: 403 });
+          return NextResponse.json({ error: "Work Wallet withdrawals are currently disabled by your channel admin." }, { status: 403 });
         }
         if (walletType === "recruit" && !channel.recruitWalletEnabled) {
-          return NextResponse.json({ error: "Recruit Earnings withdrawals are currently disabled by your admin." }, { status: 403 });
+          return NextResponse.json({ error: "Recruit Earnings withdrawals are currently disabled by your channel admin." }, { status: 403 });
         }
       }
     }

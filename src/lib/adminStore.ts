@@ -15,6 +15,7 @@ export type AccountStatus = "pending"   | "approved"  | "rejected";
 export interface SubAdmin {
   id: string; email: string; name: string; region: string;
   permissions: Permission[]; createdAt: string; createdBy: string;
+  bankCode: string; bankName: string; bankAccountNumber: string; bankAccountName: string;
 }
 export interface Channel {
   id: string; ownerEmail: string; channelName: string; description: string;
@@ -78,6 +79,16 @@ export interface PlatformSettings {
   payoutsEnabled: boolean; newJobsEnabled: boolean; announcement: string;
   commissionEnabled: boolean; commissionWallet: number;
   leaderboardThreshold: number;
+  // Granular withdrawal master controls
+  workWithdrawEnabled: boolean;
+  recruitWithdrawEnabled: boolean;
+  refClaimEnabled: boolean;
+  subAdminWithdrawEnabled: boolean;
+  // Super-admin bank
+  superAdminBankCode: string;
+  superAdminBankName: string;
+  superAdminBankAccountNumber: string;
+  superAdminBankAccountName: string;
 }
 
 /* ── Mappers (Prisma → our types) ────────────────────────────────────── */
@@ -128,6 +139,8 @@ function mapSubAdmin(s: any): SubAdmin {
     permissions: (s.permissions ?? []) as Permission[],
     createdAt: s.createdAt instanceof Date ? s.createdAt.toISOString() : s.createdAt,
     createdBy: s.createdBy,
+    bankCode: s.bankCode ?? "", bankName: s.bankName ?? "",
+    bankAccountNumber: s.bankAccountNumber ?? "", bankAccountName: s.bankAccountName ?? "",
   };
 }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -140,6 +153,30 @@ function mapReferralBonus(b: any): ReferralBonus {
     createdAt: b.createdAt instanceof Date ? b.createdAt.toISOString() : b.createdAt,
     claimedAt: b.claimedAt instanceof Date ? b.claimedAt.toISOString() : b.claimedAt ?? undefined,
     autoCreditsAt: b.autoCreditsAt instanceof Date ? b.autoCreditsAt.toISOString() : b.autoCreditsAt,
+  };
+}
+
+export interface AdminWithdrawal {
+  id: string; adminEmail: string; amount: number; status: string;
+  bankName: string; bankAccount: string; ref: string; createdAt: string;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapSettings(s: any): PlatformSettings {
+  return {
+    registrationOpen: s.registrationOpen, maintenanceMode: s.maintenanceMode,
+    payoutsEnabled: s.payoutsEnabled, newJobsEnabled: s.newJobsEnabled, announcement: s.announcement,
+    commissionEnabled: s.commissionEnabled ?? false,
+    commissionWallet: s.commissionWallet ?? 0,
+    leaderboardThreshold: s.leaderboardThreshold ?? 0,
+    workWithdrawEnabled: s.workWithdrawEnabled ?? true,
+    recruitWithdrawEnabled: s.recruitWithdrawEnabled ?? true,
+    refClaimEnabled: s.refClaimEnabled ?? true,
+    subAdminWithdrawEnabled: s.subAdminWithdrawEnabled ?? true,
+    superAdminBankCode: s.superAdminBankCode ?? "",
+    superAdminBankName: s.superAdminBankName ?? "",
+    superAdminBankAccountNumber: s.superAdminBankAccountNumber ?? "",
+    superAdminBankAccountName: s.superAdminBankAccountName ?? "",
   };
 }
 
@@ -1102,13 +1139,7 @@ export const adminStore = {
       update: {},
       create: { id: "singleton" },
     });
-    return {
-      registrationOpen: s.registrationOpen, maintenanceMode: s.maintenanceMode,
-      payoutsEnabled: s.payoutsEnabled, newJobsEnabled: s.newJobsEnabled, announcement: s.announcement,
-      commissionEnabled: s.commissionEnabled ?? false,
-      commissionWallet: s.commissionWallet ?? 0,
-      leaderboardThreshold: s.leaderboardThreshold ?? 0,
-    };
+    return mapSettings(s);
   },
 
   async updateSettings(data: Partial<PlatformSettings>): Promise<PlatformSettings> {
@@ -1117,13 +1148,7 @@ export const adminStore = {
       update: data,
       create: { id: "singleton", ...data },
     });
-    return {
-      registrationOpen: s.registrationOpen, maintenanceMode: s.maintenanceMode,
-      payoutsEnabled: s.payoutsEnabled, newJobsEnabled: s.newJobsEnabled, announcement: s.announcement,
-      commissionEnabled: s.commissionEnabled ?? false,
-      commissionWallet: s.commissionWallet ?? 0,
-      leaderboardThreshold: s.leaderboardThreshold ?? 0,
-    };
+    return mapSettings(s);
   },
 
   async resetPlatform(): Promise<{ deletedJobs: number; deletedLogs: number; deletedPayments: number; deletedReferrals: number; deletedBonuses: number; deletedCommissions: number; usersReset: number }> {
@@ -1217,4 +1242,103 @@ export const adminStore = {
       pendingRegistrations: nonSuper.filter((u) => u.accountStatus === "pending").length,
     };
   },
+
+  /* ── Admin Wallet ───────────────────────────────────────────────────── */
+
+  // Get admin wallet balance (commission wallet for super-admin; channel.balance for sub-admin)
+  async getAdminWalletBalance(email: string): Promise<number> {
+    if (this.isSuperAdmin(email)) {
+      const s = await prisma.platformSettings.findUnique({ where: { id: "singleton" } });
+      return s?.commissionWallet ?? 0;
+    }
+    const ch = await prisma.channel.findUnique({ where: { ownerEmail: email }, select: { balance: true } });
+    return ch?.balance ?? 0;
+  },
+
+  // Get bank details for an admin
+  async getAdminBank(email: string): Promise<{ bankCode: string; bankName: string; bankAccountNumber: string; bankAccountName: string }> {
+    if (this.isSuperAdmin(email)) {
+      const s = await prisma.platformSettings.findUnique({ where: { id: "singleton" } });
+      return {
+        bankCode: s?.superAdminBankCode ?? "",
+        bankName: s?.superAdminBankName ?? "",
+        bankAccountNumber: s?.superAdminBankAccountNumber ?? "",
+        bankAccountName: s?.superAdminBankAccountName ?? "",
+      };
+    }
+    const sa = await prisma.subAdmin.findUnique({ where: { email } });
+    return {
+      bankCode: sa?.bankCode ?? "",
+      bankName: sa?.bankName ?? "",
+      bankAccountNumber: sa?.bankAccountNumber ?? "",
+      bankAccountName: sa?.bankAccountName ?? "",
+    };
+  },
+
+  // Save bank details for an admin
+  async saveAdminBank(email: string, bank: { bankCode: string; bankName: string; bankAccountNumber: string; bankAccountName: string }): Promise<void> {
+    if (this.isSuperAdmin(email)) {
+      await prisma.platformSettings.upsert({
+        where: { id: "singleton" },
+        update: {
+          superAdminBankCode: bank.bankCode, superAdminBankName: bank.bankName,
+          superAdminBankAccountNumber: bank.bankAccountNumber, superAdminBankAccountName: bank.bankAccountName,
+        },
+        create: {
+          id: "singleton",
+          superAdminBankCode: bank.bankCode, superAdminBankName: bank.bankName,
+          superAdminBankAccountNumber: bank.bankAccountNumber, superAdminBankAccountName: bank.bankAccountName,
+        },
+      });
+      return;
+    }
+    await prisma.subAdmin.update({
+      where: { email },
+      data: {
+        bankCode: bank.bankCode, bankName: bank.bankName,
+        bankAccountNumber: bank.bankAccountNumber, bankAccountName: bank.bankAccountName,
+      },
+    });
+  },
+
+  // Get admin's Paystack secret key (for bank list + verification)
+  async getAdminPaystackKey(email: string): Promise<string | null> {
+    // Sub-admin uses their channel's key; super-admin uses the first available channel key
+    const ch = this.isSuperAdmin(email)
+      ? await prisma.channel.findFirst({ select: { paystackSecretKey: true }, orderBy: { createdAt: "desc" } })
+      : await prisma.channel.findUnique({ where: { ownerEmail: email }, select: { paystackSecretKey: true } });
+    return ch?.paystackSecretKey || null;
+  },
+
+  // Request an admin withdrawal — deducts balance and records the withdrawal
+  async requestAdminWithdrawal(email: string, amount: number): Promise<{ ok: boolean; error?: string; ref?: string }> {
+    const balance = await this.getAdminWalletBalance(email);
+    if (amount <= 0) return { ok: false, error: "Amount must be positive" };
+    if (amount > balance) return { ok: false, error: "Insufficient balance" };
+    const ref = `ADM-${Date.now()}`;
+    const bank = await this.getAdminBank(email);
+    await prisma.adminWithdrawal.create({
+      data: { adminEmail: email, amount, status: "pending", bankName: bank.bankName, bankAccount: bank.bankAccountNumber, ref },
+    });
+    // Deduct from the appropriate wallet
+    if (this.isSuperAdmin(email)) {
+      await prisma.platformSettings.update({ where: { id: "singleton" }, data: { commissionWallet: { decrement: amount } } });
+    } else {
+      await prisma.channel.update({ where: { ownerEmail: email }, data: { balance: { decrement: amount } } });
+    }
+    return { ok: true, ref };
+  },
+
+  // Get admin withdrawal history
+  async getAdminWithdrawals(email: string): Promise<AdminWithdrawal[]> {
+    const rows = await prisma.adminWithdrawal.findMany({
+      where: { adminEmail: email }, orderBy: { createdAt: "desc" }, take: 50,
+    });
+    return rows.map((r) => ({
+      id: r.id, adminEmail: r.adminEmail, amount: r.amount, status: r.status,
+      bankName: r.bankName, bankAccount: r.bankAccount, ref: r.ref,
+      createdAt: r.createdAt.toISOString(),
+    }));
+  },
+
 };
