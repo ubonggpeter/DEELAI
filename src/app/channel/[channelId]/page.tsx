@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import NetworkBackground from "@/components/NetworkBackground";
 import Image from "next/image";
 import {
   CheckCircle2, AlertCircle, Loader2, Upload, X,
@@ -633,14 +634,17 @@ const backBtn: React.CSSProperties = {
 /* ── Helper components ───────────────────────────────────────────── */
 function PageShell({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ minHeight:"100vh", background:"#060A12", padding:"24px 16px 60px" }}>
-      <div style={{ maxWidth:520, margin:"0 auto 24px", display:"flex", alignItems:"center", gap:10 }}>
-        <a href="/" style={{ display:"flex", alignItems:"center", gap:10, textDecoration:"none" }}>
-          <div style={{ width:34, height:34, borderRadius:9, background:"linear-gradient(135deg,#00D4FF,#0055DD)", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:900, color:"#fff", fontSize:"16px", fontFamily:"system-ui" }}>D</div>
-          <span style={{ fontWeight:900, fontSize:"20px", color:"#fff", fontFamily:"system-ui" }}>DEEL<span style={{ color:"#00D4FF" }}>Ai</span></span>
-        </a>
+    <div style={{ minHeight:"100vh", padding:"24px 16px 60px", position:"relative" }}>
+      <NetworkBackground />
+      <div style={{ position:"relative", zIndex:1 }}>
+        <div style={{ maxWidth:520, margin:"0 auto 24px", display:"flex", alignItems:"center", gap:10 }}>
+          <a href="/" style={{ display:"flex", alignItems:"center", gap:10, textDecoration:"none" }}>
+            <div style={{ width:34, height:34, borderRadius:9, background:"linear-gradient(135deg,#00D4FF,#0055DD)", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:900, color:"#fff", fontSize:"16px", fontFamily:"system-ui" }}>D</div>
+            <span style={{ fontWeight:900, fontSize:"20px", color:"#fff", fontFamily:"system-ui" }}>DEEL<span style={{ color:"#00D4FF" }}>Ai</span></span>
+          </a>
+        </div>
+        <div style={{ maxWidth:520, margin:"0 auto" }}>{children}</div>
       </div>
-      <div style={{ maxWidth:520, margin:"0 auto" }}>{children}</div>
     </div>
   );
 }

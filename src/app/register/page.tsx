@@ -2,6 +2,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { User, Mail, Phone, Lock, Eye, EyeOff, AlertCircle, Loader2, CheckCircle2, Shield } from "lucide-react";
+import NetworkBackground from "@/components/NetworkBackground";
 
 const C = { bg:"#060A12", s1:"#0C1220", s2:"#101829", s3:"#162035", cyan:"#00D4FF", green:"#00E5A0", gold:"#FFB800", red:"#FF4D6D", txt:"#EEF2FF", txt2:"#7D8BAA", txt3:"#4A5470" };
 
@@ -173,7 +174,9 @@ const STEPS = ["Personal Details", "Job Pass", "Verify Account"];
 
 function PageShell({ step, channelName, children }: { step: number; channelName: string; children: React.ReactNode }) {
   return (
-    <div style={{ minHeight:"100vh", background:C.bg, padding:"20px 14px 80px" }}>
+    <div style={{ minHeight:"100vh", padding:"20px 14px 80px", position:"relative" }}>
+      <NetworkBackground />
+      <div style={{ position:"relative", zIndex:1 }}>
       <div style={{ maxWidth:520, margin:"0 auto 20px", display:"flex", alignItems:"center", gap:9 }}>
         <a href="/" style={{ textDecoration:"none", display:"flex", alignItems:"center", gap:9 }}>
           <div style={{ width:30, height:30, borderRadius:8, background:"linear-gradient(135deg,#00D4FF,#0055DD)", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:900, color:"#fff", fontSize:13, fontFamily:"system-ui", flexShrink:0 }}>D</div>
@@ -233,6 +236,7 @@ function PageShell({ step, channelName, children }: { step: number; channelName:
         .pw-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
         @media (min-width: 440px) { .pw-grid { grid-template-columns: 1fr 1fr; } }
       `}</style>
+      </div>{/* /z-index wrapper */}
     </div>
   );
 }

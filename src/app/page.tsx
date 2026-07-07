@@ -2,6 +2,7 @@
 // only ChannelList (the interactive channel grid) ships client-side JS.
 import { ArrowRight, Shield, Zap, Star, Users } from "lucide-react";
 import ChannelList from "@/components/ChannelList";
+import NetworkBackground from "@/components/NetworkBackground";
 
 const C = {
   bg: "#060A12", s1: "#0C1220", s2: "#101829", s3: "#162035",
@@ -25,7 +26,11 @@ const STATS = [
 
 export default function LandingPage() {
   return (
-    <div style={{ minHeight: "100vh", background: C.bg, color: C.txt }}>
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.txt, position: "relative" }}>
+      <NetworkBackground />
+
+      {/* Content wrapper above the canvas */}
+      <div style={{ position: "relative", zIndex: 1 }}>
 
       {/* ── Nav ──────────────────────────────────────────────────────── */}
       <nav style={{
@@ -184,6 +189,7 @@ export default function LandingPage() {
           <a href="/login" style={{ color: C.txt2, textDecoration: "none" }}>Sign In</a>
         </div>
       </div>
+      </div>{/* /content wrapper */}
 
       <style>{`
         *, *::before, *::after { box-sizing: border-box; }
