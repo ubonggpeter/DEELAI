@@ -4,7 +4,8 @@ import { USER_COOKIE } from "@/lib/adminConfig";
 
 export async function POST(req: NextRequest) {
   const body = await req.json() as {
-    name: string; email: string; phone: string; password: string; channelId: string; refCode?: string;
+    name: string; email: string; phone: string; password: string; channelId: string;
+    refCode?: string; permitType?: string; cvUrl?: string;
   };
 
   if (!body.name || !body.email || !body.password || !body.channelId) {
@@ -33,6 +34,8 @@ export async function POST(req: NextRequest) {
   const user = await adminStore.registerUser({
     name: body.name.trim(), email, phone: body.phone ?? "",
     password: body.password, channelId: body.channelId, refCode: body.refCode,
+    permitType: body.permitType as import("@/lib/adminStore").PermitType | undefined,
+    cvUrl: body.cvUrl,
   });
 
   const session = { userId: user.id, email, name: user.name, accountStatus: user.accountStatus, channelId: user.channelId };

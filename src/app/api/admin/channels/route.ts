@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
       region:                 sa?.region             ?? "",
       workWalletEnabled:      true,
       recruitWalletEnabled:   true,
+      refBonusMode:           "manual",
     });
     return NextResponse.json({ channel: ch }, { status: 201 });
   } catch (e: unknown) {

@@ -91,6 +91,7 @@ model Channel {
   workWalletEnabled      Boolean   @default(true)
   recruitWalletEnabled   Boolean   @default(true)
   logoUrl                String?   @default("")
+  refBonusMode           String    @default("manual")  // "manual" | "auto"
   createdAt              DateTime  @default(now())
 
   users              User[]

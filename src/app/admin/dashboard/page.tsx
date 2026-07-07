@@ -33,6 +33,7 @@ interface Channel {
   referralCommissionRate: number; jobPassFee: number;
   isActive: boolean; balance: number; region: string; createdAt: string;
   workWalletEnabled: boolean; recruitWalletEnabled: boolean; logoUrl?: string;
+  refBonusMode: string;
 }
 interface QuizQuestion { id: string; q: string; opts: string[]; ans: number; }
 interface TrainingDoc { id: string; title: string; url: string; type: string; addedAt: string; }
@@ -2280,6 +2281,46 @@ function ChannelSettingsTab({ adminInfo }: { adminInfo: AdminInfo }) {
                 </span>
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Referral Bonus Mode */}
+        <div style={{ marginTop:14, paddingTop:14, borderTop:`1px solid ${C.s3}` }}>
+          <h4 style={{ color:C.txt2, fontSize:"12px", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:4 }}>
+            Referral Bonus Mode
+          </h4>
+          <p style={{ color:C.txt3, fontSize:"11px", marginBottom:10, lineHeight:1.5 }}>
+            Controls how recruit referral bonuses are paid out when a new user completes registration &amp; job-pass payment.
+          </p>
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+            {[
+              { value:"manual", label:"Manual Claim", desc:"Sub-admin reviews and approves each bonus. 24h auto-credit fallback applies." },
+              { value:"auto",   label:"Auto-Credit",  desc:"Bonus is credited to the recruiter's wallet instantly upon payment — no approval needed." },
+            ].map(({ value, label, desc }) => {
+              const active = (form.refBonusMode ?? "manual") === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setForm((p) => ({ ...p, refBonusMode: value }))}
+                  style={{
+                    background: active ? `${C.green}18` : C.s3,
+                    border: `1px solid ${active ? C.green+"55" : C.s3}`,
+                    borderRadius:8, padding:"9px 13px", cursor:"pointer", textAlign:"left", flex:1, minWidth:180,
+                  }}
+                >
+                  <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:4 }}>
+                    <div style={{
+                      width:12, height:12, borderRadius:"50%", flexShrink:0,
+                      background: active ? C.green : "transparent",
+                      border: `2px solid ${active ? C.green : C.txt3}`,
+                    }} />
+                    <span style={{ color: active ? C.green : C.txt2, fontSize:"13px", fontWeight:700 }}>{label}</span>
+                  </div>
+                  <span style={{ color:C.txt3, fontSize:"11px", lineHeight:1.5 }}>{desc}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 

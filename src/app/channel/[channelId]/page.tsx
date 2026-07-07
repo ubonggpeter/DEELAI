@@ -1,6 +1,6 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect, useRef, Suspense } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import {
   CheckCircle2, AlertCircle, Loader2, Upload, X,
@@ -34,8 +34,18 @@ declare global {
 const STEP_LABELS = ["Personal Details", "Work Permit & Terms", "Final Step"];
 
 export default function ChannelRegistrationPage() {
-  const { channelId } = useParams() as { channelId: string };
-  const router = useRouter();
+  return (
+    <Suspense fallback={<div style={{ minHeight:"100vh", background:"#060A12" }} />}>
+      <ChannelRegistrationPageInner />
+    </Suspense>
+  );
+}
+
+function ChannelRegistrationPageInner() {
+  const { channelId }  = useParams() as { channelId: string };
+  const router         = useRouter();
+  const searchParams   = useSearchParams();
+  const refCode        = searchParams.get("ref") ?? "";
 
   const [channel, setChannel]             = useState<ChannelInfo | null>(null);
   const [loading, setLoading]             = useState(true);
@@ -133,11 +143,12 @@ export default function ChannelRegistrationPage() {
           name: name.trim(), email: email.trim().toLowerCase(),
           phone: phone.trim(), password, channelId,
           cvUrl: cvUrl || undefined, permitType,
+          refCode: refCode || undefined,
         }),
       });
       const data = await res.json();
       if (!res.ok) { setStepError(data.error ?? "Registration failed"); return; }
-      router.push(`/register/job-pass?channel=${channelId}`);
+      router.push(`/register/job-pass?channel=${channelId}${refCode ? `&ref=${refCode}` : ""}`);
     } catch {
       setStepError("Network error. Please try again.");
     } finally {
@@ -235,11 +246,18 @@ export default function ChannelRegistrationPage() {
           {channel.channelName}
         </div>
       </div>
-      {channel.jobPassFee > 0 && (
-        <div style={{ background:`${C.cyan}12`, border:`1px solid ${C.cyan}30`, borderRadius:6, padding:"3px 9px", flexShrink:0 }}>
-          <span style={{ color:C.cyan, fontSize:"11px", fontWeight:700 }}>${channel.jobPassFee.toLocaleString()} fee</span>
-        </div>
-      )}
+      <div style={{ display:"flex", flexDirection:"column", gap:4, alignItems:"flex-end", flexShrink:0 }}>
+        {channel.jobPassFee > 0 && (
+          <div style={{ background:`${C.cyan}12`, border:`1px solid ${C.cyan}30`, borderRadius:6, padding:"3px 9px" }}>
+            <span style={{ color:C.cyan, fontSize:"11px", fontWeight:700 }}>${channel.jobPassFee.toLocaleString()} fee</span>
+          </div>
+        )}
+        {refCode && (
+          <div style={{ background:`${C.green}12`, border:`1px solid ${C.green}30`, borderRadius:6, padding:"3px 9px" }}>
+            <span style={{ color:C.green, fontSize:"10px", fontWeight:700 }}>Referred</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 

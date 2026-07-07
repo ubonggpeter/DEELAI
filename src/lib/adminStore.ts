@@ -22,6 +22,7 @@ export interface Channel {
   lensPaystackLink: string; referralCommissionRate: number; jobPassFee: number;
   isActive: boolean; balance: number; region: string; createdAt: string;
   workWalletEnabled: boolean; recruitWalletEnabled: boolean; logoUrl?: string;
+  refBonusMode: string;
 }
 export interface QuizQuestion { id: string; q: string; opts: string[]; ans: number; }
 export interface TrainingDoc { id: string; title: string; url: string; type: "pdf" | "doc" | "link"; ownerEmail?: string | null; addedAt: string; }
@@ -116,6 +117,7 @@ function mapChannel(c: any): Channel {
     workWalletEnabled: c.workWalletEnabled ?? true,
     recruitWalletEnabled: c.recruitWalletEnabled ?? true,
     logoUrl: c.logoUrl ?? "",
+    refBonusMode: c.refBonusMode ?? "manual",
     createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : c.createdAt,
   };
 }
@@ -306,7 +308,7 @@ export const adminStore = {
     // Sanitize string fields — null/undefined values from old DB rows would fail Prisma's
     // non-nullable String validation; replace with empty string to be safe
     const STRING_FIELDS = ["channelName", "description", "estTime", "paystackPublicKey",
-                           "paystackSecretKey", "lensPaystackLink", "region", "logoUrl"];
+                           "paystackSecretKey", "lensPaystackLink", "region", "logoUrl", "refBonusMode"];
     for (const f of STRING_FIELDS) {
       if (f in safe && (safe[f] === null || safe[f] === undefined)) safe[f] = "";
     }
@@ -1064,15 +1066,33 @@ export const adminStore = {
     const ch = await prisma.channel.findUnique({ where: { id: channelId } });
     if (!ch) return;
     const bonusAmount = (ch.jobPassFee * ch.referralCommissionRate) / 100;
-    const autoCreditsAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    await prisma.referralBonus.create({
-      data: {
-        id: `rb-${Date.now()}`, channelId, referrerId: referrer.id,
-        referrerName: referrer.name, referrerEmail: referrer.email,
-        recruitEmail: recruit.email, recruitName: recruit.name,
-        amount: bonusAmount, status: "pending", autoCreditsAt,
-      },
-    });
+    const now = new Date();
+
+    if (ch.refBonusMode === "auto") {
+      // Auto mode: immediately credit the referrer, no admin action needed
+      const netAmount = await this._deductSuperAdminCommission(bonusAmount);
+      await prisma.referralBonus.create({
+        data: {
+          id: `rb-${Date.now()}`, channelId, referrerId: referrer.id,
+          referrerName: referrer.name, referrerEmail: referrer.email,
+          recruitEmail: recruit.email, recruitName: recruit.name,
+          amount: bonusAmount, status: "auto-credited",
+          claimedAt: now, autoCreditsAt: now,
+        },
+      });
+      await prisma.user.update({ where: { id: referrer.id }, data: { recruitWallet: { increment: netAmount } } });
+    } else {
+      // Manual mode: create pending bonus; 24h auto-credit acts as fallback
+      const autoCreditsAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      await prisma.referralBonus.create({
+        data: {
+          id: `rb-${Date.now()}`, channelId, referrerId: referrer.id,
+          referrerName: referrer.name, referrerEmail: referrer.email,
+          recruitEmail: recruit.email, recruitName: recruit.name,
+          amount: bonusAmount, status: "pending", autoCreditsAt,
+        },
+      });
+    }
   },
 
   /* ── Settings ───────────────────────────────────────────────────────── */
